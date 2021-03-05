@@ -1,0 +1,28 @@
+name: CI
+on:
+    push:
+        branches: [master, base, browser, node]
+    pull_request:
+        branches: [master, base, browser, node]
+
+jobs:
+    test:
+        name: Build & Test
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v2
+
+            - name: Setup Node
+              uses: actions/setup-node@v1
+              with:
+                  node-version: "12.x"
+
+            - name: Prepare
+              run: npm install
+
+            - name: Build
+              run: npm run-script build
+
+            - name: Test
+              run: npm run-script test

@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"experimentalDecorators": true,
+		"target": "es2017",
+		"outDir": "./dist",
+		"sourceMap": true,
+		"strict": true,
+		"allowJs": true,
+		"removeComments": true,
+		"strictPropertyInitialization": true,
+		"noImplicitAny": true,
+		"strictBindCallApply": true,
+		"strictNullChecks": true,
+		"strictFunctionTypes": true,
+		"noImplicitThis": true,
+		"alwaysStrict": true,
+		"moduleResolution": "node",
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true
+	}
+}

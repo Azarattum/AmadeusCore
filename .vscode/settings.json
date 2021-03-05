@@ -1,0 +1,5 @@
+{
+    "deno.enable": false,
+    "jest.pathToConfig": "./env/jest.config.js",
+    "jest.autoEnable": false
+}
