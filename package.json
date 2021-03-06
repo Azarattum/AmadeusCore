@@ -7,10 +7,13 @@
 		"test": "jest --config env/jest.config.js",
 		"coverage": "jest --coverage --config env/jest.config.js"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"node-fetch": "^2.6.1"
+	},
 	"devDependencies": {
 		"@types/jest": "^25.2.3",
 		"@types/node": "^13.9.1",
+		"@types/node-fetch": "^2.5.8",
 		"@typescript-eslint/eslint-plugin": "^2.24.0",
 		"@typescript-eslint/parser": "^2.24.0",
 		"comlink-loader": "^2.0.0",
