@@ -249,7 +249,6 @@ export default class YouTubeProvider extends Provider {
 
 		await Promise.all(loads);
 
-		console.log(metas.filter(x => x.url));
 		return metas.filter(x => x.url);
 	}
 }

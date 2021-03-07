@@ -78,7 +78,6 @@ export default class YandexProvider extends Provider {
 
 		await Promise.all(loads);
 
-		console.log(metas);
 		return metas;
 	}
 }
