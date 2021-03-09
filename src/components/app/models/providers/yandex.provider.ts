@@ -24,7 +24,8 @@ export default class YandexProvider extends Provider {
 		});
 
 		const json = await response.json();
-		const tracks = json["result"]["tracks"]["results"].slice(0, count);
+		const tracks = json["result"]["tracks"]?.["results"].slice(0, count);
+		if (!tracks) return [];
 		if (count > 20) {
 			tracks.push(...(await this.search(query, count - 20, offset + 1)));
 		}
@@ -63,7 +64,7 @@ export default class YandexProvider extends Provider {
 				cover:
 					"https://" +
 						x.coverUri.slice(0, x.coverUri.length - 2) +
-						"600x600" || null,
+						"800x800" || null,
 				url: null
 			};
 		}) as ITrack[];

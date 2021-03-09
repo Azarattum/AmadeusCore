@@ -25,16 +25,16 @@ export default class VKProvider extends Provider {
 
 	public async get(query: string, count = 1): Promise<ITrack[]> {
 		const tracks = await this.search(query, count);
-		const joins = /,|(\s(ft.|feat.|&|\+|\/|featuring|med)\s)/;
+		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\|/;
 
 		const metas = tracks.map(x => {
 			return {
 				title: x.title,
-				artists: x.artist.split(joins).map(x => x.trim()),
-				album: x.album.title,
+				artists: x.artist.split(joins).map(x => x?.trim()),
+				album: x.album?.title || x.title,
 				length: x.duration,
 				year: new Date(x.date * 1000).getFullYear(),
-				cover: x.album.thumb.photo_600 || null,
+				cover: x.album?.thumb?.photo_1200 || null,
 				url: x.url
 			};
 		});
@@ -54,7 +54,7 @@ interface ITrackVK {
 	url: string;
 	date: number;
 	is_hq: boolean;
-	album: IAlbumVK;
+	album?: IAlbumVK;
 	track_genre_id: number;
 	short_videos_allowed: boolean;
 	stories_allowed: boolean;

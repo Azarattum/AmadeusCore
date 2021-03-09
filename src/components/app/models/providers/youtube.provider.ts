@@ -52,24 +52,6 @@ export default class YouTubeProvider extends Provider {
 		});
 	}
 
-	private parseTitle(text: string, channel: string): [string, string[]] {
-		const joins = /,|(\s(ft.|feat.|&|\+|\/|featuring|med)\s)/;
-		let title = text;
-		let artists = channel;
-
-		if (text.includes(" - ")) {
-			[artists, title] = text.split(" - ");
-		}
-		if (text.includes(" | ")) {
-			[artists, title] = text.split(" | ");
-		}
-		if (text.includes(" by ")) {
-			[title, artists] = text.split(" by ");
-		}
-
-		return [title, artists.split(joins).map(x => x.trim())];
-	}
-
 	private async decryptSignature(
 		sig: string,
 		playerUrl: string
@@ -218,19 +200,19 @@ export default class YouTubeProvider extends Provider {
 
 	public async get(query: string, count = 1): Promise<ITrack[]> {
 		const tracks = await this.search(query, count);
+		if (!tracks) return [];
 
 		const metas = tracks.map(x => {
-			const [title, artists] = this.parseTitle(
-				this.parseString(x.snippet.title),
-				this.parseString(x.snippet.channelTitle)
+			const { title, artists, year, album } = this.parse(
+				this.parseString(x.snippet.title)
 			);
 
 			return {
 				title: title,
-				artists: artists,
-				album: this.parseString(x.snippet.channelTitle),
+				artists: artists.length ? artists : [x.snippet.channelTitle],
+				album: album,
 				length: 0,
-				year: new Date(x.snippet.publishedAt).getFullYear(),
+				year: year || new Date(x.snippet.publishedAt).getFullYear(),
 				cover: x.snippet.thumbnails.high.url,
 				url: null
 			};

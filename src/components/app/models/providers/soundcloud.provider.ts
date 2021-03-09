@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/camelcase */
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
+import fetch from "node-fetch";
 
 export default class SoundCloudProvider extends Provider {
 	protected baseURL = "https://api-v2.soundcloud.com/";
@@ -21,71 +22,26 @@ export default class SoundCloudProvider extends Provider {
 		return json["collection"] as ITrackSoundCloud[];
 	}
 
-	private async load(track: ITrackSoundCloud): Promise<string | null> {
+	private async load(
+		track: ITrackSoundCloud,
+		cover: string | null
+	): Promise<[string | null, string | null]> {
+		if (cover) {
+			const alt = cover.replace("t500x500", "original");
+			cover = (await fetch(cover)).ok ? alt : cover;
+		}
+
 		const codings = track.media.transcodings;
 		const url = codings
 			.filter(x => x.format.protocol == "progressive")?.[0]
 			?.url?.replace(this.baseURL, "");
-		if (!url) return null;
+		if (!url) return [null, cover];
 
 		const reponse = await this.call(url);
 		const json = await reponse.json();
 
-		if (json.url.includes("preview")) return null;
-		return json.url || null;
-	}
-
-	private parseTitle(
-		title: string,
-		album: string
-	): [string, string, string[]] {
-		const joins = /,|&|\+|\//;
-		let artist = "";
-
-		if (title.includes(" - ")) {
-			[album, title] = title.split(" - ");
-		}
-		if (title.includes("- ")) {
-			[album, title] = title.split("- ");
-		}
-		if (title.includes(" | ")) {
-			[album, title] = title.split(" | ");
-		}
-		if (title.includes(" ♫ ")) {
-			[album, title] = title.split(" ♫ ");
-		}
-		if (album?.includes(" ♫ ")) {
-			[album, title] = album.split(" ♫ ");
-		}
-
-		if (title.includes(" by ")) {
-			[title, artist] = title.split(" by ");
-		}
-		if (title.includes(" By ")) {
-			[title, artist] = title.split(" By ");
-		}
-		if (title.includes(" ft. ")) {
-			[title, artist] = title.split(" ft. ");
-		}
-		if (title.includes(" feat. ")) {
-			[title, artist] = title.split(" ft. ");
-		}
-		if (title.includes(" featuring ")) {
-			[title, artist] = title.split(" featuring ");
-		}
-		if (title.includes(" med ")) {
-			[title, artist] = title.split(" med ");
-		}
-
-		const artistRegex = /\((ft\.?|feat\.?|featuring|by|med)([^)]+?)\)/i;
-		if (title.match(artistRegex)) {
-			artist = title.match(artistRegex)?.[2] || artist;
-			title = title.replace(artistRegex, "");
-		}
-
-		const artists = artist ? artist.split(joins).map(x => x.trim()) : [];
-
-		return [title?.trim(), album?.trim() || title?.trim(), artists];
+		if (json.url.includes("preview")) return [null, cover];
+		return [json.url || null, cover];
 	}
 
 	public async get(query: string, count = 1): Promise<ITrack[]> {
@@ -93,9 +49,11 @@ export default class SoundCloudProvider extends Provider {
 		const tracks = await this.search(query, count);
 
 		const metas = tracks.map(x => {
-			const [title, album, artists] = this.parseTitle(
-				x.title,
-				x.publisher_metadata?.album_title
+			const { title, album, artists, year } = this.parse(x.title);
+
+			const cover = (x.artwork_url || x.user.avatar_url).replace(
+				"large.jpg",
+				"t500x500.jpg"
 			);
 
 			return {
@@ -104,27 +62,27 @@ export default class SoundCloudProvider extends Provider {
 					...new Set([
 						...(x.publisher_metadata?.artist
 							?.split(joins)
-							?.map(x => x.trim()) || [
-							x.user.full_name || x.user.username
-						]),
+							?.map(x => x.trim()) || !artists.length
+							? [x.user.full_name || x.user.username]
+							: []),
 						...artists
 					])
 				],
-				album: album,
+				album: x.publisher_metadata?.album_title || album,
 				length: x.full_duration / 1000,
-				year: new Date(x.release_date || x.created_at).getFullYear(),
-				cover: (x.artwork_url || x.user.avatar_url).replace(
-					"large.jpg",
-					"t500x500.jpg"
-				),
+				year:
+					year ||
+					new Date(x.release_date || x.created_at).getFullYear(),
+				cover: cover.includes("default_avatar") ? null : cover,
 				url: null
 			};
 		}) as ITrack[];
 
 		const loads: Promise<any>[] = [];
 		for (const i in tracks) {
-			const promise = this.load(tracks[i]).then(x => {
-				metas[i].url = x;
+			const promise = this.load(tracks[i], metas[i].cover).then(x => {
+				metas[i].url = x[0];
+				metas[i].cover = x[1];
 			});
 			loads.push(promise);
 		}
