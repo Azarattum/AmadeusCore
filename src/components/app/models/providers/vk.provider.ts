@@ -39,7 +39,7 @@ export default class VKProvider extends Provider {
 			};
 		});
 
-		return metas;
+		return metas.filter(x => x.url);
 	}
 }
 

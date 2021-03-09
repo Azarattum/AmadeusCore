@@ -79,7 +79,7 @@ export default class YandexProvider extends Provider {
 
 		await Promise.all(loads);
 
-		return metas;
+		return metas.filter(x => x.url);
 	}
 }
 

@@ -11,7 +11,7 @@ export default abstract class Provider {
 		this.token = token;
 	}
 
-	public parse(text: string): IParsed {
+	protected parse(text: string): IParsed {
 		const year = /\s*(^|[-[({【|♫—–/\\:])\s*([1-2][0-9]{3})\s*([-\])}】|♫—–/\\:]|$)/;
 		const joins = /,|\bft.|\bfeat.|&|\+|\/|\bfeaturing|\bmed\b/i;
 		const artists = /(((?<=["|♫—\-–/\\:]\s*)|\()(\s*[^\s|"♫—\-–/\\:()][^|"♫—\-–/\\:()]*?)(\b(edit|rmx|remix|cover|version)\b\s*)+\)?)|([[({【]?(edited|rmx|remix|cover|performed)?\s*(\bby\b|\bft\.?|\bfeat\.?|\bfeaturing|\bmed\b)\s*(.*?)\s*([|♫—\-–/\\:\])}】](\s+|$)|$))/gi;
@@ -22,7 +22,7 @@ export default abstract class Provider {
 			/\s*([({【][^)]*)?\bver(\.|sion)?(\s*[\])}】])?/i, //Versions
 			/[[({【]?\s*(original\s*)?(of+icial\s*)?(music\s*)?(video|mix)(\s*[\])}】])?/i, //Official/music video
 			/\s*(full\s*)?album\s*(tracks?)?/i, //Album
-			/\s*[[({【]\s*(with)?\s*(of+icial)?\s*lyrics?\s*(video)?\s*[\])}】]/i, //Lyrics
+			/\s*[[({【]?\s*(with)?\s*\+(of+icial)?\s*lyrics?\s*(video)?\s*([\])}】]|$)/i, //Lyrics
 			/\s*[[({【]\s*(HD|HQ|[0-9]{3,4}p|4K)\s*(version|video|quality)?\s*[\])}】]/i, //Qulity
 			/[\s\-–_♫]+(HD|HQ|[0-9]{3,4}(p|bpm)|4K)\s*(version|video|quality)?\s*/gi, //Quality 2
 			/\s*\(?live\)?$/, //Live
