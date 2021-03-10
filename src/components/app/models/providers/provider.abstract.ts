@@ -1,11 +1,13 @@
 import { ITrack } from "../track.interface";
-import fetch, { Response } from "node-fetch";
+import fetch, { Response, RequestInit, RequestInfo } from "node-fetch";
+import { log, LogType, sleep } from "../../../common/utils.class";
 
 export default abstract class Provider {
 	protected token: string;
 	protected headers: Record<string, string> = {};
 	protected params: Record<string, string> = {};
 	protected abstract baseURL: string;
+	private readonly maxRetries = 10;
 
 	public constructor(token: string) {
 		this.token = token;
@@ -13,7 +15,7 @@ export default abstract class Provider {
 
 	protected parse(text: string): IParsed {
 		const year = /\s*(^|[-[({【|♫—–/\\:])\s*([1-2][0-9]{3})\s*([-\])}】|♫—–/\\:]|$)/;
-		const joins = /,|\bft.|\bfeat.|&|\+|\/|\bfeaturing|\bmed\b/i;
+		const joins = /,|\bft.|\bfeat.|&|\+|\/|\bfeaturing|\bmed\b|\band\b/i;
 		const artists = /(((?<=["|♫—\-–/\\:]\s*)|\()(\s*[^\s|"♫—\-–/\\:()][^|"♫—\-–/\\:()]*?)(\b(edit|rmx|remix|cover|version)\b\s*)+\)?)|([[({【]?(edited|rmx|remix|cover|performed)?\s*(\bby\b|\bft\.?|\bfeat\.?|\bfeaturing|\bmed\b)\s*(.*?)\s*([|♫—\-–/\\:\])}】](\s+|$)|$))/gi;
 		const separators = /\s*["|♫—–\\:]+\s*|\s*[-/]+\s+|\s+[-/]+\s*|(\W+|^)\.(\W+|$)/;
 		const trim = /^['"`«»|♫—\-–/\\:\s]+|['"`«»|♫—\-–/\\:\s]+$/gi;
@@ -83,6 +85,68 @@ export default abstract class Provider {
 		return parsed;
 	}
 
+	protected fetch(url: RequestInfo, params?: RequestInit): Promise<Response> {
+		let retries = 0;
+		const doFetch = (resolve: Function, reject: Function): void => {
+			if (retries > this.maxRetries) {
+				log(
+					`Request from ${this.constructor.name} to "${url}" rejected!`,
+					LogType.ERROR
+				);
+
+				reject();
+				return;
+			}
+
+			fetch(url, params)
+				.then(x => {
+					resolve(x);
+				})
+				.catch(async () => {
+					log(
+						`Request from ${
+							this.constructor.name
+						} to "${url}" failed (retry ${++retries})!`,
+						LogType.WARNING
+					);
+
+					await sleep(500);
+					doFetch(resolve, reject);
+				});
+		};
+
+		return new Promise((resolve, reject) => {
+			doFetch(resolve, reject);
+		});
+	}
+
+	protected async update<T>(
+		args: any[][],
+		method: (...args: any) => Promise<T>,
+		callback: (result: T, index: number) => void
+	): Promise<void[]> {
+		const updates: Promise<void>[] = [];
+		for (const i in args) {
+			const promise = method
+				.bind(this)(...args[i])
+				.then(x => {
+					callback(x, +i);
+				})
+				.catch(e => {
+					log(
+						`${JSON.stringify(args[i])} skiped by ${
+							this.constructor.name
+						} (failed to load)!\n${e}`,
+						LogType.WARNING
+					);
+				});
+
+			updates.push(promise);
+		}
+
+		return Promise.all(updates);
+	}
+
 	protected call(
 		method: string,
 		params: Record<string, any> = {}
@@ -93,7 +157,7 @@ export default abstract class Provider {
 			...params
 		}).toString();
 
-		return fetch(url, {
+		return this.fetch(url, {
 			headers: this.headers
 		});
 	}

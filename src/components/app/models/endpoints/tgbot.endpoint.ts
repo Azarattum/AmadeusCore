@@ -10,6 +10,7 @@ import { Readable } from "stream";
 import { Promise as Meta } from "node-id3";
 import { log, LogType, sleep } from "../../../common/utils.class";
 import { Message } from "telegraf/typings/telegram-types";
+import { clearInterval } from "timers";
 
 export default class TelegramBotEndpoint extends Endpoint {
 	private bot: Telegraf;
@@ -30,13 +31,12 @@ export default class TelegramBotEndpoint extends Endpoint {
 		source?: Buffer
 	): Promise<void> {
 		if (!source && this.statusCache.has(status)) return;
-		if (source) this.statusCache.set(status, source);
 
 		return ctx.tg
 			.editMessageMedia(status.chat.id, status.message_id, undefined, {
 				type: "audio",
 				parse_mode: "Markdown",
-				media: source ? { source } : status.audio.file_id,
+				media: source ? { source } : status.audio?.file_id,
 
 				title: track.title,
 				performer: track.artists.join(", "),
@@ -50,14 +50,30 @@ export default class TelegramBotEndpoint extends Endpoint {
 						  " ".repeat(9 - percent / 10) +
 						  "]`"
 			})
-			.catch(async () => {
+			.catch(async e => {
 				if (source && percent >= 100 && percent < 115) {
+					if (e.message.includes("message to edit not found")) return;
+					if (e.message.includes("cancelled by new editMessageMedia"))
+						return;
+
+					log(
+						`Track "${
+							track.title
+						}" failed to upload (retry ${percent - 99})!\n${e}`,
+						LogType.WARNING
+					);
+
 					await sleep(1000);
 					this.updateStatus(ctx, status, percent + 1, track, source);
 				}
 			})
 			.then(async () => {
 				if (this.statusCache.has(status) && !source) {
+					log(
+						`Track "${track.title}" has overwritten metadata. Fixing...`,
+						LogType.WARNING
+					);
+
 					await sleep(1000);
 					this.updateStatus(
 						ctx,
@@ -75,15 +91,25 @@ export default class TelegramBotEndpoint extends Endpoint {
 		type: string | null,
 		track: ITrack
 	): Promise<Message.AudioMessage> {
-		return await ctx.replyWithAudio(
-			type == "audio/webm" || !track.url
-				? { source: Readable.from(["0"]) }
-				: track.url,
-			{
-				caption: track.title + ": `[" + " ".repeat(10) + "]`",
-				parse_mode: "Markdown"
-			}
-		);
+		return ctx
+			.replyWithAudio(
+				type == "audio/webm" || !track.url
+					? { source: Readable.from(["0"]) }
+					: track.url,
+				{
+					caption: track.title + ": `[" + " ".repeat(10) + "]`",
+					parse_mode: "Markdown"
+				}
+			)
+			.catch(() => {
+				return ctx.replyWithAudio(
+					{ source: Readable.from(["0"]) },
+					{
+						caption: track.title + ": `[" + " ".repeat(10) + "]`",
+						parse_mode: "Markdown"
+					}
+				);
+			});
 	}
 
 	private async sendTrack(
@@ -91,8 +117,12 @@ export default class TelegramBotEndpoint extends Endpoint {
 		track: ITrack
 	): Promise<Message.AudioMessage | void> {
 		if (!track.url) return;
-		const dataLoad = fetch(track.url);
-		const coverLoad = track.cover ? fetch(track.cover) : undefined;
+		const dataLoad = fetch(track.url).catch(e => {
+			throw e;
+		});
+		const coverLoad = track.cover
+			? fetch(track.cover).catch(() => undefined)
+			: undefined;
 
 		const [data, cover] = await Promise.all([dataLoad, coverLoad]);
 		const type = data.headers.get("content-type");
@@ -138,9 +168,7 @@ export default class TelegramBotEndpoint extends Endpoint {
 
 			this.messages.get(ctx.chat?.id || 0)?.push(status.message_id);
 			await this.updateStatus(ctx, status, 100, track, buffer);
-			//An extra request to make sure the data is right
-			await sleep(1000);
-			this.updateStatus(ctx, status, 100, track, buffer);
+			this.statusCache.set(status, buffer);
 		});
 
 		stream.on("error", () => {
@@ -151,31 +179,39 @@ export default class TelegramBotEndpoint extends Endpoint {
 		return status;
 	}
 
-	private async searchTracks(ctx: Context, query: string): Promise<void> {
-		log(`${ctx.from?.username} searched for "${query}"...`);
+	private showLoading(ctx: Context): NodeJS.Timeout {
 		ctx.replyWithChatAction("record_voice");
-		const tracks = await this.aggregator.get(ctx.chat?.id || 0)?.get(query);
-		if (!tracks) return;
+		return setInterval(() => ctx.replyWithChatAction("record_voice"), 3000);
+	}
 
-		for (const track of tracks) {
-			this.sendTrack(ctx, track).catch(() => {
-				log(`Failed to send track "${track.title}"!`, LogType.ERROR);
-			});
-		}
+	private async searchTracks(ctx: Context, query: string): Promise<void> {
+		const loading = this.showLoading(ctx);
+		log(`${ctx.from?.username} searched for "${query}"...`);
+		const track = await this.aggregator.get(ctx.chat?.id || 0)?.get(query);
+		clearInterval(loading);
+		if (!track) return;
+
+		this.sendTrack(ctx, track).catch(e => {
+			log(`Failed to send track "${track.title}"!\n${e}`, LogType.ERROR);
+		});
 	}
 
 	private async moreTracks(ctx: Context): Promise<void> {
-		ctx.replyWithChatAction("record_voice");
+		const loading = this.showLoading(ctx);
 		const tracks = await this.aggregator.get(ctx.chat?.id || 0)?.more();
 		log(
 			`${ctx.from?.username} requested more tracks (${tracks?.length ||
 				0} found)...`
 		);
+		clearInterval(loading);
 		if (!tracks) return;
 
 		for (const track of tracks) {
-			this.sendTrack(ctx, track).catch(() => {
-				log(`Failed to send track "${track.title}"!`, LogType.ERROR);
+			this.sendTrack(ctx, track).catch(e => {
+				log(
+					`Failed to send track "${track.title}"!\n${e}`,
+					LogType.ERROR
+				);
 			});
 		}
 	}
@@ -196,17 +232,30 @@ export default class TelegramBotEndpoint extends Endpoint {
 		}
 	}
 
+	private setupResoponse(ctx: Context): void {
+		ctx.deleteMessage().catch(() => {});
+		if (ctx.chat && !this.aggregator.has(ctx.chat.id))
+			this.aggregator.set(ctx.chat.id, new Aggregator());
+		if (ctx.chat && !this.messages.has(ctx.chat.id))
+			this.messages.set(ctx.chat.id, []);
+	}
+
 	public async start(): Promise<void> {
 		this.bot.on("text", async ctx => {
-			ctx.deleteMessage().catch(() => {});
-			if (ctx.chat && !this.aggregator.has(ctx.chat.id))
-				this.aggregator.set(ctx.chat.id, new Aggregator());
-			if (ctx.chat && !this.messages.has(ctx.chat.id))
-				this.messages.set(ctx.chat.id, []);
+			this.setupResoponse(ctx);
 
 			const text = ctx.message.text;
 			if (text[0] == "/") this.handleCommand(ctx, text.slice(1));
 			else this.searchTracks(ctx, text);
+		});
+
+		this.bot.on("audio", async ctx => {
+			this.setupResoponse(ctx);
+
+			const text = [ctx.message.audio.performer, ctx.message.audio.title]
+				.filter(x => x)
+				.join(" - ");
+			this.searchTracks(ctx, text);
 		});
 
 		this.bot.launch();

@@ -218,18 +218,15 @@ export default class YouTubeProvider extends Provider {
 			};
 		}) as ITrack[];
 
-		const loads: Promise<any>[] = [];
-		for (const i in tracks) {
-			const promise = this.load(tracks[i].id.videoId).then(x => {
+		await this.update(
+			tracks.map(x => [x.id.videoId]),
+			this.load,
+			(x, i) => {
 				metas[i].url = x[0];
 				metas[i].cover = x[1] || metas[i].cover;
 				metas[i].length = x[2];
-			});
-
-			loads.push(promise);
-		}
-
-		await Promise.all(loads);
+			}
+		);
 
 		return metas.filter(x => x.url);
 	}

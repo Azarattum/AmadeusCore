@@ -34,7 +34,7 @@ export default class YandexProvider extends Provider {
 	}
 
 	private async load(id: number): Promise<string> {
-		const response = await this.call(`/tracks/${id}/download-info`);
+		const response = await this.call(`tracks/${id}/download-info`);
 
 		const url =
 			(await response.json())["result"][0]["downloadInfoUrl"] +
@@ -69,15 +69,13 @@ export default class YandexProvider extends Provider {
 			};
 		}) as ITrack[];
 
-		const loads: Promise<any>[] = [];
-		for (const i in tracks) {
-			const promise = this.load(tracks[i].id).then(x => {
+		await this.update(
+			tracks.map(x => [x.id]),
+			this.load,
+			(x, i) => {
 				metas[i].url = x;
-			});
-			loads.push(promise);
-		}
-
-		await Promise.all(loads);
+			}
+		);
 
 		return metas.filter(x => x.url);
 	}

@@ -5,6 +5,10 @@ import fetch from "node-fetch";
 
 export default class SoundCloudProvider extends Provider {
 	protected baseURL = "https://api-v2.soundcloud.com/";
+	protected headers = {
+		"User-Agent":
+			"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36"
+	};
 	protected params = {
 		client_id: this.token
 	};
@@ -28,7 +32,13 @@ export default class SoundCloudProvider extends Provider {
 	): Promise<[string | null, string | null]> {
 		if (cover) {
 			const alt = cover.replace("t500x500", "original");
-			cover = (await fetch(cover)).ok ? alt : cover;
+			cover = (
+				await fetch(alt).catch(() => {
+					return { ok: false };
+				})
+			).ok
+				? alt
+				: cover;
 		}
 
 		const codings = track.media.transcodings;
@@ -45,7 +55,7 @@ export default class SoundCloudProvider extends Provider {
 	}
 
 	public async get(query: string, count = 1): Promise<ITrack[]> {
-		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\|/;
+		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\||\band\b/;
 		const tracks = await this.search(query, count);
 
 		const metas = tracks.map(x => {
@@ -78,16 +88,14 @@ export default class SoundCloudProvider extends Provider {
 			};
 		}) as ITrack[];
 
-		const loads: Promise<any>[] = [];
-		for (const i in tracks) {
-			const promise = this.load(tracks[i], metas[i].cover).then(x => {
+		await this.update(
+			tracks.map((x, i) => [x, metas[i].cover]),
+			this.load,
+			(x, i) => {
 				metas[i].url = x[0];
 				metas[i].cover = x[1];
-			});
-			loads.push(promise);
-		}
-
-		await Promise.all(loads);
+			}
+		);
 
 		return metas.filter(x => x.url);
 	}

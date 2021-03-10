@@ -25,7 +25,7 @@ export default class VKProvider extends Provider {
 
 	public async get(query: string, count = 1): Promise<ITrack[]> {
 		const tracks = await this.search(query, count);
-		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\|/;
+		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\||\band\b/;
 
 		const metas = tracks.map(x => {
 			return {
