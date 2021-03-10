@@ -1,5 +1,9 @@
 /**Main Script */
 import App from "./components/app/app";
+import DotEnv from "dotenv";
+
+//Configure environment
+DotEnv.config();
 
 //Application init
 const app = new App();

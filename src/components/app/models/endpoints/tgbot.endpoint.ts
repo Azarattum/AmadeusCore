@@ -265,4 +265,8 @@ export default class TelegramBotEndpoint extends Endpoint {
 
 		this.bot.launch();
 	}
+
+	public async stop(): Promise<void> {
+		this.bot.stop();
+	}
 }
