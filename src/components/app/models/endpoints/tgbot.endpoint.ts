@@ -196,24 +196,29 @@ export default class TelegramBotEndpoint extends Endpoint {
 		});
 	}
 
-	private async moreTracks(ctx: Context): Promise<void> {
+	private async moreTracks(ctx: Context): Promise<ITrack[] | undefined> {
 		const loading = this.showLoading(ctx);
-		const tracks = await this.aggregator.get(ctx.chat?.id || 0)?.more();
-		log(
-			`${ctx.from?.username} requested more tracks (${tracks?.length ||
-				0} found)...`
-		);
-		clearInterval(loading);
-		if (!tracks) return;
+		log(`${ctx.from?.username} requested more tracks...`);
 
-		for (const track of tracks) {
-			this.sendTrack(ctx, track).catch(e => {
-				log(
-					`Failed to send track "${track.title}"!\n${e}`,
-					LogType.ERROR
-				);
+		const tracks = await this.aggregator
+			.get(ctx.chat?.id || 0)
+			?.more((tracks: ITrack[]) => {
+				clearInterval(loading);
+
+				for (const track of tracks) {
+					this.sendTrack(ctx, track).catch(e => {
+						log(
+							`Failed to send track "${track.title}"!\n${e}`,
+							LogType.ERROR
+						);
+					});
+				}
 			});
-		}
+
+		log(`${tracks?.length || 0} track found for ${ctx.from?.username}.`);
+		clearInterval(loading);
+
+		return tracks;
 	}
 
 	private handleCommand(ctx: Context, command: string): void {
