@@ -225,9 +225,14 @@ export default abstract class Application {
 	 * Returns the first component by the type
 	 * @param type Component's type
 	 */
-	protected getComponent<T extends IComponent>(type: IComponentType<T>): T {
+	protected getComponent<T extends IComponent>(
+		type: IComponentType<T>,
+		relation?: object
+	): T {
 		const component = this.components.find(
-			component => component instanceof (type.valueOf() as any)
+			component =>
+				component instanceof (type.valueOf() as any) &&
+				(!relation || (component as any).relation === relation)
 		);
 
 		if (!component) {

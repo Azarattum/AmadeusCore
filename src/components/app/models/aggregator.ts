@@ -1,37 +1,35 @@
+import Controller from "../../common/controller.abstract";
 import { log, LogType } from "../../common/utils.class";
 import Provider from "./providers/provider.abstract";
 import SoundCloudProvider from "./providers/soundcloud.provider";
 import VKProvider from "./providers/vk.provider";
 import YandexProvider from "./providers/yandex.provider";
 import YouTubeProvider from "./providers/youtube.provider";
+import Tenant from "./tenant";
 import { ITrack } from "./track.interface";
 
 /**
  * Aggregates track data from all Amadeus' providers
  */
-export default class Aggregator {
+export default class Aggregator extends Controller() {
 	private providers: Provider[] = [];
-	private tokens: string[];
 	private lastQuery: string | undefined;
 	private lastTrack: ITrack | undefined;
 
-	public constructor() {
-		const providers = [
-			VKProvider,
-			YandexProvider,
-			SoundCloudProvider,
-			YouTubeProvider
-		];
+	public static get relations(): object[] {
+		return Tenant.tenants;
+	}
 
-		this.tokens = [
-			process.env["VK_TOKEN"] as string,
-			process.env["YANDEX_TOKEN"] as string,
-			process.env["SOUNDCLOUD_TOKEN"] as string,
-			process.env["YOUTUBE_TOKEN"] as string
-		];
+	public initialize(tokens: Record<string, string>): void {
+		const providers: Record<string, typeof Provider> = {
+			vk: VKProvider,
+			yandex: YandexProvider,
+			soundCloud: SoundCloudProvider,
+			youTube: YouTubeProvider
+		};
 
 		for (const i in providers) {
-			const provider = new providers[i](this.tokens[i]);
+			const provider = new (providers[i] as any)(tokens[i]);
 			this.providers.push(provider);
 		}
 	}
@@ -68,7 +66,7 @@ export default class Aggregator {
 		return tracks;
 	}
 
-	public async get(query: string): Promise<ITrack | null> {
+	public async single(query: string): Promise<ITrack | null> {
 		this.lastQuery = query;
 
 		const promises = [];
