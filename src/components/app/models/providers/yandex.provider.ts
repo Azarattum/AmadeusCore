@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
 import { createHash } from "crypto";
 import fetch from "node-fetch";
 import { ITrack } from "../track.interface";
@@ -65,7 +64,8 @@ export default class YandexProvider extends Provider {
 					"https://" +
 						x.coverUri.slice(0, x.coverUri.length - 2) +
 						"800x800" || null,
-				url: null
+				url: null,
+				sources: [`aggr://yandex:${x.id}`]
 			};
 		}) as ITrack[];
 
@@ -78,6 +78,17 @@ export default class YandexProvider extends Provider {
 		);
 
 		return metas.filter(x => x.url);
+	}
+
+	public async desource(source: string): Promise<string | null> {
+		if (!source.startsWith("aggr://")) return null;
+		source = source.replace("aggr://", "");
+		if (!source.startsWith("yandex:")) return null;
+		source = source.replace("yandex:", "");
+		if (!+source) return null;
+		const id = +source;
+
+		return this.load(id) || null;
 	}
 }
 

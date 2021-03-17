@@ -1,12 +1,12 @@
 import Controller from "../../common/controller.abstract";
 import { log, LogType } from "../../common/utils.class";
-import Provider from "./providers/provider.abstract";
-import SoundCloudProvider from "./providers/soundcloud.provider";
-import VKProvider from "./providers/vk.provider";
-import YandexProvider from "./providers/yandex.provider";
-import YouTubeProvider from "./providers/youtube.provider";
-import Tenant from "./tenant";
-import { ITrack } from "./track.interface";
+import Provider from "../models/providers/provider.abstract";
+import SoundCloudProvider from "../models/providers/soundcloud.provider";
+import VKProvider from "../models/providers/vk.provider";
+import YandexProvider from "../models/providers/yandex.provider";
+import YouTubeProvider from "../models/providers/youtube.provider";
+import Tenant from "../models/tenant";
+import { ITrack } from "../models/track.interface";
 
 /**
  * Aggregates track data from all Amadeus' providers
@@ -127,5 +127,16 @@ export default class Aggregator extends Controller() {
 		await Promise.all(promises);
 
 		return this.filter(tracks).slice(1);
+	}
+
+	public async desource(sources: string[]): Promise<string | null> {
+		for (const provider of this.providers) {
+			for (const source of sources) {
+				const url = await provider.desource(source);
+				if (url) return url;
+			}
+		}
+
+		return null;
 	}
 }

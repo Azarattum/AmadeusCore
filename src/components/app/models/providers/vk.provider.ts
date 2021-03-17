@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
 
@@ -35,11 +34,24 @@ export default class VKProvider extends Provider {
 				length: x.duration,
 				year: new Date(x.date * 1000).getFullYear(),
 				cover: x.album?.thumb?.photo_1200 || null,
-				url: x.url
+				url: x.url,
+				sources: [`aggr://vk:${x.owner_id}_${x.id}`]
 			};
 		});
 
 		return metas.filter(x => x.url);
+	}
+
+	public async desource(source: string): Promise<string | null> {
+		if (!source.startsWith("aggr://")) return null;
+		source = source.replace("aggr://", "");
+		if (!source.startsWith("vk:")) return null;
+		source = source.replace("vk:", "");
+
+		const response = await this.call("audio.getById", { audios: [source] });
+		const json = await response.json();
+
+		return json?.["response"]?.[0]?.["url"] || null;
 	}
 }
 

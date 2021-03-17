@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
 import fetch from "node-fetch";
 import { format, log, LogType } from "../../../common/utils.class";
 import { ITrack } from "../track.interface";
@@ -214,7 +213,8 @@ export default class YouTubeProvider extends Provider {
 				length: 0,
 				year: year || new Date(x.snippet.publishedAt).getFullYear(),
 				cover: x.snippet.thumbnails.high.url,
-				url: null
+				url: null,
+				sources: [`aggr://youtube:${x.id.videoId}`]
 			};
 		}) as ITrack[];
 
@@ -229,6 +229,16 @@ export default class YouTubeProvider extends Provider {
 		);
 
 		return metas.filter(x => x.url);
+	}
+
+	public async desource(source: string): Promise<string | null> {
+		if (!source.startsWith("aggr://")) return null;
+		source = source.replace("aggr://", "");
+		if (!source.startsWith("youtube:")) return null;
+		source = source.replace("youtube:", "");
+
+		const [url] = await this.load(source);
+		return url || null;
 	}
 }
 

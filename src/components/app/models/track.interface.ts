@@ -7,4 +7,5 @@ export interface ITrack {
 	year?: number;
 	cover: string | null;
 	url: string | null;
+	sources: string[];
 }

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/camelcase */
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
 import fetch from "node-fetch";
@@ -65,6 +64,9 @@ export default class SoundCloudProvider extends Provider {
 				"large.jpg",
 				"t500x500.jpg"
 			);
+			const media = x.media.transcodings
+				.filter(x => x.format.protocol == "progressive")?.[0]
+				?.url?.replace(this.baseURL, "");
 
 			return {
 				title: title,
@@ -84,7 +86,8 @@ export default class SoundCloudProvider extends Provider {
 					year ||
 					new Date(x.release_date || x.created_at).getFullYear(),
 				cover: cover.includes("default_avatar") ? null : cover,
-				url: null
+				url: null,
+				sources: [`aggr://soundcloud:${media}`]
 			};
 		}) as ITrack[];
 
@@ -98,6 +101,16 @@ export default class SoundCloudProvider extends Provider {
 		);
 
 		return metas.filter(x => x.url);
+	}
+
+	public async desource(source: string): Promise<string | null> {
+		if (!source.startsWith("aggr://")) return null;
+		source = source.replace("aggr://", "");
+		if (!source.startsWith("soundcloud:")) return null;
+		source = source.replace("soundcloud:", "");
+
+		const json = await (await this.call(source)).json();
+		return json?.url || null;
 	}
 }
 

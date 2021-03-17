@@ -163,6 +163,8 @@ export default abstract class Provider {
 	}
 
 	abstract get(query: string, count: number): Promise<ITrack[]>;
+
+	abstract desource(source: string): Promise<string | null>;
 }
 
 export interface IParsed {
