@@ -219,23 +219,23 @@ export default class TelegramBot extends Controller<
 	): Promise<void> {
 		if (!source && this.statusCache.has(status)) return;
 
+		let name = track.artists.join(", ") + " - " + track.title;
+		const index = Math.min(
+			name.length,
+			Math.ceil(name.length * percent * 1.11111)
+		);
+		name = "<u>" + name.slice(0, index) + "</u>" + name.slice(index);
+
 		return ctx.tg
 			.editMessageMedia(status.chat.id, status.message_id, undefined, {
 				type: "audio",
-				parse_mode: "Markdown",
+				parse_mode: "HTML",
 				media: source ? { source } : status.audio?.file_id,
 
 				title: track.title,
 				performer: track.artists.join(", "),
 				duration: Math.round(track.length),
-				caption:
-					percent >= 100
-						? undefined
-						: track.title +
-						  ": `[" +
-						  "#".repeat(percent / 10 + 1) +
-						  " ".repeat(9 - percent / 10) +
-						  "]`"
+				caption: percent < 1 ? name : undefined
 			})
 			.catch(async e => {
 				if (source && percent >= 100 && percent < 115) {
@@ -254,6 +254,7 @@ export default class TelegramBot extends Controller<
 					await sleep(1000 + 1000 * Math.random());
 					this.updateStatus(ctx, status, percent + 1, track, source);
 				}
+				console.log(e);
 			})
 			.then(async () => {
 				if (this.statusCache.has(status) && !source) {
@@ -283,8 +284,7 @@ export default class TelegramBot extends Controller<
 			.replyWithAudio(
 				!track.url ? { source: Readable.from(["0"]) } : track.url,
 				{
-					caption: track.title + ": `[" + " ".repeat(10) + "]`",
-					parse_mode: "Markdown",
+					caption: track.artists.join(", ") + " - " + track.title,
 					disable_notification: true
 				}
 			)
@@ -292,8 +292,7 @@ export default class TelegramBot extends Controller<
 				return ctx.replyWithAudio(
 					{ source: Readable.from(["0"]) },
 					{
-						caption: track.title + ": `[" + " ".repeat(10) + "]`",
-						parse_mode: "Markdown",
+						caption: track.artists.join(", ") + "-" + track.title,
 						disable_notification: true
 					}
 				);

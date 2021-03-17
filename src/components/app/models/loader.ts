@@ -41,8 +41,8 @@ export default class Loader {
 			loaded += buffer.length;
 			buffers.push(buffer);
 
-			const percent = Math.round((loaded / length) * 100);
-			if (percent - prev > 10) {
+			const percent = loaded / length;
+			if (percent - prev > 0.1) {
 				progress(percent);
 				prev = percent;
 			}
