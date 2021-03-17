@@ -2,5 +2,7 @@ node_modules
 coverage
 dist
 .env
+prisma/migrations
 data/*
 !data/tenants.example.json
+!data/dummy.db

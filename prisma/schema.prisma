@@ -1,0 +1,51 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/dummy.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Track {
+  id        Int        @id @default(autoincrement())
+  title     String
+  album     Album      @relation(references: [id], fields: [albumId])
+  albumId   Int
+  artists   Artist[]   @relation(references: [id])
+  playlists Playlist[] @relation(references: [id])
+
+  length Float
+  cover  String?
+  year   Int?
+
+  sources String
+
+  @@index([title])
+}
+
+model Playlist {
+  id     Int     @id @default(autoincrement())
+  title  String  @unique
+  tracks Track[] @relation(references: [id])
+
+  telegram Int? @unique
+
+  @@index([title])
+}
+
+model Album {
+  id     Int     @id @default(autoincrement())
+  title  String  @unique
+  tracks Track[]
+
+  @@index([title])
+}
+
+model Artist {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  tracks Track[] @relation(references: [id])
+
+  @@index([name])
+}

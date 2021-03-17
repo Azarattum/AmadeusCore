@@ -1,10 +1,11 @@
 import Application, { handle } from "../common/application.abstract";
 import { log, LogType } from "../common/utils.class";
-import TelegramBot, {
-	BotContext
-} from "./controllers/endpoints/tgbot.endpoint";
-import Aggregator from "./models/aggregator";
+import Aggregator from "./controllers/aggregator.controller";
 import { ITrack } from "./models/track.interface";
+import Preserver from "./controllers/preserver.controller";
+import TelegramBot from "./controllers/endpoints/tgbot.endpoint";
+import Tenant from "./models/tenant";
+import { Playlist } from "@prisma/client";
 
 /**
  * Application class
@@ -14,7 +15,7 @@ export default class App extends Application {
 	 * Application constructor
 	 */
 	public constructor() {
-		super([Aggregator, TelegramBot]);
+		super([Preserver, Aggregator, TelegramBot]);
 	}
 
 	/**
@@ -42,16 +43,16 @@ export default class App extends Application {
 			log(message, levels[level]);
 		});
 
-		bot.on("searched", async (ctx: BotContext, query: string) => {
-			log(`${ctx.from?.username} searched for "${query}"...`);
+		bot.on("searched", async (tenant: Tenant, query: string) => {
+			log(`${tenant.identifier} searched for "${query}"...`);
 
-			bot.showLoader(ctx);
-			const aggregator = this.getComponent(Aggregator, ctx.tenant);
+			bot.showLoader(tenant.telegram);
+			const aggregator = this.getComponent(Aggregator, tenant);
 			const track = await aggregator.single(query);
-			bot.hideLoader(ctx);
+			bot.hideLoader(tenant.telegram);
 			if (!track) return;
 
-			bot.sendTrack(ctx, track).catch(e => {
+			bot.sendTrack(tenant.telegram, track).catch(e => {
 				log(
 					`Failed to send track "${track.title}"!\n${e}`,
 					LogType.ERROR
@@ -59,15 +60,15 @@ export default class App extends Application {
 			});
 		});
 
-		bot.on("extended", async (ctx: BotContext) => {
-			log(`${ctx.from?.username} requested more tracks...`);
+		bot.on("extended", async (tenant: Tenant) => {
+			log(`${tenant.identifier} requested more tracks...`);
 
-			bot.showLoader(ctx);
-			const aggregator = this.getComponent(Aggregator, ctx.tenant);
-			const tracks = await aggregator.more((tracks: ITrack[]) => {
-				bot.hideLoader(ctx);
+			bot.showLoader(tenant.telegram);
+			const aggregator = this.getComponent(Aggregator, tenant);
+			const tracks = await aggregator.more(async (tracks: ITrack[]) => {
+				bot.hideLoader(tenant.telegram);
 				for (const track of tracks) {
-					bot.sendTrack(ctx, track).catch(e => {
+					bot.sendTrack(tenant.telegram, track).catch(e => {
 						log(
 							`Failed to send track "${track.title}"!\n${e}`,
 							LogType.ERROR
@@ -75,11 +76,61 @@ export default class App extends Application {
 					});
 				}
 			});
-			bot.hideLoader(ctx);
+			bot.hideLoader(tenant.telegram);
 
 			log(
-				`${tracks?.length || 0} tracks found for ${ctx.from?.username}.`
+				`${tracks?.length || 0} tracks found for ${tenant.identifier}.`
 			);
 		});
+
+		bot.on("shared", async (tenant: Tenant, track: ITrack) => {
+			const preserver = this.getComponent(Preserver, tenant);
+			const playlists = (await preserver.getPlaylists()).map(
+				x => x.title
+			);
+
+			const playlist = await bot
+				.requestPlaylist(tenant.telegram, playlists)
+				.catch(() => {});
+			if (!playlist) return;
+
+			preserver.playlistTrack(track, playlist);
+
+			log(
+				`${tenant.identifier} shared track "${track.title}" to "${playlist}".`
+			);
+		});
+
+		bot.on(
+			"joined",
+			async (tenant: Tenant, playlist: string, telegram: number) => {
+				log(
+					`Bot joined ${tenant.identifier}'s playlist "${playlist}".`
+				);
+
+				const preserver = this.getComponent(Preserver, tenant);
+				preserver.updatePlaylist(playlist, telegram);
+			}
+		);
+	}
+
+	@handle(Preserver)
+	private onPreserver(preserver: Preserver): void {
+		preserver.on(
+			"playlisted",
+			(tenant: Tenant, track: ITrack, playlist: Playlist) => {
+				const bot = this.getComponent(TelegramBot);
+
+				if (playlist.telegram) {
+					bot.playlistTrack(
+						tenant.telegram,
+						playlist.telegram,
+						track
+					).catch(() => {
+						preserver.updatePlaylist(playlist.title, null);
+					});
+				}
+			}
+		);
 	}
 }
