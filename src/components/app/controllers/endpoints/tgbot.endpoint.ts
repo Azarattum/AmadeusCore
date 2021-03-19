@@ -121,18 +121,10 @@ export default class TelegramBot extends Controller<
 		this.bot.stop();
 	}
 
-	public async sendTrack(
-		chat: number,
-		track: ITrack
-	): Promise<Message.AudioMessage | void> {
+	public async sendTrack(chat: number, track: ITrack): Promise<void> {
 		const status = await this.createStatus(chat, track);
-		const updates: Promise<any>[] = [];
 
-		const stream = await Restream.fromUrl(
-			track,
-			track.url,
-			track.cover
-		).catch(e => {
+		const stream = await Restream.fromTrack(track).catch(e => {
 			this.emit(
 				"reported",
 				`Failed to load track "${track.title}"!\n${e}`,
@@ -144,15 +136,13 @@ export default class TelegramBot extends Controller<
 		if (!stream) return;
 
 		stream.on("progress", (percent: number): void => {
-			updates.push(this.updateStatus(status, percent, track));
+			this.updateStatus(status, percent, track);
 		});
 
-		await Promise.all(updates);
 		const message = await this.updateStatus(status, 1, track, stream);
 		this.messages.get(chat)?.push(message.message_id);
 		track.sources.push(`tg://${message.message_id}`);
-
-		return message;
+		stream.destroy();
 	}
 
 	public async requestPlaylist(
@@ -183,12 +173,12 @@ export default class TelegramBot extends Controller<
 		chat: number,
 		playlist: number,
 		track: ITrack
-	): Promise<any> {
+	): Promise<void> {
 		const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
 		if (tg && +tg) {
-			return this.bot.telegram.forwardMessage(playlist, chat, +tg);
+			this.bot.telegram.forwardMessage(playlist, chat, +tg);
 		} else {
-			return this.sendTrack(playlist, track);
+			this.sendTrack(playlist, track);
 		}
 	}
 
@@ -249,7 +239,7 @@ export default class TelegramBot extends Controller<
 		const formatted =
 			"<u>" + name.slice(0, index) + "</u>" + name.slice(index);
 
-		const message = (await this.bot.telegram
+		const message = this.bot.telegram
 			.editMessageMedia(status.chat.id, status.message_id, undefined, {
 				type: "audio",
 				parse_mode: "HTML",
@@ -273,9 +263,9 @@ export default class TelegramBot extends Controller<
 					);
 				}
 				return status;
-			})) as Message.AudioMessage;
+			});
 
-		return message;
+		return message as Promise<Message.AudioMessage>;
 	}
 
 	private async createStatus(

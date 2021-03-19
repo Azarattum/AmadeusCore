@@ -28,7 +28,7 @@ export default class Restream extends PassThrough {
 			}
 		});
 
-		this.on("resume", () => {
+		this.once("resume", () => {
 			this.writeHeader();
 			this.writeTags();
 			if (this.cover) {
