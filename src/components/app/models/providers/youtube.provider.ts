@@ -213,10 +213,10 @@ export default class YouTubeProvider extends Provider {
 				length: 0,
 				year: year || new Date(x.snippet.publishedAt).getFullYear(),
 				cover: x.snippet.thumbnails.high.url,
-				url: null,
+				url: null as any,
 				sources: [`aggr://youtube:${x.id.videoId}`]
 			};
-		}) as ITrack[];
+		});
 
 		await this.update(
 			tracks.map(x => [x.id.videoId]),

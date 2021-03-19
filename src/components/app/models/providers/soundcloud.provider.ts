@@ -85,11 +85,11 @@ export default class SoundCloudProvider extends Provider {
 				year:
 					year ||
 					new Date(x.release_date || x.created_at).getFullYear(),
-				cover: cover.includes("default_avatar") ? null : cover,
-				url: null,
+				cover: cover.includes("default_avatar") ? undefined : cover,
+				url: null as any,
 				sources: [`aggr://soundcloud:${media}`]
 			};
-		}) as ITrack[];
+		});
 
 		await this.update(
 			tracks.map((x, i) => [x, metas[i].cover]),

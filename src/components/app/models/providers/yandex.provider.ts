@@ -62,18 +62,18 @@ export default class YandexProvider extends Provider {
 				year: x.albums[0].year,
 				cover:
 					"https://" +
-						x.coverUri.slice(0, x.coverUri.length - 2) +
-						"800x800" || null,
-				url: null,
+					x.coverUri.slice(0, x.coverUri.length - 2) +
+					"800x800",
+				url: null as any,
 				sources: [`aggr://yandex:${x.id}`]
 			};
-		}) as ITrack[];
+		});
 
 		await this.update(
 			tracks.map(x => [x.id]),
 			this.load,
 			(x, i) => {
-				metas[i].url = x;
+				metas[i].url = x as any;
 			}
 		);
 

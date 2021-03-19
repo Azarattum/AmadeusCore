@@ -5,7 +5,7 @@ export interface ITrack {
 
 	length: number;
 	year?: number;
-	cover: string | null;
-	url: string | null;
+	cover?: string;
+	url: string;
 	sources: string[];
 }

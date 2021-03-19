@@ -33,7 +33,7 @@ export default class VKProvider extends Provider {
 				album: x.album?.title || x.title,
 				length: x.duration,
 				year: new Date(x.date * 1000).getFullYear(),
-				cover: x.album?.thumb?.photo_1200 || null,
+				cover: x.album?.thumb?.photo_1200,
 				url: x.url,
 				sources: [`aggr://vk:${x.owner_id}_${x.id}`]
 			};

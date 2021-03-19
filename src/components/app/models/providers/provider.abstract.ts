@@ -39,7 +39,7 @@ export default abstract class Provider {
 			/\s*\{[^}]+\}\s*$/g //Stuff at the end
 		];
 
-		const parsed: IParsed = { title: text, artists: [] };
+		const parsed: IParsed = { title: text, artists: [], album: "" };
 
 		parsed.year = +(text.match(year)?.[2] || 0) || undefined;
 		text = text.replace(year, "");
@@ -170,6 +170,6 @@ export default abstract class Provider {
 export interface IParsed {
 	title: string;
 	artists: string[];
-	album?: string;
+	album: string;
 	year?: number;
 }
