@@ -1,19 +1,17 @@
 import { Context, Telegraf } from "telegraf";
 import { ITrack } from "../../models/track.interface";
-import { sleep } from "../../../common/utils.class";
 import { Message } from "telegraf/typings/telegram-types";
 import { clearInterval } from "timers";
 import Tenant from "../../models/tenant";
 import Controller from "../../../common/controller.abstract";
-import Loader from "../../models/loader";
 import { Readable } from "stream";
+import Restream from "../../models/restream";
 
 export default class TelegramBot extends Controller<
 	"searched" | "extended" | "reported" | "shared" | "joined"
 >() {
 	private bot!: Telegraf<BotContext>;
 	private messages: Map<number, number[]> = new Map();
-	private statusCache: Map<Message.AudioMessage, Buffer> = new Map();
 	private loaders: Map<number, NodeJS.Timeout> = new Map();
 	private requests: Map<number, IRequest> = new Map();
 	private tracks: Map<number, ITrack> = new Map();
@@ -128,11 +126,13 @@ export default class TelegramBot extends Controller<
 		track: ITrack
 	): Promise<Message.AudioMessage | void> {
 		const status = await this.createStatus(chat, track);
-		const progress = (percent: number): void => {
-			this.updateStatus(chat, status, percent, track);
-		};
+		const updates: Promise<any>[] = [];
 
-		const buffer = await Loader.load(track, progress).catch(e => {
+		const stream = await Restream.fromUrl(
+			track,
+			track.url,
+			track.cover
+		).catch(e => {
 			this.emit(
 				"reported",
 				`Failed to load track "${track.title}"!\n${e}`,
@@ -141,21 +141,18 @@ export default class TelegramBot extends Controller<
 			this.tracks.delete(status.message_id);
 			this.bot.telegram.deleteMessage(chat, status.message_id);
 		});
+		if (!stream) return;
 
-		if (!buffer) return;
+		stream.on("progress", (percent: number): void => {
+			updates.push(this.updateStatus(status, percent, track));
+		});
 
-		const message = await this.updateStatus(
-			chat,
-			status,
-			100,
-			track,
-			buffer
-		);
-		this.statusCache.set(status, buffer);
+		await Promise.all(updates);
+		const message = await this.updateStatus(status, 1, track, stream);
 		this.messages.get(chat)?.push(message.message_id);
 		track.sources.push(`tg://${message.message_id}`);
 
-		return status;
+		return message;
 	}
 
 	public async requestPlaylist(
@@ -239,14 +236,11 @@ export default class TelegramBot extends Controller<
 	}
 
 	private async updateStatus(
-		chat: number,
 		status: Message.AudioMessage,
 		percent: number,
 		track: ITrack,
-		source?: Buffer
+		source?: Readable
 	): Promise<Message.AudioMessage> {
-		if (!source && this.statusCache.has(status)) return status;
-
 		const name = track.artists.join(", ") + " - " + track.title;
 		const index = Math.min(
 			name.length,
@@ -269,12 +263,7 @@ export default class TelegramBot extends Controller<
 				caption: percent < 1 ? formatted : undefined
 			})
 			.catch(async e => {
-				if (source && percent >= 100 && percent < 115) {
-					if (e.message.includes("message to edit not found"))
-						return status;
-					if (e.message.includes("cancelled by new editMessageMedia"))
-						return status;
-
+				if (source) {
 					this.emit(
 						"reported",
 						`Track "${
@@ -282,41 +271,9 @@ export default class TelegramBot extends Controller<
 						}" failed to upload (retry ${percent - 99})!\n${e}`,
 						Level.Normal
 					);
-
-					await sleep(1000 + 1000 * Math.random());
-					return this.updateStatus(
-						chat,
-						status,
-						percent + 1,
-						track,
-						source
-					);
 				}
-
 				return status;
 			})) as Message.AudioMessage;
-
-		if (this.statusCache.has(status)) {
-			if (source) {
-				this.statusCache.delete(status);
-				return message;
-			}
-
-			this.emit(
-				"reported",
-				`Track "${track.title}" has overwritten metadata. Fixing...`,
-				Level.Normal
-			);
-
-			await sleep(1000);
-			this.updateStatus(
-				chat,
-				status,
-				100,
-				track,
-				this.statusCache.get(status)
-			);
-		}
 
 		return message;
 	}
