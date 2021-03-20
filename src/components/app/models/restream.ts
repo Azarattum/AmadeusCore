@@ -16,18 +16,6 @@ export default class Restream extends PassThrough {
 		this.audio = audio;
 		this.mime = cover?.mime || "image/jpeg";
 
-		let total = 0;
-		let previous = 0;
-		this.on("data", chunk => {
-			total += chunk.length;
-			const progress = total / this.length;
-
-			if (progress - previous > 0.1) {
-				this.emit("progress", progress);
-				previous = progress;
-			}
-		});
-
 		this.once("resume", () => {
 			this.writeHeader();
 			this.writeTags();
@@ -75,15 +63,11 @@ export default class Restream extends PassThrough {
 		return this.fromUrl(track, track.url, track.cover);
 	}
 
-	public get length(): number {
-		return 10 + this.metaLength + (this.audio.size || 0);
-	}
-
 	private get metaLength(): number {
 		const tag = 4;
 		const size = 4;
 		const flags = 2;
-		const encoding = 1;
+		const encoding = 3;
 
 		let length = 0;
 		for (const name in this.meta) {
@@ -94,7 +78,7 @@ export default class Restream extends PassThrough {
 			if (typeof item === "number") item = item.toString();
 
 			length += tag + size + flags + encoding;
-			length += Buffer.from(item, "utf-8").length;
+			length += Buffer.from(item, "ucs-2").length;
 		}
 
 		if (this.cover) {
@@ -124,7 +108,7 @@ export default class Restream extends PassThrough {
 
 	private writeHeader(): void {
 		this.write("ID3");
-		this.write(new Uint8Array([4, 0, 0]));
+		this.write(new Uint8Array([3, 0, 0]));
 
 		this.write(this.toSyncBuffer(this.metaLength));
 	}
@@ -137,38 +121,60 @@ export default class Restream extends PassThrough {
 			if (Array.isArray(value)) value = value.join(", ");
 			if (typeof value === "number") value = value.toString();
 
-			const bytes = Buffer.from(value, "utf-8");
+			const bytes = Buffer.from(value, "ucs-2");
+			const buffer = Buffer.alloc(4);
+			buffer.writeInt32BE(Buffer.byteLength(bytes) + 3);
 
 			this.write(Tag[tag as keyof typeof Tag]);
-			this.write(this.toSyncBuffer(bytes.length + 1));
-			this.write(new Uint8Array([0, 0, 3]));
+			this.write(buffer);
+			this.write(new Uint8Array([0, 0, 1]));
+			this.write(new Uint8Array([0xff, 0xfe]));
 			this.write(bytes);
 		}
 	}
 
 	private writeCoverHeader(): void {
 		if (!this.cover || !this.cover.size) return;
+		const buffer = Buffer.alloc(4);
+		buffer.writeInt32BE(this.cover.size + this.mime.length + 8);
 
 		this.write(Tag.picture);
-		this.write(this.toSyncBuffer(this.cover.size + this.mime.length + 8));
+		this.write(buffer);
 		this.write(new Uint8Array([0, 0]));
 
 		this.write(new Uint8Array([0]));
 		this.write(this.mime);
-		this.write(new Uint8Array([0, 0]));
+		this.write(new Uint8Array([0, 3]));
 		this.write("JFIF");
 		this.write(new Uint8Array([0]));
 	}
 
 	private writeAudio(audio: IInput): any {
+		let stream = audio.stream;
 		if (audio.mime !== "audio/mpeg") {
-			Ffmpeg(audio.stream as Readable)
+			stream = Ffmpeg(audio.stream as Readable)
 				.noVideo()
 				.format("mp3")
-				.pipe(this);
-		} else {
-			audio.stream.pipe(this);
+				.pipe();
 		}
+
+		let total = 0;
+		let previous = 0;
+		stream.on("data", chunk => {
+			this.write(chunk);
+
+			if (!audio.size) return;
+			total += chunk.length;
+			const progress = total / audio.size;
+			if (progress - previous > 0.1) {
+				this.emit("progress", progress);
+				previous = progress;
+			}
+		});
+
+		stream.on("end", () => {
+			this.end();
+		});
 	}
 }
 
