@@ -344,11 +344,14 @@ export default class Telegram extends Endpoint {
 			});
 
 			const admins = (await response.json())["result"];
-			for (const admin of admins) {
-				const client = this.clients.get(admin.user.id);
-				if (!client) continue;
-				client.onChat(title, chat);
-				return;
+			console.log(admins);
+			if (Array.isArray(admins)) {
+				for (const admin of admins) {
+					const client = this.clients.get(admin.user.id);
+					if (!client) continue;
+					client.onChat(title, chat);
+					return;
+				}
 			}
 
 			await this.call("leaveChat", { chat_id: chat });
