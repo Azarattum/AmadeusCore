@@ -1,11 +1,12 @@
 import Application, { handle } from "../common/application.abstract";
-import { log, LogType } from "../common/utils.class";
+import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
 import { ITrack } from "./models/track.interface";
 import Preserver from "./controllers/preserver.controller";
-import TelegramBot from "./controllers/endpoints/tgbot.endpoint";
 import Tenant from "./models/tenant";
 import { Playlist } from "@prisma/client";
+import Telegram from "./controllers/endpoints/telegram.endpoint";
+import Endpoint from "./controllers/endpoints/endpoint.abstract";
 
 /**
  * Application class
@@ -15,7 +16,7 @@ export default class App extends Application {
 	 * Application constructor
 	 */
 	public constructor() {
-		super([Preserver, Aggregator, TelegramBot]);
+		super([Aggregator, Preserver, Telegram]);
 	}
 
 	/**
@@ -23,7 +24,7 @@ export default class App extends Application {
 	 */
 	public async initialize(): Promise<void> {
 		await super.initialize(
-			[TelegramBot, process.env["BOT_TOKEN"]],
+			[Telegram, process.env["BOT_TOKEN"]],
 			[
 				Aggregator,
 				{
@@ -36,82 +37,50 @@ export default class App extends Application {
 		);
 	}
 
-	@handle(TelegramBot)
-	private onTelegramBot(bot: TelegramBot): void {
-		bot.on("reported", (message: string, level: number) => {
-			const levels = [LogType.INFO, LogType.WARNING, LogType.ERROR];
-			log(message, levels[level]);
-		});
+	@handle(Endpoint)
+	private onEndpoint(endpoint: Endpoint): void {
+		const name = endpoint.tenant.identifier;
+		const aggregator = this.getComponent(Aggregator, endpoint.tenant);
+		const preserver = this.getComponent(Preserver, endpoint.tenant);
 
-		bot.on("searched", async (tenant: Tenant, query: string) => {
-			log(`${tenant.identifier} searched for "${query}"...`);
+		endpoint.on("searched", async (query: string) => {
+			log(`${name} searched for "${query}"...`);
 
-			bot.showLoader(tenant.telegram);
-			const aggregator = this.getComponent(Aggregator, tenant);
 			const track = await aggregator.single(query);
-			bot.hideLoader(tenant.telegram);
 			if (!track) return;
-
-			bot.sendTrack(tenant.telegram, track).catch(e => {
-				log(
-					`Failed to send track "${track.title}"!\n${e}`,
-					LogType.ERROR
-				);
-			});
+			endpoint.sendTracks([track]);
 		});
 
-		bot.on("extended", async (tenant: Tenant) => {
-			log(`${tenant.identifier} requested more tracks...`);
+		endpoint.on("extended", async () => {
+			log(`${name} requested more tracks...`);
 
-			bot.showLoader(tenant.telegram);
-			const aggregator = this.getComponent(Aggregator, tenant);
-			const tracks = await aggregator.more(async (tracks: ITrack[]) => {
-				bot.hideLoader(tenant.telegram);
-				for (const track of tracks) {
-					bot.sendTrack(tenant.telegram, track).catch(e => {
-						log(
-							`Failed to send track "${track.title}"!\n${e}`,
-							LogType.ERROR
-						);
-					});
-				}
+			const tracks = await aggregator.extend(async (tracks: ITrack[]) => {
+				endpoint.sendTracks(tracks);
 			});
-			bot.hideLoader(tenant.telegram);
 
-			log(
-				`${tracks?.length || 0} tracks found for ${tenant.identifier}.`
-			);
+			log(`${tracks?.length || 0} tracks found for ${name}.`);
 		});
 
-		bot.on("shared", async (tenant: Tenant, track: ITrack) => {
-			const preserver = this.getComponent(Preserver, tenant);
+		endpoint.on("playlists", async () => {
+			log(`${name} requested his/her playlists.`);
 			const playlists = (await preserver.getPlaylists()).map(
 				x => x.title
 			);
 
-			const playlist = await bot
-				.requestPlaylist(tenant.telegram, playlists)
-				.catch(() => {});
-			if (!playlist) return;
-
-			preserver.playlistTrack(track, playlist);
-
-			log(
-				`${tenant.identifier} shared track "${track.title}" to "${playlist}".`
-			);
+			endpoint.setPlaylists(playlists);
 		});
 
-		bot.on(
-			"joined",
-			async (tenant: Tenant, playlist: string, telegram: number) => {
-				log(
-					`Bot joined ${tenant.identifier}'s playlist "${playlist}".`
-				);
+		endpoint.on("playlisted", async (track: ITrack, playlist: string) => {
+			log(`${name} added track "${track.title}" to "${playlist}".`);
 
-				const preserver = this.getComponent(Preserver, tenant);
-				preserver.updatePlaylist(playlist, telegram);
-			}
-		);
+			preserver.playlistTrack(track, playlist);
+		});
+
+		endpoint.on("relist", (playlist: string, id: number) => {
+			log(`"${playlist}" relisted as "${id}".`);
+
+			preserver.updatePlaylist(playlist, id);
+		});
 	}
 
 	@handle(Preserver)
@@ -119,17 +88,11 @@ export default class App extends Application {
 		preserver.on(
 			"playlisted",
 			(tenant: Tenant, track: ITrack, playlist: Playlist) => {
-				const bot = this.getComponent(TelegramBot);
+				const endpoints = this.getComponents(Endpoint, tenant);
 
-				if (playlist.telegram) {
-					bot.playlistTrack(
-						tenant.telegram,
-						playlist.telegram,
-						track
-					).catch(() => {
-						preserver.updatePlaylist(playlist.title, null);
-					});
-				}
+				endpoints.forEach(x => {
+					x.playlistTrack(track, playlist);
+				});
 			}
 		);
 	}

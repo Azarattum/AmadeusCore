@@ -94,7 +94,7 @@ export default class Aggregator extends Controller() {
 		return null;
 	}
 
-	public async more(
+	public async extend(
 		callback?: (tracks: ITrack[]) => void
 	): Promise<ITrack[]> {
 		if (!this.lastQuery) return [];

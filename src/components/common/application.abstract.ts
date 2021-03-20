@@ -226,7 +226,7 @@ export default abstract class Application {
 	 * @param type Component's type
 	 */
 	protected getComponent<T extends IComponent>(
-		type: IComponentType<T>,
+		type: IComponentType<T> | (Function & { prototype: T }),
 		relation?: object
 	): T {
 		const component = this.components.find(
@@ -247,10 +247,13 @@ export default abstract class Application {
 	 * @param type Component's type
 	 */
 	protected getComponents<T extends IComponent>(
-		type: IComponentType<T>
+		type: IComponentType<T> | (Function & { prototype: T }),
+		relation?: object
 	): T[] {
 		return this.components.filter(
-			component => component instanceof (type.valueOf() as any)
+			component =>
+				component instanceof (type.valueOf() as any) &&
+				(!relation || (component as any).relation === relation)
 		) as T[];
 	}
 
@@ -274,14 +277,15 @@ export default abstract class Application {
 			}
 
 			//Call all component's handlers
-			const handlers = this.handlers.get(
-				component.constructor as IComponentType
-			);
-			if (handlers) {
-				handlers.forEach(handler => {
-					handler(component);
-				});
-			}
+			let target = component.constructor as any;
+			do {
+				const handlers = this.handlers.get(target);
+				if (handlers) {
+					handlers.forEach(handler => {
+						handler(component);
+					});
+				}
+			} while ((target = target.__proto__));
 
 			//Initialize the component with its config
 			const args =
@@ -352,7 +356,9 @@ export default abstract class Application {
  * before its initializtion. The main use case is events registration
  * @param type Component type to handle
  */
-export function handle<T extends IComponent>(type: IComponentType<T>) {
+export function handle<T extends IComponent>(
+	type: IComponentType<T> | (Function & { prototype: T })
+) {
 	return function(
 		target: Application,
 		_: string,
@@ -364,11 +370,10 @@ export function handle<T extends IComponent>(type: IComponentType<T>) {
 
 		const original = target["registerHandlers"];
 		target["registerHandlers"] = function(...args): any {
-			let handlers = this["handlers"].get(type);
+			let handlers = this["handlers"].get(type as any);
 			if (!handlers) handlers = [];
 			handlers.push(handler.bind(this));
-			this["handlers"].set(type, handlers);
-
+			this["handlers"].set(type as any, handlers);
 			return original.bind(this)(...args);
 		};
 	};
