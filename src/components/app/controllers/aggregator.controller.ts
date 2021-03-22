@@ -24,8 +24,8 @@ export default class Aggregator extends Controller() {
 		const providers: Record<string, typeof Provider> = {
 			vk: VKProvider,
 			yandex: YandexProvider,
-			soundCloud: SoundCloudProvider,
-			youTube: YouTubeProvider
+			youTube: YouTubeProvider,
+			soundCloud: SoundCloudProvider
 		};
 
 		for (const i in providers) {

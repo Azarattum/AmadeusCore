@@ -8,6 +8,7 @@ import Restream from "../../models/restream";
 import Tenant from "../../models/tenant";
 import { ITrack } from "../../models/track.interface";
 import Endpoint from "./endpoint.abstract";
+import AbortController from "abort-controller";
 
 export default class Telegram extends Endpoint {
 	private client: number;
@@ -21,6 +22,7 @@ export default class Telegram extends Endpoint {
 	private static url: string;
 	private static inited = false;
 	private static clients: Map<number, Telegram> = new Map();
+	private static abortController: AbortController;
 
 	public constructor(args: IComponentOptions) {
 		super(args);
@@ -31,8 +33,9 @@ export default class Telegram extends Endpoint {
 		Telegram.initialize(token, this);
 	}
 
-	public close(): void {
+	public async close(): Promise<void> {
 		Telegram.inited = false;
+		Telegram.abortController.abort();
 	}
 
 	public async setPlaylists(playlists: string[]): Promise<any> {
@@ -84,21 +87,47 @@ export default class Telegram extends Endpoint {
 	private async sendTrack(track: ITrack, playlist?: number): Promise<void> {
 		clearInterval(this.loader);
 		const status = await this.sendStatus(track, playlist);
-		const stream = await Restream.fromTrack(track);
+		let source: Restream | null = await Restream.fromTrack(track);
+		const abort = new AbortController();
 
 		let file: string | null = null;
-		stream.on("progress", async (progress: number) => {
+		let loaded: number | null = 0;
+		let request: Promise<any> | null = null;
+		source.on("progress", async (progress: number) => {
 			if (playlist) return;
-			await this.updateStatus(status, progress, track);
-			if (!file) return;
-			this.updateStatus(status, 1, track, file);
+			if (loaded === null) return;
+
+			loaded = progress;
+			await request;
+			if (loaded != progress) return;
+			if (file) return;
+
+			request = this.updateStatus(status, progress, track, {
+				abort
+			}).catch(() => null);
 		});
 
-		file = (await this.updateStatus(status, 1, track, stream, playlist))[1];
+		source.on("beforeEnd", async () => {
+			loaded = null;
+			await request;
+			source?.end();
+		});
+
+		const options = { source, playlist };
+		file = (
+			await this.updateStatus(status, 1, track, options).catch(e => {
+				source?.destroy();
+				throw e;
+			})
+		)[1];
+		abort.abort();
 		this.tracks.set(status[0], track);
 		track.sources.push(`tg://${file}`);
 		this.messages.push(status[0]);
-		stream.destroy();
+
+		source.removeAllListeners();
+		source.destroy();
+		source = null;
 	}
 
 	private async sendStatus(
@@ -127,7 +156,8 @@ export default class Telegram extends Endpoint {
 
 		const result = (await response.json())["result"];
 		const message = +result["message_id"];
-		const file = result["audio"]["file_id"];
+		const file =
+			result["audio"]?.["file_id"] || result["document"]?.["file_id"];
 		return [message, file];
 	}
 
@@ -135,8 +165,7 @@ export default class Telegram extends Endpoint {
 		status: [number, string],
 		progress: number,
 		track: ITrack,
-		source?: Readable | string,
-		playlist?: number
+		{ source, playlist, abort }: IUpdateOptions
 	): Promise<[number, string]> {
 		const name = track.artists.join(", ") + " - " + track.title;
 		const index = Math.min(
@@ -146,32 +175,42 @@ export default class Telegram extends Endpoint {
 		const formatted =
 			"<u>" + name.slice(0, index) + "</u>" + name.slice(index);
 
-		const response = await this.call("editMessageMedia", {
+		const media = {
+			type: "audio",
+			parse_mode: "HTML",
+			media:
+				source && typeof source != "string"
+					? "attach://audio"
+					: source || status[1],
+
+			title: track.title,
+			performer: track.artists.join(", "),
+			duration: Math.round(track.length),
+			caption: !source ? formatted : undefined
+		};
+
+		const audio =
+			source && typeof source != "string"
+				? [source, name + ".mp3"]
+				: undefined;
+
+		const payload = {
 			...(playlist ? { chat_id: playlist } : {}),
 			message_id: status[0],
-			media: {
-				type: "audio",
-				parse_mode: "HTML",
-				media:
-					source && typeof source != "string"
-						? "attach://audio"
-						: source || status[1],
+			media,
+			audio
+		};
 
-				title: track.title,
-				performer: track.artists.join(", "),
-				duration: Math.round(track.length),
-				caption: !source ? formatted : undefined
-			},
-			audio:
-				source && typeof source != "string"
-					? [source, name + ".mp3"]
-					: undefined
-		});
-		if (!response.ok) return status;
+		const response = await this.call("editMessageMedia", payload, abort);
+		if (!response.ok) {
+			if (!source) return status;
+			throw new Error(await response.text());
+		}
 
 		const result = (await response.json())["result"];
 		const message = +result["message_id"];
-		const file = result["audio"]["file_id"];
+		const file =
+			result["audio"]?.["file_id"] || result["document"]?.["file_id"];
 		return [message, file];
 	}
 
@@ -237,9 +276,14 @@ export default class Telegram extends Endpoint {
 
 	private call(
 		method: string,
-		params: Record<string, any> = {}
+		params: Record<string, any> = {},
+		abort?: AbortController
 	): Promise<Response> {
-		return Telegram.call(method, { chat_id: this.client, ...params });
+		return Telegram.call(
+			method,
+			{ chat_id: this.client, ...params },
+			abort
+		);
 	}
 
 	public static get relations(): object[] {
@@ -248,12 +292,29 @@ export default class Telegram extends Endpoint {
 
 	private static async call(
 		method: string,
-		params: Record<string, any> = {}
+		params: Record<string, any> = {},
+		abortController?: AbortController
 	): Promise<Response> {
+		const mixedAbort = new AbortController();
+		this.abortController.signal.addEventListener("abort", (): void => {
+			mixedAbort.abort();
+		});
+		abortController?.signal.addEventListener("abort", (): void => {
+			mixedAbort.abort();
+		});
+
 		return fetch(this.url + method, {
 			method: "POST",
 			headers: Form.headers,
-			body: new Form(params)
+			body: new Form(params),
+			signal: mixedAbort.signal
+		}).catch(e => {
+			return {
+				status: 503,
+				text: (): string => e,
+				json: () => null,
+				ok: false
+			} as any;
 		});
 	}
 
@@ -261,8 +322,9 @@ export default class Telegram extends Endpoint {
 		if (!this.inited) return;
 		const response = await this.call("getUpdates", {
 			offset,
-			timeout: 5
+			timeout: 30
 		});
+		if (!this.inited) return;
 
 		//Timeout
 		if (response.status == 502) {
@@ -344,7 +406,6 @@ export default class Telegram extends Endpoint {
 			});
 
 			const admins = (await response.json())["result"];
-			console.log(admins);
 			if (Array.isArray(admins)) {
 				for (const admin of admins) {
 					const client = this.clients.get(admin.user.id);
@@ -366,7 +427,14 @@ export default class Telegram extends Endpoint {
 		this.clients.set(instance.client, instance);
 		if (this.inited) return;
 		this.url = "https://api.telegram.org/bot" + token + "/";
+		this.abortController = new AbortController();
 		this.inited = true;
 		this.subscribe();
 	}
+}
+
+interface IUpdateOptions {
+	source?: Readable | string;
+	playlist?: number;
+	abort?: AbortController;
 }

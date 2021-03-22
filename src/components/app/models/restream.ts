@@ -40,22 +40,32 @@ export default class Restream extends PassThrough {
 		const coverLoading = coverUrl ? fetch(coverUrl) : null;
 
 		const [audio, cover] = await Promise.all([audioLoading, coverLoading]);
+		const audioMime = audio.headers.get("content-type") || "audio/unknown";
+		const audioSize = +(audio.headers.get("content-length") || 0) || null;
+
+		let coverData;
+		if (cover) {
+			let stream = cover.body;
+			const mime = cover.headers.get("content-type") || "image/jpeg";
+			let size = +(cover?.headers.get("content-length") || 0);
+
+			if (!size) {
+				const buffer = await cover.buffer();
+				size = buffer.byteLength;
+				stream = Readable.from(buffer);
+			}
+
+			coverData = { stream, mime, size };
+		}
 
 		return new Restream(
 			meta,
 			{
 				stream: audio.body,
-				mime: audio.headers.get("content-type"),
-				size: +(audio.headers.get("content-length") || 0) || null
+				mime: audioMime,
+				size: audioSize
 			},
-			cover
-				? {
-						stream: cover.body,
-						mime: cover.headers.get("content-type"),
-						size:
-							+(cover.headers.get("content-length") || 0) || null
-				  }
-				: undefined
+			coverData
 		);
 	}
 
@@ -81,7 +91,7 @@ export default class Restream extends PassThrough {
 			length += Buffer.from(item, "ucs-2").length;
 		}
 
-		if (this.cover) {
+		if (this.cover && this.cover.size) {
 			length += tag + size + flags;
 			length += 8 + this.mime.length + (this.cover?.size || 0); //Image & header
 		}
@@ -173,6 +183,7 @@ export default class Restream extends PassThrough {
 		});
 
 		stream.on("end", () => {
+			if (this.emit("beforeEnd")) return;
 			this.end();
 		});
 	}
