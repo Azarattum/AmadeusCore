@@ -14,11 +14,13 @@ export default class SoundCloudProvider extends Provider {
 
 	private async search(
 		query: string,
-		count = 1
+		count = 1,
+		offset = 0
 	): Promise<ITrackSoundCloud[]> {
 		const response = await this.call("search/tracks", {
 			q: query,
-			limit: count
+			limit: count,
+			offset
 		});
 		const json = await response.json();
 
@@ -53,9 +55,9 @@ export default class SoundCloudProvider extends Provider {
 		return [json.url || null, cover];
 	}
 
-	public async get(query: string, count = 1): Promise<ITrack[]> {
+	public async get(query: string, count = 1, offset = 0): Promise<ITrack[]> {
 		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\||\band\b/;
-		const tracks = await this.search(query, count);
+		const tracks = await this.search(query, count, offset);
 
 		const metas = tracks.map(x => {
 			const { title, album, artists, year } = this.parse(x.title);

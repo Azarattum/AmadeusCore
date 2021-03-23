@@ -12,18 +12,23 @@ export default class VKProvider extends Provider {
 		access_token: this.token
 	};
 
-	private async search(query: string, count = 1): Promise<ITrackVK[]> {
+	private async search(
+		query: string,
+		count = 1,
+		offset = 0
+	): Promise<ITrackVK[]> {
 		const response = await this.call("audio.search", {
 			q: query,
-			count: count
+			count,
+			offset
 		});
 		const json = await response.json();
 
 		return json["response"]["items"] as ITrackVK[];
 	}
 
-	public async get(query: string, count = 1): Promise<ITrack[]> {
-		const tracks = await this.search(query, count);
+	public async get(query: string, count = 1, offset = 0): Promise<ITrack[]> {
+		const tracks = await this.search(query, count, offset);
 		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\||\band\b/;
 
 		const metas = tracks.map(x => {

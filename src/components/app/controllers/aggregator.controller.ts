@@ -15,6 +15,7 @@ export default class Aggregator extends Controller() {
 	private providers: Provider[] = [];
 	private lastQuery: string | undefined;
 	private lastTrack: ITrack | undefined;
+	private repeats = 0;
 
 	public static get relations(): object[] {
 		return Tenant.tenants;
@@ -68,6 +69,7 @@ export default class Aggregator extends Controller() {
 
 	public async single(query: string): Promise<ITrack | null> {
 		this.lastQuery = query;
+		this.repeats = 0;
 
 		const promises = [];
 		for (const i in this.providers) {
@@ -99,13 +101,15 @@ export default class Aggregator extends Controller() {
 	): Promise<ITrack[]> {
 		if (!this.lastQuery) return [];
 		const limits = [6, 5, 2, 2];
+		const offsets = limits.map(x => x * this.repeats);
+		this.repeats++;
 
 		const tracks: ITrack[] = [];
 		const promises = [];
 		for (const i in this.providers) {
 			if (!limits[i]) continue;
 			const promise = this.providers[i]
-				.get(this.lastQuery, limits[i])
+				.get(this.lastQuery, limits[i], offsets[i])
 				.then(x => {
 					callback?.(
 						this.filter(x, tracks).filter(

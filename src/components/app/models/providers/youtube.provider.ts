@@ -12,14 +12,30 @@ export default class YouTubeProvider extends Provider {
 	/**Player decryption cache */
 	private playerCache: Map<string, Function> = new Map();
 
-	private async search(query: string, count = 1): Promise<ITrackYouTube[]> {
+	private async search(
+		query: string,
+		count = 1,
+		offset = 0
+	): Promise<ITrackYouTube[]> {
 		const response = await this.call("search", {
 			part: "snippet",
 			q: query,
-			maxResults: count,
+			maxResults: offset || count,
 			type: "video"
 		});
-		const json = await response.json();
+		let json = await response.json();
+
+		if (offset) {
+			const pageToken = json.nextPageToken;
+			const response = await this.call("search", {
+				part: "snippet",
+				q: query,
+				maxResults: count,
+				type: "video",
+				pageToken
+			});
+			json = await response.json();
+		}
 
 		return json.items;
 	}
@@ -197,8 +213,8 @@ export default class YouTubeProvider extends Provider {
 		return [audio.url, thumb, +audio.approxDurationMs / 1000];
 	}
 
-	public async get(query: string, count = 1): Promise<ITrack[]> {
-		const tracks = await this.search(query, count);
+	public async get(query: string, count = 1, offset = 0): Promise<ITrack[]> {
+		const tracks = await this.search(query, count, offset);
 		if (!tracks) return [];
 
 		const metas = tracks.map(x => {

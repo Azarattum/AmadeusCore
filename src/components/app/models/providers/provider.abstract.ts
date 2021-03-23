@@ -162,7 +162,11 @@ export default abstract class Provider {
 		});
 	}
 
-	abstract get(query: string, count: number): Promise<ITrack[]>;
+	abstract get(
+		query: string,
+		count: number,
+		offset?: number
+	): Promise<ITrack[]>;
 
 	abstract desource(source: string): Promise<string | null>;
 }

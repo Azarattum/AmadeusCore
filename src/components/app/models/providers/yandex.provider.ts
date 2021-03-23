@@ -15,18 +15,26 @@ export default class YandexProvider extends Provider {
 		count = 1,
 		offset = 0
 	): Promise<ITrackYandex[]> {
+		const perPage = 20;
 		const response = await this.call("search", {
 			type: "track",
 			text: query,
-			page: offset,
+			page: Math.floor(offset / perPage),
 			nococrrect: false
 		});
 
 		const json = await response.json();
-		const tracks = json["result"]["tracks"]?.["results"].slice(0, count);
+		const tracks = json["result"]["tracks"]?.["results"].slice(
+			offset % perPage,
+			count
+		);
+
 		if (!tracks) return [];
-		if (count > 20) {
-			tracks.push(...(await this.search(query, count - 20, offset + 1)));
+		const onPage = perPage - (offset % perPage);
+		if (count > onPage) {
+			tracks.push(
+				...(await this.search(query, count - onPage, offset + onPage))
+			);
 		}
 
 		return tracks;
@@ -50,8 +58,8 @@ export default class YandexProvider extends Provider {
 		return `https://${info.host}/get-mp3/${sign}/${info.ts}${info.path}`;
 	}
 
-	public async get(query: string, count = 1): Promise<ITrack[]> {
-		const tracks = await this.search(query, count);
+	public async get(query: string, count = 1, offset = 0): Promise<ITrack[]> {
+		const tracks = await this.search(query, count, offset);
 
 		const metas = tracks.map(x => {
 			return {
