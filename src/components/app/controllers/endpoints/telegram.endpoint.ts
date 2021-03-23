@@ -280,6 +280,7 @@ export default class Telegram extends Endpoint {
 				action: "record_voice"
 			});
 		};
+		clearInterval(this.loader);
 		this.loader = +setInterval(action, 3000);
 		action();
 	}
