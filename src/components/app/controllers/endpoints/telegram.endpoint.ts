@@ -88,10 +88,9 @@ export default class Telegram extends Endpoint {
 	private async sendTrack(track: ITrack, playlist?: number): Promise<void> {
 		clearInterval(this.loader);
 		const status = await this.sendStatus(track, playlist);
-		this.messages.push(status[0]);
-
 		let source: Restream | null = await Restream.fromTrack(track);
 		const abort = new AbortController();
+		this.messages.push(status[0]);
 		this.aborts.add(abort);
 
 		let file: string | null = null;
@@ -322,7 +321,7 @@ export default class Telegram extends Endpoint {
 		}).catch(e => {
 			return {
 				status: 503,
-				text: (): string => e,
+				text: (): string => e.toString(),
 				json: () => null,
 				ok: false
 			} as any;
