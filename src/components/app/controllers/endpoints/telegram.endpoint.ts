@@ -18,6 +18,7 @@ export default class Telegram extends Endpoint {
 	private share?: ITrack;
 	private playlists: string[] = [];
 	private tempMessages: number[] = [];
+	private aborts: Set<AbortController> = new Set();
 
 	private static url: string;
 	private static inited = false;
@@ -87,8 +88,11 @@ export default class Telegram extends Endpoint {
 	private async sendTrack(track: ITrack, playlist?: number): Promise<void> {
 		clearInterval(this.loader);
 		const status = await this.sendStatus(track, playlist);
+		this.messages.push(status[0]);
+
 		let source: Restream | null = await Restream.fromTrack(track);
 		const abort = new AbortController();
+		this.aborts.add(abort);
 
 		let file: string | null = null;
 		let loaded: number | null = 0;
@@ -113,21 +117,27 @@ export default class Telegram extends Endpoint {
 			source?.end();
 		});
 
-		const options = { source, playlist };
+		const options = { source, playlist, abort };
 		file = (
 			await this.updateStatus(status, 1, track, options).catch(e => {
+				if (e.message?.toString().startsWith("AbortError")) {
+					return [null, null];
+				}
+
 				source?.destroy();
 				throw e;
 			})
 		)[1];
 		abort.abort();
-		this.tracks.set(status[0], track);
-		track.sources.push(`tg://${file}`);
-		this.messages.push(status[0]);
+		this.aborts.delete(abort);
 
 		source.removeAllListeners();
 		source.destroy();
 		source = null;
+
+		if (!file) return;
+		this.tracks.set(status[0], track);
+		track.sources.push(`tg://${file}`);
 	}
 
 	private async sendStatus(
@@ -235,6 +245,7 @@ export default class Telegram extends Endpoint {
 	private onCommand(command: string, data: any): void {
 		switch (command) {
 			case "clear": {
+				this.aborts.forEach(x => x.abort());
 				let message_id;
 				while ((message_id = this.messages.shift())) {
 					this.tracks.delete(message_id);
