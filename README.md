@@ -1,8 +1,8 @@
-![]()
 # Amadeus
-<span style="display:block;text-align:center">
-Self hosted <b>music</b> streaming service.
+<span align="center">
 
+Self hosted **music** streaming service.
+  
 ![Logo](assets/logo/center.jpg)
 
 </span>
