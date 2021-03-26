@@ -1,5 +1,11 @@
+![]()
 # Amadeus
-Self hosted music streaming service.
+<span style="display:block;text-align:center">
+Self hosted <b>music</b> streaming service.
+
+![Logo](assets/logo/center.jpg)
+
+</span>
 
 ### Installation: 
 Install all the development dependencies:

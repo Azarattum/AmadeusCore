@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Moho 12.4 build 22203 -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Frame_0" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512px" height="512px">
+<g id="Background">
+<g id="Full">
+<path fill="#1c1c1c" fill-rule="evenodd" stroke="none" d="M -270.272 -329.115 C -270.170 -329.115 750.962 -329.115 751.064 -329.115 C 751.064 -329.004 751.064 777.222 751.064 777.333 C 750.962 777.333 -270.170 777.333 -270.272 777.333 C -270.272 777.222 -270.272 -329.004 -270.272 -329.115 Z"/>
+</g>
+</g>
+<g id="Inner_Circle">
+<path fill="#cbcbcb" fill-rule="evenodd" stroke="none" d="M 256.000 101.522 C 341.503 101.522 410.478 170.497 410.478 256.000 C 410.478 341.503 341.503 410.478 256.000 410.478 C 170.497 410.478 101.522 341.503 101.522 256.000 C 101.522 170.497 170.497 101.522 256.000 101.522 Z"/>
+</g>
+<g id="Logo">
+<g id="Center">
+<linearGradient id="05fc3b9c-01e2-4a7a-9679-ea286bb63699_0" x1="-5.18%" y1="22.73%" x2="114.20%" y2="67.75%">
+<stop offset="0.00%" style="stop-color:rgb(144,21,24);stop-opacity:1.00" />
+<stop offset="100.00%" style="stop-color:rgb(236,44,80);stop-opacity:1.00" />
+</linearGradient>
+<path fill="url(#05fc3b9c-01e2-4a7a-9679-ea286bb63699_0)" fill-rule="evenodd" stroke="none" d="M 433.859 366.208 C 393.836 370.276 337.733 312.683 233.348 78.816 C 233.342 78.817 173.308 90.113 173.301 90.114 C 290.590 349.943 357.015 427.076 433.878 433.184 C 446.648 422.022 447.017 378.687 433.859 366.208 Z"/>
+<linearGradient id="05fc3b9c-01e2-4a7a-9679-ea286bb63699_1" x1="50.00%" y1="105.02%" x2="51.63%" y2="14.87%">
+<stop offset="0.00%" style="stop-color:rgb(144,21,24);stop-opacity:1.00" />
+<stop offset="100.00%" style="stop-color:rgb(236,44,80);stop-opacity:1.00" />
+</linearGradient>
+<path fill="url(#05fc3b9c-01e2-4a7a-9679-ea286bb63699_1)" fill-rule="evenodd" stroke="none" d="M 233.348 78.816 C 233.342 78.817 173.308 90.113 173.301 90.114 C 173.302 90.142 174.029 366.651 174.029 366.679 C 174.035 366.679 234.979 366.679 234.985 366.679 C 234.985 366.650 233.349 78.845 233.348 78.816 Z"/>
+<linearGradient id="05fc3b9c-01e2-4a7a-9679-ea286bb63699_2" x1="88.11%" y1="88.03%" x2="7.94%" y2="19.45%">
+<stop offset="0.00%" style="stop-color:rgb(144,21,24);stop-opacity:1.00" />
+<stop offset="100.00%" style="stop-color:rgb(236,44,80);stop-opacity:1.00" />
+</linearGradient>
+<path fill="url(#05fc3b9c-01e2-4a7a-9679-ea286bb63699_2)" fill-rule="evenodd" stroke="none" d="M 141.372 336.417 C 193.764 319.512 225.806 332.491 233.360 355.904 C 240.914 379.316 222.500 408.574 170.108 425.479 C 117.717 442.383 85.676 429.406 78.122 405.994 C 70.567 382.582 88.980 353.322 141.372 336.417 Z"/>
+</g>
+</g>
+</svg>
