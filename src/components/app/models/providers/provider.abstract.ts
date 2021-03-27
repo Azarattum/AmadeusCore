@@ -18,7 +18,7 @@ export default abstract class Provider extends Fetcher {
 			/\s*([({【][^)]*)?\bver(\.|sion)?(\s*[\])}】])?/i, //Versions
 			/[[({【]?\s*(original\s*)?(of+icial\s*)?(music\s*)?(video|mix)(\s*[\])}】])?/i, //Official/music video
 			/\s*(full\s*)?album\s*(tracks?)?/i, //Album
-			/\s*[[({【]?\s*(with)?\s*\+(of+icial)?\s*lyrics?\s*(video)?\s*([\])}】]|$)/i, //Lyrics
+			/\s*[[({【]?\s*(with)?\s*(of+icial)?\s*lyrics?\s*(video)?\s*([\])}】]|$)/i, //Lyrics
 			/\s*[[({【]\s*(HD|HQ|[0-9]{3,4}p|4K)\s*(version|video|quality)?\s*[\])}】]/i, //Qulity
 			/[\s\-–_♫]+(HD|HQ|[0-9]{3,4}(p|bpm)|4K)\s*(version|video|quality)?\s*/gi, //Quality 2
 			/\s*\(?live\)?$/, //Live

@@ -1,9 +1,9 @@
 name: CI
 on:
     push:
-        branches: [master, base, browser, node]
+        branches: [main]
     pull_request:
-        branches: [master, base, browser, node]
+        branches: [main]
 
 jobs:
     test:

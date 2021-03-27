@@ -1,6 +1,6 @@
 import Provider from "../../app/models/providers/provider.abstract";
 
-const parse = Provider.prototype.parse;
+const parse = (Provider.prototype as any).parse;
 
 describe("Parser", () => {
 	/**
@@ -143,7 +143,7 @@ describe("Parser", () => {
 		val = parse(
 			"Game Of Thrones Theme (Music Box Vocal Version -- Cover of Karliene Lyrics)"
 		);
-		expect(val.title).toBe("Cover of Karliene Lyrics");
+		expect(val.title).toBe("Cover of Karliene");
 		expect(val.artists).toEqual([
 			"Music Box Vocal",
 			"Game Of Thrones Theme"
