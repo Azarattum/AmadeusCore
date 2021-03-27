@@ -8,8 +8,7 @@ describe("App", () => {
 		console.log = jest.fn();
 		console.error = jest.fn();
 		const init = (): void => {
-			const app = new App();
-			app.initialize();
+			new App();
 		};
 
 		expect(init).not.toThrowError();
