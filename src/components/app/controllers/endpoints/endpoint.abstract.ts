@@ -20,6 +20,8 @@ export default abstract class Endpoint extends Controller<
 
 	public abstract setPlaylists(playlists: string[]): Promise<void>;
 
+	public abstract clearPlaylist(playlist: Playlist): Promise<void>;
+
 	public abstract sendTracks(tracks: ITrack[]): Promise<void>;
 
 	public abstract playlistTrack(

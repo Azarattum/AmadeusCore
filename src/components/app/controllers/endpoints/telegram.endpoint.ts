@@ -16,13 +16,13 @@ const LISTEN_TAG = "#listen";
 
 export default class Telegram extends Endpoint {
 	private client: number;
-	private messages: number[] = [];
+	private messages: Map<number | undefined, number[]> = new Map();
 	private tracks: Map<number, ITrack> = new Map();
 	private loader?: number;
 	private lastTrack?: ITrack;
 	private tempMessages: number[] = [];
 	private requests: IRequest[] = [];
-	private aborts: Set<AbortController> = new Set();
+	private aborts: Map<number | undefined, Set<AbortController>> = new Map();
 
 	private static url: string;
 	private static inited = false;
@@ -97,12 +97,32 @@ export default class Telegram extends Endpoint {
 		}
 	}
 
+	public async clearPlaylist(playlist?: Playlist): Promise<void> {
+		const id = playlist?.telegram || undefined;
+		this.aborts.get(id)?.forEach(x => x.abort());
+
+		const messages = this.messages.get(id);
+		if (!messages) return;
+
+		const promises: Promise<any>[] = [];
+		let message_id;
+		while ((message_id = messages.shift())) {
+			this.tracks.delete(message_id);
+			promises.push(this.call("deleteMessage", { message_id }));
+		}
+
+		await Promise.all(promises);
+	}
+
 	private async sendTrack(track: ITrack, playlist?: number): Promise<void> {
 		const status = await this.sendStatus(track, playlist);
 		let source: Restream | null = await Restream.fromTrack(track);
 		const abort = new AbortController();
-		this.messages.push(status[0]);
-		this.aborts.add(abort);
+
+		if (!this.messages.has(playlist)) this.messages.set(playlist, []);
+		this.messages.get(playlist)?.push(status[0]);
+		if (!this.aborts.has(playlist)) this.aborts.set(playlist, new Set());
+		this.aborts.get(playlist)?.add(abort);
 
 		let file: string | null = null;
 		let loaded: number | null = 0;
@@ -139,7 +159,7 @@ export default class Telegram extends Endpoint {
 			})
 		)[1];
 		abort.abort();
-		this.aborts.delete(abort);
+		this.aborts.get(playlist)?.delete(abort);
 
 		source.removeAllListeners();
 		source.destroy();
@@ -251,12 +271,7 @@ export default class Telegram extends Endpoint {
 	private onCommand(command: string, data: any): void {
 		switch (command) {
 			case "clear": {
-				this.aborts.forEach(x => x.abort());
-				let message_id;
-				while ((message_id = this.messages.shift())) {
-					this.tracks.delete(message_id);
-					this.call("deleteMessage", { message_id });
-				}
+				this.clearPlaylist();
 				break;
 			}
 			case "playlist": {
