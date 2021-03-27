@@ -19,6 +19,7 @@ npm install
 | **start** | Runs your application                                   |
 | release   | Creates a production build of the project               |
 | build     | Builds the entire project with webpack                  |
+| migrate   | Migrates the database to a new schema                   |
 | watch     | Watches all file changes and rebuilds them if necessary |
 | test      | Runs all tests                                          |
 | coverage  | Generates code test coverage report                     |

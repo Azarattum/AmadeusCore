@@ -79,10 +79,10 @@ export default class App extends Application {
 			preserver.playlistTrack(track, playlist);
 		});
 
-		endpoint.on("relist", (playlist: string, id: number) => {
-			log(`"${playlist}" relisted as "${id}".`);
+		endpoint.on("relist", (playlist: string, update: any) => {
+			log(`${name} updated "${playlist}" playlist.`);
 
-			preserver.updatePlaylist(playlist, id);
+			preserver.updatePlaylist(playlist, update);
 		});
 	}
 

@@ -10,6 +10,10 @@ import { ITrack } from "../../models/track.interface";
 import Endpoint from "./endpoint.abstract";
 import AbortController from "abort-controller";
 
+const UNTRACKED_TAG = "#untracked";
+const DISCOVER_TAG = "#discover";
+const LISTEN_TAG = "#listen";
+
 export default class Telegram extends Endpoint {
 	private client: number;
 	private messages: number[] = [];
@@ -272,8 +276,26 @@ export default class Telegram extends Endpoint {
 		}
 	}
 
-	private onChat(title: string, chat: number): void {
-		this.emit("relist", title, chat);
+	private onChat(chat: number, title: string, description?: string): void {
+		const update = {
+			telegram: chat,
+			type: 0
+		};
+
+		if (!description) return this.emit("relist", title, update);
+		description = description.toLocaleLowerCase();
+
+		if (description.includes(UNTRACKED_TAG)) {
+			update.type = -1;
+		}
+		if (description.includes(DISCOVER_TAG)) {
+			update.type = 1;
+		}
+		if (description.includes(LISTEN_TAG)) {
+			update.type = 2;
+		}
+
+		this.emit("relist", title, update);
 	}
 
 	private startLoader(): void {
@@ -414,16 +436,18 @@ export default class Telegram extends Endpoint {
 			if (!member) return;
 			if (member.status === "left") return;
 
-			const response = await this.call("getChatAdministrators", {
+			const chatInfo = await this.call("getChat", { chat_id: chat });
+			const adminsInfo = await this.call("getChatAdministrators", {
 				chat_id: chat
 			});
 
-			const admins = (await response.json())["result"];
+			const admins = (await adminsInfo.json())["result"];
+			const info = (await chatInfo.json())["result"];
 			if (Array.isArray(admins)) {
 				for (const admin of admins) {
 					const client = this.clients.get(admin.user.id);
 					if (!client) continue;
-					client.onChat(title, chat);
+					client.onChat(chat, title, info.description);
 					return;
 				}
 			}

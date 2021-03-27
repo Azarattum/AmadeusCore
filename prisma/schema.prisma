@@ -9,6 +9,7 @@ generator client {
 
 model Track {
   id        Int        @id @default(autoincrement())
+  date      DateTime   @default(now())
   title     String
   album     Album      @relation(references: [id], fields: [albumId])
   albumId   Int
@@ -30,6 +31,9 @@ model Playlist {
   tracks Track[] @relation(references: [id])
 
   telegram Int? @unique
+
+  //-1 Untracked, 0 Normal, 1 Discover, 2 Listen
+  type Int @default(0)
 
   @@index([title])
 }

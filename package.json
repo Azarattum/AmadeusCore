@@ -3,6 +3,7 @@
 		"start": "(cd dist && node ./bundle.js)",
 		"release": "webpack-cli -p --progress --config env/webpack.config.js",
 		"build": "webpack-cli --progress --config env/webpack.config.js",
+		"migrate": "prisma migrate dev --preview-feature",
 		"watch": "webpack-cli -w --config env/webpack.config.js",
 		"test": "jest --config env/jest.config.js",
 		"coverage": "jest --coverage --config env/jest.config.js"

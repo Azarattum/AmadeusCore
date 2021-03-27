@@ -39,38 +39,9 @@ export default class Preserver extends Controller<"playlisted">() {
 		});
 	}
 
-	private async createTrack(track: ITrack, playlist: string): Promise<Track> {
-		return this.prisma.track.create({
-			data: {
-				title: track.title,
-				album: {
-					connectOrCreate: {
-						where: { title: track.album },
-						create: { title: track.album }
-					}
-				},
-				artists: {
-					connectOrCreate: track.artists.map(x => {
-						return { create: { name: x }, where: { name: x } };
-					})
-				},
-				year: track.year,
-				cover: track.cover,
-				length: Math.round(track.length),
-				sources: JSON.stringify(track.sources),
-				playlists: {
-					connectOrCreate: {
-						create: { title: playlist },
-						where: { title: playlist }
-					}
-				}
-			}
-		});
-	}
-
 	public async updatePlaylist(
 		playlist: string,
-		telegram: number | null
+		update: IPlaylistUpdate
 	): Promise<void> {
 		await this.prisma.playlist.upsert({
 			where: {
@@ -78,11 +49,9 @@ export default class Preserver extends Controller<"playlisted">() {
 			},
 			create: {
 				title: playlist,
-				telegram: telegram
+				...update
 			},
-			update: {
-				telegram: telegram
-			}
+			update: update
 		});
 	}
 
@@ -130,4 +99,52 @@ export default class Preserver extends Controller<"playlisted">() {
 	public getPlaylists(): Promise<Playlist[]> {
 		return this.prisma.playlist.findMany();
 	}
+
+	public getLastTracks(count: number): Promise<Track[]> {
+		return this.prisma.track.findMany({
+			where: {
+				playlists: {
+					some: { type: 0 }
+				}
+			},
+			orderBy: {
+				id: "desc"
+			},
+			take: count
+		});
+	}
+
+	private async createTrack(track: ITrack, playlist: string): Promise<Track> {
+		return this.prisma.track.create({
+			data: {
+				title: track.title,
+				album: {
+					connectOrCreate: {
+						where: { title: track.album },
+						create: { title: track.album }
+					}
+				},
+				artists: {
+					connectOrCreate: track.artists.map(x => {
+						return { create: { name: x }, where: { name: x } };
+					})
+				},
+				year: track.year,
+				cover: track.cover,
+				length: Math.round(track.length),
+				sources: JSON.stringify(track.sources),
+				playlists: {
+					connectOrCreate: {
+						create: { title: playlist },
+						where: { title: playlist }
+					}
+				}
+			}
+		});
+	}
+}
+
+interface IPlaylistUpdate {
+	telegram?: number;
+	type?: number;
 }
