@@ -24,10 +24,14 @@ export default class Tenant {
 
 	public static get tenants(): Tenant[] {
 		if (this.cache) return this.cache;
-		const text = readFileSync("data/tenants.json").toString();
-		const data = JSON.parse(text).map((x: ITenant) => new Tenant(x));
-		this.cache = data;
-		return data;
+		try {
+			const text = readFileSync("data/tenants.json").toString();
+			const data = JSON.parse(text).map((x: ITenant) => new Tenant(x));
+			this.cache = data;
+			return data;
+		} catch {
+			return [];
+		}
 	}
 
 	public static fromIdentiefier(value: string): Tenant {
