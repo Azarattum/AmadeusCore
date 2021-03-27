@@ -9,6 +9,7 @@ import Tenant from "../../models/tenant";
 import { ITrack } from "../../models/track.interface";
 import Endpoint from "./endpoint.abstract";
 import AbortController from "abort-controller";
+import PromisePool from "es6-promise-pool";
 
 const UNTRACKED_TAG = "#untracked";
 const DISCOVER_TAG = "#discover";
@@ -67,34 +68,40 @@ export default class Telegram extends Endpoint {
 		});
 	}
 
-	public async sendTracks(tracks: ITrack[]): Promise<void> {
-		clearInterval(this.loader);
-		for (const track of tracks) {
-			this.sendTrack(track).catch(e => {
-				log(
-					`Failed to send track "${track.title}"!\n${e}`,
-					LogType.ERROR
-				);
-			});
-		}
-	}
-
-	public async playlistTrack(
-		track: ITrack,
-		playlist: Playlist
+	public async sendTracks(
+		tracks: ITrack[],
+		playlist?: Playlist
 	): Promise<void> {
-		if (!playlist.telegram) return;
+		clearInterval(this.loader);
 
-		const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
-		if (tg) {
-			await this.call("sendAudio", {
-				chat_id: playlist.telegram,
-				audio: tg,
-				disable_notification: true
-			});
-		} else {
-			this.sendTrack(track, playlist.telegram);
-		}
+		if (playlist && !playlist.telegram) return;
+		const telegramPlaylist = playlist?.telegram || undefined;
+
+		const generatePromises = function*(this: Telegram): any {
+			for (const track of tracks) {
+				const tg = track.sources
+					.find(x => x.startsWith("tg://"))
+					?.slice(5);
+				if (tg) {
+					yield this.call("sendAudio", {
+						chat_id: telegramPlaylist || this.client,
+						audio: tg,
+						disable_notification: true
+					});
+				} else {
+					yield this.sendTrack(track, telegramPlaylist).catch(e => {
+						log(
+							`Failed to send track "${track.title}"!\n${e}`,
+							LogType.ERROR
+						);
+					});
+				}
+			}
+		};
+
+		const promiseIterator = generatePromises.bind(this)();
+		const pool = new PromisePool(promiseIterator, playlist ? 3 : 10);
+		await pool.start();
 	}
 
 	public async clearPlaylist(playlist?: Playlist): Promise<void> {
@@ -108,7 +115,8 @@ export default class Telegram extends Endpoint {
 		let message_id;
 		while ((message_id = messages.shift())) {
 			this.tracks.delete(message_id);
-			promises.push(this.call("deleteMessage", { message_id }));
+			const chat_id = playlist?.telegram || this.client;
+			promises.push(this.call("deleteMessage", { chat_id, message_id }));
 		}
 
 		await Promise.all(promises);
@@ -168,6 +176,7 @@ export default class Telegram extends Endpoint {
 		if (!file) return;
 		track.sources.push(`tg://${file}`);
 		this.tracks.set(status[0], track);
+		if (playlist) return;
 		this.lastTrack = track;
 	}
 
@@ -269,6 +278,20 @@ export default class Telegram extends Endpoint {
 	}
 
 	private onCommand(command: string, data: any): void {
+		const type = data?.["channel_post"]?.chat?.type;
+		if (type === "channel") {
+			command = command.replace(/@.*$/, "");
+			switch (command) {
+				case "update": {
+					const playlist = data["channel_post"].chat?.title;
+					if (!playlist) return;
+					this.emit("triggered", playlist);
+					break;
+				}
+			}
+			return;
+		}
+
 		switch (command) {
 			case "clear": {
 				this.clearPlaylist();
@@ -412,6 +435,23 @@ export default class Telegram extends Endpoint {
 		this.subscribe(offset);
 	}
 
+	private static async checkChannel(id: number): Promise<Telegram | null> {
+		const adminsInfo = await this.call("getChatAdministrators", {
+			chat_id: id
+		});
+
+		const admins = (await adminsInfo.json())["result"];
+		if (Array.isArray(admins)) {
+			for (const admin of admins) {
+				const client = this.clients.get(admin.user.id);
+				if (!client) continue;
+				return client;
+			}
+		}
+
+		return null;
+	}
+
 	private static async update(data: Record<string, any>): Promise<void> {
 		if (data["message"]) {
 			const message = data["message"];
@@ -452,19 +492,12 @@ export default class Telegram extends Endpoint {
 			if (member.status === "left") return;
 
 			const chatInfo = await this.call("getChat", { chat_id: chat });
-			const adminsInfo = await this.call("getChatAdministrators", {
-				chat_id: chat
-			});
 
-			const admins = (await adminsInfo.json())["result"];
+			const client = await this.checkChannel(chat);
 			const info = (await chatInfo.json())["result"];
-			if (Array.isArray(admins)) {
-				for (const admin of admins) {
-					const client = this.clients.get(admin.user.id);
-					if (!client) continue;
-					client.onChat(chat, title, info.description);
-					return;
-				}
+			if (client) {
+				client.onChat(chat, title, info.description);
+				return;
 			}
 
 			await this.call("leaveChat", { chat_id: chat });
@@ -472,6 +505,23 @@ export default class Telegram extends Endpoint {
 				`Unauthorized "${title}" (${chat}) playlist access!`,
 				LogType.WARNING
 			);
+		} else if (data["channel_post"]) {
+			const post = data["channel_post"];
+			const chat = post.chat?.id;
+			const text = post.text;
+
+			if (!chat) return;
+			if (!text || text[0] !== "/") return;
+
+			const client = await this.checkChannel(chat);
+			if (!client) return;
+
+			client.onCommand(text.slice(1), data);
+
+			Telegram.call("deleteMessage", {
+				chat_id: chat,
+				message_id: post["message_id"]
+			});
 		}
 	}
 
