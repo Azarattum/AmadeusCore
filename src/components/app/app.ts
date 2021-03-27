@@ -3,10 +3,10 @@ import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
 import { ITrack } from "./models/track.interface";
 import Preserver from "./controllers/preserver.controller";
-import Tenant from "./models/tenant";
 import { Playlist } from "@prisma/client";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
 import Endpoint from "./controllers/endpoints/endpoint.abstract";
+import Scheduler from "./controllers/scheduler.controller";
 
 /**
  * Application class
@@ -16,7 +16,7 @@ export default class App extends Application {
 	 * Application constructor
 	 */
 	public constructor() {
-		super([Aggregator, Preserver, Telegram]);
+		super([Aggregator, Preserver, Scheduler, Telegram]);
 	}
 
 	/**
@@ -31,7 +31,8 @@ export default class App extends Application {
 					vk: process.env["VK_TOKEN"],
 					yandex: process.env["YANDEX_TOKEN"],
 					soundCloud: process.env["SOUNDCLOUD_TOKEN"],
-					youTube: process.env["YOUTUBE_TOKEN"]
+					youTube: process.env["YOUTUBE_TOKEN"],
+					lastfm: process.env["LASTFM_TOKEN"]
 				}
 			]
 		);
@@ -42,6 +43,7 @@ export default class App extends Application {
 		const name = endpoint.tenant.identifier;
 		const aggregator = this.getComponent(Aggregator, endpoint.tenant);
 		const preserver = this.getComponent(Preserver, endpoint.tenant);
+		const scheduler = this.getComponent(Scheduler, endpoint.tenant);
 
 		endpoint.on("searched", async (query: string) => {
 			log(`${name} searched for "${query}"...`);
@@ -76,7 +78,7 @@ export default class App extends Application {
 		endpoint.on("playlisted", async (track: ITrack, playlist: string) => {
 			log(`${name} added track "${track.title}" to "${playlist}".`);
 
-			preserver.playlistTrack(track, playlist);
+			preserver.addTrack(track, playlist);
 		});
 
 		endpoint.on("relist", (playlist: string, update: any) => {
@@ -84,19 +86,53 @@ export default class App extends Application {
 
 			preserver.updatePlaylist(playlist, update);
 		});
+
+		endpoint.on("triggered", (playlist: string) => {
+			log(`${name} triggered an update on "${playlist}" playlist.`);
+
+			scheduler.trigger([playlist]);
+		});
 	}
 
 	@handle(Preserver)
 	private onPreserver(preserver: Preserver): void {
-		preserver.on(
-			"playlisted",
-			(tenant: Tenant, track: ITrack, playlist: Playlist) => {
-				const endpoints = this.getComponents(Endpoint, tenant);
+		preserver.on("playlisted", (track: ITrack, playlist: Playlist) => {
+			const endpoints = this.getComponents(Endpoint, preserver.tenant);
 
-				endpoints.forEach(x => {
-					x.playlistTrack(track, playlist);
-				});
-			}
-		);
+			endpoints.forEach(x => {
+				x.sendTracks([track], playlist);
+			});
+		});
+	}
+
+	@handle(Scheduler)
+	private onScheduler(scheduler: Scheduler): void {
+		const aggregator = this.getComponent(Aggregator, scheduler.tenant);
+		const preserver = this.getComponent(Preserver, scheduler.tenant);
+		const endpoints = this.getComponents(Endpoint, scheduler.tenant);
+
+		scheduler.on("triggered", async (selected?: string[]) => {
+			const playlists = (await preserver.getPlaylists(true)).filter(
+				x => !selected || selected.includes(x.title)
+			);
+
+			playlists.forEach(async playlist => {
+				endpoints.forEach(x => x.clearPlaylist(playlist));
+				const source = preserver.getTracks.bind(preserver);
+				const tracks = await aggregator.recommend(
+					source,
+					playlist,
+					async (tracks: ITrack[]): Promise<void> => {
+						for (const endpoint of endpoints) {
+							await endpoint.sendTracks(tracks, playlist);
+						}
+					}
+				);
+
+				log(
+					`Playlist "${playlist.title}" updated with ${tracks.length} tracks.`
+				);
+			});
+		});
 	}
 }

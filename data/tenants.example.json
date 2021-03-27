@@ -1,7 +1,8 @@
 [
     {
-        "identifier": "",
-        "token": "",
-        "telegram": ""
+        "identifier": "Example User",
+        "token": "NDIgNDIgNDI=",
+        "telegram": "42421337",
+        "hour": "6"
     }
 ]

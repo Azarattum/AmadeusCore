@@ -10,7 +10,7 @@ import { ITrack } from "../models/track.interface";
  * Stores and manages Amadeus' user's data
  */
 export default class Preserver extends Controller<"playlisted">() {
-	private tenant: Tenant;
+	public tenant: Tenant;
 	private prisma: PrismaClient;
 
 	public static get relations(): object[] {
@@ -55,7 +55,21 @@ export default class Preserver extends Controller<"playlisted">() {
 		});
 	}
 
-	public async playlistTrack(track: ITrack, playlist: string): Promise<void> {
+	public getPlaylists(dynamic = false): Promise<Playlist[]> {
+		return this.prisma.playlist.findMany({
+			where: {
+				type: !dynamic
+					? {
+							lte: 0
+					  }
+					: {
+							gte: 1
+					  }
+			}
+		});
+	}
+
+	public async addTrack(track: ITrack, playlist: string): Promise<void> {
 		let found = await this.prisma.track.findFirst({
 			where: {
 				title: track.title,
@@ -87,37 +101,32 @@ export default class Preserver extends Controller<"playlisted">() {
 			}
 		});
 
-		this.emit("playlisted", this.tenant, track, updated);
+		this.emit("playlisted", track, updated);
 	}
 
-	public getPlaylist(query: string): Promise<Playlist | null> {
-		return this.prisma.playlist.findUnique({
-			where: { title: query }
-		});
-	}
-
-	public getPlaylists(): Promise<Playlist[]> {
-		return this.prisma.playlist.findMany({
-			where: {
-				type: {
-					lte: 0
-				}
-			}
-		});
-	}
-
-	public getLastTracks(count: number): Promise<Track[]> {
-		return this.prisma.track.findMany({
+	public async getTracks(
+		count: number
+	): Promise<(Track & { artists: string[] })[]> {
+		const results = (await this.prisma.track.findMany({
 			where: {
 				playlists: {
 					some: { type: 0 }
 				}
 			},
+			include: {
+				artists: true
+			},
 			orderBy: {
 				id: "desc"
 			},
 			take: count
+		})) as (Track & { artists: any[] })[];
+
+		results.forEach(result => {
+			result.artists = result.artists.map(x => x.name);
 		});
+
+		return results;
 	}
 
 	private async createTrack(track: ITrack, playlist: string): Promise<Track> {

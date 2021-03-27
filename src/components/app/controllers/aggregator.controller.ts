@@ -1,10 +1,16 @@
+import { Playlist } from ".prisma/client";
+import PromisePool from "es6-promise-pool";
 import Controller from "../../common/controller.abstract";
-import { log, LogType } from "../../common/utils.class";
+import { log, LogType, shuffle } from "../../common/utils.class";
 import Provider from "../models/providers/provider.abstract";
 import SoundCloudProvider from "../models/providers/soundcloud.provider";
 import VKProvider from "../models/providers/vk.provider";
 import YandexProvider from "../models/providers/yandex.provider";
 import YouTubeProvider from "../models/providers/youtube.provider";
+import SimilarRecommender from "../models/recommenders/similar.recommender";
+import Recommender, {
+	TrackSource
+} from "../models/recommenders/recommender.abstract";
 import Tenant from "../models/tenant";
 import { ITrack } from "../models/track.interface";
 
@@ -13,6 +19,7 @@ import { ITrack } from "../models/track.interface";
  */
 export default class Aggregator extends Controller() {
 	private providers: Provider[] = [];
+	private recommenders: Recommender[] = [];
 	private lastQuery: string | undefined;
 	private lastTrack: ITrack | undefined;
 	private repeats = 0;
@@ -29,9 +36,18 @@ export default class Aggregator extends Controller() {
 			soundCloud: SoundCloudProvider
 		};
 
+		const recommenders: Record<string, typeof Recommender> = {
+			latest: SimilarRecommender
+		};
+
 		for (const i in providers) {
 			const provider = new (providers[i] as any)(tokens[i]);
 			this.providers.push(provider);
+		}
+
+		for (const i in recommenders) {
+			const recommender = new (recommenders[i] as any)(tokens["lastfm"]);
+			this.recommenders.push(recommender);
 		}
 	}
 
@@ -142,5 +158,49 @@ export default class Aggregator extends Controller() {
 		}
 
 		return null;
+	}
+
+	public async recommend(
+		source: TrackSource,
+		playlist: Playlist,
+		callback?: (tracks: ITrack[]) => Promise<any>
+	): Promise<ITrack[]> {
+		const promises = [];
+		for (const i in this.recommenders) {
+			const promise = this.recommenders[i]
+				.get(source, playlist)
+				.catch(e => {
+					log(
+						`${this.recommenders[i].constructor.name} failed to recommend tracks!\n${e}`,
+						LogType.ERROR
+					);
+					return [] as string[];
+				});
+
+			promises.push(promise);
+		}
+
+		let names: string[] = [];
+		for (const promise of promises) {
+			names.push(...(await promise));
+		}
+		names = shuffle(names).slice(0, 100);
+
+		const tracks: ITrack[] = [];
+		const generatePromises = function*(this: Aggregator): any {
+			for (const name of names) {
+				yield this.single(name).then(async track => {
+					if (!track) return;
+					await callback?.([track]);
+					tracks.push(track);
+				});
+			}
+		};
+
+		const promiseIterator = generatePromises.bind(this)();
+		const pool = new PromisePool(promiseIterator, 3);
+		await pool.start();
+
+		return tracks;
 	}
 }
