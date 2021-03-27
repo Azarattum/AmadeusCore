@@ -60,11 +60,17 @@ export default class YandexProvider extends Provider {
 
 	public async get(query: string, count = 1, offset = 0): Promise<ITrack[]> {
 		const tracks = await this.search(query, count, offset);
+		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\||\band\b/;
 
 		const metas = tracks.map(x => {
+			const artists: string[] = [];
+			x.artists.forEach(x =>
+				artists.push(...x.name.split(joins).map(x => x?.trim()))
+			);
+
 			return {
 				title: x.title,
-				artists: x.artists.map(x => x.name),
+				artists: [...new Set(artists)],
 				album: x.albums[0].title,
 				length: x.durationMs / 1000,
 				year: x.albums[0].year,

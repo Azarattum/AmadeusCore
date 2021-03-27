@@ -33,7 +33,7 @@ export default class VKProvider extends Provider {
 
 		const metas = tracks.map(x => {
 			return {
-				title: x.title,
+				title: x.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
 				artists: x.artist.split(joins).map(x => x?.trim()),
 				album: x.album?.title || x.title,
 				length: x.duration,

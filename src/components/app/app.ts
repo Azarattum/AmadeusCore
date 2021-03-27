@@ -47,7 +47,10 @@ export default class App extends Application {
 			log(`${name} searched for "${query}"...`);
 
 			const track = await aggregator.single(query);
-			if (!track) return;
+			if (!track) {
+				endpoint.sendTracks([]);
+				return;
+			}
 			endpoint.sendTracks([track]);
 		});
 

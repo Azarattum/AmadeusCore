@@ -15,9 +15,9 @@ export default class Telegram extends Endpoint {
 	private messages: number[] = [];
 	private tracks: Map<number, ITrack> = new Map();
 	private loader?: number;
-	private share?: ITrack;
-	private playlists: string[] = [];
+	private lastTrack?: ITrack;
 	private tempMessages: number[] = [];
+	private requests: IRequest[] = [];
 	private aborts: Set<AbortController> = new Set();
 
 	private static url: string;
@@ -40,7 +40,7 @@ export default class Telegram extends Endpoint {
 	}
 
 	public async setPlaylists(playlists: string[]): Promise<any> {
-		this.playlists = playlists;
+		if (!this.lastTrack) return;
 
 		const response = await this.call("sendMessage", {
 			text: "...",
@@ -54,9 +54,17 @@ export default class Telegram extends Endpoint {
 		if (!response.ok) return;
 		const result = (await response.json())["result"];
 		this.tempMessages.push(+result["message_id"]);
+		this.requests.push({
+			items: playlists,
+			callback: (playlist: string) => {
+				this.emit("playlisted", this.lastTrack, playlist);
+				return true;
+			}
+		});
 	}
 
 	public async sendTracks(tracks: ITrack[]): Promise<void> {
+		clearInterval(this.loader);
 		for (const track of tracks) {
 			this.sendTrack(track).catch(e => {
 				log(
@@ -86,7 +94,6 @@ export default class Telegram extends Endpoint {
 	}
 
 	private async sendTrack(track: ITrack, playlist?: number): Promise<void> {
-		clearInterval(this.loader);
 		const status = await this.sendStatus(track, playlist);
 		let source: Restream | null = await Restream.fromTrack(track);
 		const abort = new AbortController();
@@ -135,8 +142,9 @@ export default class Telegram extends Endpoint {
 		source = null;
 
 		if (!file) return;
-		this.tracks.set(status[0], track);
 		track.sources.push(`tg://${file}`);
+		this.tracks.set(status[0], track);
+		this.lastTrack = track;
 	}
 
 	private async sendStatus(
@@ -229,13 +237,8 @@ export default class Telegram extends Endpoint {
 			this.call("deleteMessage", { message_id });
 		}
 
-		if (this.share) {
-			if (this.playlists.includes(message)) {
-				this.emit("playlisted", this.share, message);
-			}
-			this.share = undefined;
-			return;
-		}
+		const request = this.requests.find(x => x.items.includes(message));
+		if (request?.callback(message)) return;
 
 		this.startLoader();
 		this.emit("searched", message);
@@ -252,13 +255,12 @@ export default class Telegram extends Endpoint {
 				}
 				break;
 			}
-			case "share": {
+			case "playlist": {
 				const target = data["message"]?.["reply_to_message"];
-				if (!target) return;
-				if (!target.audio) return;
-				const track = this.tracks.get(target.message_id);
-				if (!track) return;
-				this.share = track;
+				if (target && target.audio) {
+					this.lastTrack =
+						this.tracks.get(target.message_id) || this.lastTrack;
+				}
 				this.emit("playlists");
 				break;
 			}
@@ -442,6 +444,11 @@ export default class Telegram extends Endpoint {
 		this.inited = true;
 		this.subscribe();
 	}
+}
+
+interface IRequest {
+	items: string[];
+	callback: (response: string) => boolean;
 }
 
 interface IUpdateOptions {
