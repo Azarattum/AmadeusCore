@@ -21,6 +21,10 @@ export default class Scheduler extends Controller<"triggered">() {
 		this.schedule();
 	}
 
+	public close(): void {
+		clearTimeout(this.timeout);
+	}
+
 	public trigger(playlists?: string[]): void {
 		this.emit("triggered", playlists);
 		this.schedule();

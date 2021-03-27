@@ -1,5 +1,4 @@
 import { Playlist } from ".prisma/client";
-import PromisePool from "es6-promise-pool";
 import Controller from "../../common/controller.abstract";
 import { log, LogType, shuffle } from "../../common/utils.class";
 import Provider from "../models/providers/provider.abstract";
@@ -187,19 +186,13 @@ export default class Aggregator extends Controller() {
 		names = shuffle(names).slice(0, 100);
 
 		const tracks: ITrack[] = [];
-		const generatePromises = function*(this: Aggregator): any {
-			for (const name of names) {
-				yield this.single(name).then(async track => {
-					if (!track) return;
-					await callback?.([track]);
-					tracks.push(track);
-				});
-			}
-		};
-
-		const promiseIterator = generatePromises.bind(this)();
-		const pool = new PromisePool(promiseIterator, 3);
-		await pool.start();
+		for (const name of names) {
+			await this.single(name).then(async track => {
+				if (!track) return;
+				await callback?.([track]);
+				tracks.push(track);
+			});
+		}
 
 		return tracks;
 	}
