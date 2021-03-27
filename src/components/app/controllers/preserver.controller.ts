@@ -97,7 +97,13 @@ export default class Preserver extends Controller<"playlisted">() {
 	}
 
 	public getPlaylists(): Promise<Playlist[]> {
-		return this.prisma.playlist.findMany();
+		return this.prisma.playlist.findMany({
+			where: {
+				type: {
+					lte: 0
+				}
+			}
+		});
 	}
 
 	public getLastTracks(count: number): Promise<Track[]> {
