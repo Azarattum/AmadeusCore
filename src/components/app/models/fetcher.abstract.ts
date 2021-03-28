@@ -1,4 +1,3 @@
-import fetch, { Response, RequestInit, RequestInfo } from "node-fetch";
 import { log, LogType, sleep } from "../../common/utils.class";
 
 export default abstract class Fetcher {
@@ -57,7 +56,7 @@ export default abstract class Fetcher {
 			...params
 		}).toString();
 
-		return this.fetch(url, {
+		return this.fetch(url.toString(), {
 			headers: this.headers
 		});
 	}

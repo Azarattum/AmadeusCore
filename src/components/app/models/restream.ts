@@ -1,5 +1,4 @@
 import Ffmpeg from "fluent-ffmpeg";
-import fetch from "node-fetch";
 import { PassThrough, Readable, Stream } from "stream";
 import { ITrack } from "./track.interface";
 

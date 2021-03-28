@@ -1,4 +1,3 @@
-import fetch from "node-fetch";
 import { format, log, LogType } from "../../../common/utils.class";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";

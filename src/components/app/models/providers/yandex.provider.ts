@@ -1,5 +1,4 @@
 import { createHash } from "crypto";
-import fetch from "node-fetch";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
 

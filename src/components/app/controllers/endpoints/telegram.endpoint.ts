@@ -1,5 +1,4 @@
 import { Playlist } from ".prisma/client";
-import fetch, { Response } from "node-fetch";
 import { Readable } from "stream";
 import { IComponentOptions } from "../../../common/component.interface";
 import { log, LogType, sleep } from "../../../common/utils.class";

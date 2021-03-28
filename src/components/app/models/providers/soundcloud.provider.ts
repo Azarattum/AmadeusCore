@@ -1,6 +1,5 @@
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
-import fetch from "node-fetch";
 
 export default class SoundCloudProvider extends Provider {
 	protected baseURL = "https://api-v2.soundcloud.com/";
