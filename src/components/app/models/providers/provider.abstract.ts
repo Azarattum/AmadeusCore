@@ -17,8 +17,10 @@ export default abstract class Provider extends Fetcher {
 			/[\s\-–_]+\s*[[({【]?\s*(of+icial\s+)?([PM]\/?V)\s*[\])}】]?/i, //MVs
 			/\s*([({【][^)]*)?\bver(\.|sion)?(\s*[\])}】])?/i, //Versions
 			/[[({【]?\s*(original\s*)?(of+icial\s*)?(music\s*)?(video|mix)(\s*[\])}】])?/i, //Official/music video
+			/[[({【]?\s*(the)?\s*(original\s*)(video|mix|song)(\s*[\])}】])?/, //Original
 			/\s*(full\s*)?album\s*(tracks?)?/i, //Album
 			/\s*[[({【]?\s*(with)?\s*(of+icial)?\s*lyrics?\s*(video)?\s*([\])}】]|$)/i, //Lyrics
+			/[[({【]?\s*(with|\+)?(\s*\S+)?\s*subtitles?\s*(in\s*\S+\s*)?[\])}】]?/i, //Subtitles
 			/\s*[[({【]\s*(HD|HQ|[0-9]{3,4}p|4K)\s*(version|video|quality)?\s*[\])}】]/i, //Qulity
 			/[\s\-–_♫]+(HD|HQ|[0-9]{3,4}(p|bpm)|4K)\s*(version|video|quality)?\s*/gi, //Quality 2
 			/\s*\(?live\)?$/, //Live
@@ -30,7 +32,8 @@ export default abstract class Provider extends Fetcher {
 			/^\s*\{[^}]+\}\s*/g, //Stuff at the start
 			/\s*\[[^\]]+]\s*$/g, //Stuff at the end
 			/\s*\([^)]+\)\s*$/g, //Stuff at the end
-			/\s*\{[^}]+\}\s*$/g //Stuff at the end
+			/\s*\{[^}]+\}\s*$/g, //Stuff at the end
+			/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|\uD83E[\uDD10-\uDDFF])/gi //Emoji
 		];
 
 		const parsed: IParsed = { title: text, artists: [], album: "" };

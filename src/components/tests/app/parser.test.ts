@@ -148,5 +148,11 @@ describe("Parser", () => {
 			"Music Box Vocal",
 			"Game Of Thrones Theme"
 		]);
+
+		val = parse(
+			"🎵MiatriSs🎵 - Yandere Song (The Original Song) [Русская Версия] + ENG Subtitles"
+		);
+		expect(val.title).toBe("Yandere Song");
+		expect(val.artists).toEqual(["MiatriSs"]);
 	});
 });
