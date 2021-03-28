@@ -2,42 +2,33 @@ import fetch from "node-fetch";
 import { format, log, LogType } from "../../../common/utils.class";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
+import ytsr, { ContinueResult, Video } from "ytsr";
 
 export default class YouTubeProvider extends Provider {
-	protected baseURL = "https://youtube.googleapis.com/youtube/v3/";
-	protected params = {
-		key: this.token
-	};
-
 	/**Player decryption cache */
 	private playerCache: Map<string, Function> = new Map();
+	protected baseURL = "";
+
+	public constructor() {
+		super("");
+	}
 
 	private async search(
 		query: string,
 		count = 1,
 		offset = 0
-	): Promise<ITrackYouTube[]> {
-		const response = await this.call("search", {
-			part: "snippet",
-			q: query,
-			maxResults: offset || count,
-			type: "video"
-		});
-		let json = await response.json();
+	): Promise<Video[]> {
+		let response = (await ytsr(query, {
+			pages: 1
+		})) as ContinueResult;
+		const items = response.items.filter(x => x.type === "video");
 
-		if (offset) {
-			const pageToken = json.nextPageToken;
-			const response = await this.call("search", {
-				part: "snippet",
-				q: query,
-				maxResults: count,
-				type: "video",
-				pageToken
-			});
-			json = await response.json();
+		while (response.continuation && items.length < offset + count) {
+			response = await ytsr.continueReq(response.continuation);
+			items.push(...response.items.filter(x => x.type === "video"));
 		}
 
-		return json.items;
+		return items.slice(offset, offset + count) as Video[];
 	}
 
 	private parseInfo(info: string): any {
@@ -168,7 +159,9 @@ export default class YouTubeProvider extends Provider {
 		return this.playerCache.get(playerUrl)?.(sig);
 	}
 
-	public async load(id: string): Promise<[string | null, string, number]> {
+	public async load(
+		id: string
+	): Promise<[string | null, string, number, number | undefined]> {
 		const page = await fetch(`https://www.youtube.com/watch?v=${id}`);
 
 		const text = await page.text();
@@ -176,16 +169,21 @@ export default class YouTubeProvider extends Provider {
 		const playerResponse = text.match(playerRegex)?.[1] || "{}";
 
 		const player = JSON.parse(playerResponse);
+
 		const formats = player?.streamingData?.adaptiveFormats;
 		const thumbs = player?.videoDetails?.thumbnail?.thumbnails;
 		const thumb = thumbs ? thumbs[thumbs.length - 1].url : "";
+		const year =
+			new Date(
+				player?.microformat?.playerMicroformatRenderer?.uploadDate
+			).getFullYear() || undefined;
 
 		if (!formats) {
 			log(
 				"Failed to get streaming formats for a YouTube video!",
 				LogType.ERROR
 			);
-			return [null, "", 0];
+			return [null, "", 0, year];
 		}
 
 		const audio = formats
@@ -204,13 +202,13 @@ export default class YouTubeProvider extends Provider {
 					"Failed to decrypt signature while loading a YouTube video!",
 					LogType.ERROR
 				);
-				return [null, "", 0];
+				return [null, "", 0, year];
 			}
 
 			audio.url = url + "&" + info.sp + "=" + sig;
 		}
 
-		return [audio.url, thumb, +audio.approxDurationMs / 1000];
+		return [audio.url, thumb, +audio.approxDurationMs / 1000, year];
 	}
 
 	public async get(query: string, count = 1, offset = 0): Promise<ITrack[]> {
@@ -218,29 +216,31 @@ export default class YouTubeProvider extends Provider {
 		if (!tracks) return [];
 
 		const metas = tracks.map(x => {
+			const author = x.author ? [x.author.name] : [];
 			const { title, artists, year, album } = this.parse(
-				this.parseString(x.snippet.title)
+				this.parseString(x.title)
 			);
 
 			return {
 				title: title,
-				artists: artists.length ? artists : [x.snippet.channelTitle],
+				artists: artists.length ? artists : author,
 				album: album,
 				length: 0,
-				year: year || new Date(x.snippet.publishedAt).getFullYear(),
-				cover: x.snippet.thumbnails.high.url,
+				year: year,
+				cover: x.bestThumbnail.url || undefined,
 				url: null as any,
-				sources: [`aggr://youtube:${x.id.videoId}`]
+				sources: [`aggr://youtube:${x.id}`]
 			};
 		});
 
 		await this.update(
-			tracks.map(x => [x.id.videoId]),
+			tracks.map(x => [x.id]),
 			this.load,
 			(x, i) => {
 				metas[i].url = x[0];
 				metas[i].cover = x[1] || metas[i].cover;
 				metas[i].length = x[2];
+				metas[i].year = metas[i].year || x[3];
 			}
 		);
 
@@ -256,34 +256,4 @@ export default class YouTubeProvider extends Provider {
 		const [url] = await this.load(source);
 		return url || null;
 	}
-}
-
-interface ITrackYouTube {
-	kind: string;
-	etag: string;
-	id: { kind: string; videoId: string };
-	snippet: ISnippetYouTube;
-}
-
-interface ISnippetYouTube {
-	publishedAt: string;
-	channelId: string;
-	title: string;
-	description: string;
-	thumbnails: IThumbnailsYouTube;
-	channelTitle: string;
-	liveBroadcastContent: string;
-	publishTime: string;
-}
-
-interface IThumbnailsYouTube {
-	default: IThumbnailYouTube;
-	medium: IThumbnailYouTube;
-	high: IThumbnailYouTube;
-}
-
-interface IThumbnailYouTube {
-	url: string;
-	width: number;
-	height: number;
 }

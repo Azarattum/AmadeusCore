@@ -31,7 +31,6 @@ export default class App extends Application {
 					vk: process.env["VK_TOKEN"],
 					yandex: process.env["YANDEX_TOKEN"],
 					soundCloud: process.env["SOUNDCLOUD_TOKEN"],
-					youTube: process.env["YOUTUBE_TOKEN"],
 					lastfm: process.env["LASTFM_TOKEN"]
 				}
 			]

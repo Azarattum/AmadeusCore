@@ -15,7 +15,8 @@
 		"es6-promise-pool": "^2.5.0",
 		"express": "^4.17.1",
 		"fluent-ffmpeg": "^2.1.2",
-		"node-fetch": "^2.6.1"
+		"node-fetch": "^2.6.1",
+		"ytsr": "^3.3.1"
 	},
 	"devDependencies": {
 		"@types/express": "^4.17.11",
