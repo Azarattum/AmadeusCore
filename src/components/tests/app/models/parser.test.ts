@@ -1,16 +1,33 @@
-import Provider from "../../app/models/providers/provider.abstract";
-
-const parse = (Provider.prototype as any).parse;
+import parse, { unbrace } from "../../../app/models/parser";
 
 describe("Parser", () => {
-	/**
-	 * Tests titles parser
-	 */
+	it("unbrace", () => {
+		expect(unbrace("clean (hello)")).toEqual({
+			clean: "clean",
+			parts: ["hello"]
+		});
+
+		expect(unbrace("clean [hello)")).toEqual({
+			clean: "clean",
+			parts: ["hello"]
+		});
+
+		expect(unbrace("clean ([)h(ello)")).toEqual({
+			clean: "clean h",
+			parts: ["ello"]
+		});
+
+		expect(unbrace("clean [text (here)]")).toEqual({
+			clean: "clean",
+			parts: ["text here"]
+		});
+	});
+
 	it("parseTitles", () => {
 		let val = parse(
 			"Game of Thrones Theme Song - Karliene Version Cover (Oh La Lau) (Lyrics)"
 		);
-		expect(val.title).toBe("Game of Thrones Theme Song");
+		expect(val.title).toBe("Game of Thrones Theme Song (Oh La Lau)");
 		expect(val.artists).toEqual(["Karliene"]);
 
 		val = parse(
@@ -60,7 +77,7 @@ describe("Parser", () => {
 		val = parse(
 			"Varg | I Did Not Always Appear This Way [Ascetic House 2015]"
 		);
-		expect(val.year).toBe(undefined);
+		expect(val.year).toBe(2015);
 		expect(val.title).toBe("I Did Not Always Appear This Way");
 		expect(val.artists).toEqual(["Varg"]);
 
@@ -117,7 +134,7 @@ describe("Parser", () => {
 			"Abandoned - Out Of The Grave (Feat. ENROSA) [NCS Release]"
 		);
 		expect(val.title).toBe("Out Of The Grave");
-		expect(val.artists).toEqual(["ENROSA", "Abandoned"]);
+		expect(val.artists).toEqual(["ENROSA", "NCS", "Abandoned"]);
 
 		val = parse("Ali Sethi | Rung (Official Music Video)");
 		expect(val.title).toBe("Rung");
@@ -136,23 +153,41 @@ describe("Parser", () => {
 		val = parse(
 			"Galasy ZMesta - Ya Nauchu Tebya (I'll Teach You) - Belarus - Official Video - Eurovision 2021"
 		);
-		expect(val.title).toBe("Ya Nauchu Tebya (I'll Teach You) - Belarus");
-		expect(val.album).toBe("Eurovision 2021");
+		expect(val.title).toBe("Ya Nauchu Tebya (I'll Teach You, Belarus)");
+		expect(val.year).toBe(2021);
+		expect(val.album).toBe("Eurovision");
 		expect(val.artists).toEqual(["Galasy ZMesta"]);
 
 		val = parse(
 			"Game Of Thrones Theme (Music Box Vocal Version -- Cover of Karliene Lyrics)"
 		);
-		expect(val.title).toBe("Cover of Karliene");
-		expect(val.artists).toEqual([
-			"Music Box Vocal",
-			"Game Of Thrones Theme"
-		]);
+		expect(val.title).toBe("Game Of Thrones Theme");
+		expect(val.artists).toEqual(["Music Box Vocal"]);
 
 		val = parse(
 			"🎵MiatriSs🎵 - Yandere Song (The Original Song) [Русская Версия] + ENG Subtitles"
 		);
-		expect(val.title).toBe("Yandere Song");
+		expect(val.title).toBe("Yandere Song (Русская Версия)");
+		expect(val.artists).toEqual(["MiatriSs"]);
+
+		val = parse(
+			"【Helltaker Original Song】 What the Hell by @OR3O , @Lollia  , and @Sleeping Forest   ft. Friends"
+		);
+		expect(val.title).toBe("What the Hell");
+		expect(val.artists).toEqual([
+			"OR3O",
+			"Lollia",
+			"Sleeping Forest",
+			"Friends"
+		]);
+
+		val = parse("Splatoon ★ Blitz It (Remix\\Cover) | MiatriSs");
+		expect(val.title).toBe("Blitz It (Remix\\Cover)");
+		expect(val.artists).toEqual(["Splatoon"]);
+		expect(val.album).toEqual("MiatriSs");
+
+		val = parse("ECHO【Gumi English】Crusher-P: MiatriSs Remix");
+		expect(val.title).toBe("ECHO Crusher-P (Gumi English)");
 		expect(val.artists).toEqual(["MiatriSs"]);
 	});
 });

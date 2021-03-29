@@ -2,6 +2,7 @@ import { format, log, LogType } from "../../../common/utils.class";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
 import ytsr, { ContinueResult, Video } from "ytsr";
+import parse from "../parser";
 
 export default class YouTubeProvider extends Provider {
 	/**Player decryption cache */
@@ -216,7 +217,7 @@ export default class YouTubeProvider extends Provider {
 
 		const metas = tracks.map(x => {
 			const author = x.author ? [x.author.name] : [];
-			const { title, artists, year, album } = this.parse(
+			const { title, artists, year, album } = parse(
 				this.parseString(x.title)
 			);
 

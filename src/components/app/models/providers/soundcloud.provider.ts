@@ -1,3 +1,4 @@
+import parse from "../parser";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
 
@@ -59,7 +60,7 @@ export default class SoundCloudProvider extends Provider {
 		const tracks = await this.search(query, count, offset);
 
 		const metas = tracks.map(x => {
-			const { title, album, artists, year } = this.parse(x.title);
+			const { title, album, artists, year } = parse(x.title);
 
 			const cover = (x.artwork_url || x.user.avatar_url).replace(
 				"large.jpg",
