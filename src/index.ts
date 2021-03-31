@@ -1,11 +1,12 @@
 /**Main Script */
 import App from "./components/app/app";
 import DotEnv from "dotenv";
-import fetch from "node-fetch";
+import * as fetch from "node-fetch";
 
 //Configure environment
 DotEnv.config();
-globalThis.fetch = fetch as any;
+Object.assign(globalThis, fetch);
+globalThis.fetch = fetch.default as any;
 
 //Application init
 const app = new App();
