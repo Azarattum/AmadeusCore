@@ -92,7 +92,7 @@ export function unemojify(text: string): string {
 
 export function parseArtists(text: string): string[] {
 	const joins = /,|\bft.|\bfeat.|&|\+|\/|\bfeaturing|\bmed\b|\band\b/i;
-	return text.split(joins);
+	return [...new Set(text.split(joins).map(x => trim(x)))];
 }
 
 export function toYear(text: string): [string, number] | null {

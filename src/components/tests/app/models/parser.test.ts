@@ -1,4 +1,4 @@
-import parse, { unbrace } from "../../../app/models/parser";
+import parse, { parseArtists, unbrace } from "../../../app/models/parser";
 
 describe("Parser", () => {
 	it("unbrace", () => {
@@ -189,5 +189,17 @@ describe("Parser", () => {
 		val = parse("ECHO【Gumi English】Crusher-P: MiatriSs Remix");
 		expect(val.title).toBe("ECHO Crusher-P (Gumi English)");
 		expect(val.artists).toEqual(["MiatriSs"]);
+	});
+
+	it("parseArtists", () => {
+		expect(parseArtists("A & B")).toEqual(["A", "B"]);
+		expect(parseArtists("A,B ,C feat. D")).toEqual(["A", "B", "C", "D"]);
+		expect(parseArtists("A + 1")).toEqual(["A", "1"]);
+		expect(parseArtists("lol/KEK")).toEqual(["lol", "KEK"]);
+		expect(parseArtists("0///A+B,feat.D")).toEqual(["0", "A", "B", "D"]);
+		expect(parseArtists("Amedoand and ft Smb")).toEqual([
+			"Amedoand",
+			"Smb"
+		]);
 	});
 });
