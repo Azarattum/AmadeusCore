@@ -62,8 +62,9 @@ export default function Service<T extends string>() {
 		 */
 		private async listen(): Promise<{ type: T; args: any[] }> {
 			const event = new Promise<{ type: T; args: any[] }>(resolve => {
-				if (this.events.length) {
-					resolve(this.events.shift());
+				const event = this.events.shift();
+				if (event) {
+					resolve(event);
 					return;
 				}
 				this.resolve = resolve;

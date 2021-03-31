@@ -16,6 +16,11 @@
 		"alwaysStrict": true,
 		"moduleResolution": "node",
 		"allowSyntheticDefaultImports": true,
-		"esModuleInterop": true
+		"esModuleInterop": true,
+		"plugins": [
+			{
+				"transform": "typescript-is/lib/transform-inline/transformer"
+			}
+		]
 	}
 }
