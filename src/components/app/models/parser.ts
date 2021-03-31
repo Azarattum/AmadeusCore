@@ -91,8 +91,16 @@ export function unemojify(text: string): string {
 }
 
 export function parseArtists(text: string): string[] {
-	const joins = /,|\bft.|\bfeat.|&|\+|\/|\bfeaturing|\bmed\b|\band\b/i;
-	return [...new Set(text.split(joins).map(x => trim(x)))];
+	const joins = /,|\bft\.?|\bfeat\.?|&|\+|\/|\bfeaturing|\bmed\b|\band\b/i;
+
+	return [
+		...new Set(
+			text
+				.split(joins)
+				.map(x => trim(x))
+				.filter(x => x)
+		)
+	];
 }
 
 export function toYear(text: string): [string, number] | null {
