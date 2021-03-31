@@ -14,6 +14,19 @@ export default class VKProvider extends Provider {
 		access_token: this.token
 	};
 
+	private async convert(track: ITrackVK): Promise<ITrack> {
+		return {
+			title: track.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
+			artists: parseArtists(track.artist),
+			album: track.album?.title || track.title,
+			length: track.duration,
+			year: new Date(track.date * 1000).getFullYear(),
+			cover: track.album?.thumb?.photo_1200,
+			url: track.url,
+			sources: [`aggr://vk:${track.owner_id}_${track.id}`]
+		};
+	}
+
 	private async search(
 		query: string,
 		count = 1,
@@ -36,38 +49,38 @@ export default class VKProvider extends Provider {
 	): AsyncGenerator<ITrack> {
 		const tracks = await this.search(query, count, offset);
 
-		for (const x of tracks) {
-			if (!x.url) continue;
-			yield {
-				title: x.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
-				artists: parseArtists(x.artist),
-				album: x.album?.title || x.title,
-				length: x.duration,
-				year: new Date(x.date * 1000).getFullYear(),
-				cover: x.album?.thumb?.photo_1200,
-				url: x.url,
-				sources: [`aggr://vk:${x.owner_id}_${x.id}`]
-			};
+		for (const track of tracks) {
+			if (!track.url) continue;
+			yield this.convert(track);
 		}
 	}
 
-	public async desource(source: string): Promise<string | null> {
-		if (!source.startsWith("aggr://")) return null;
+	public async *desource(source: string): AsyncGenerator<ITrack> {
+		const handle = /(https?:\/\/)?vk\.com\/audio(-?[0-9]+_[0-9]+)/i;
+		const match = source.match(handle);
+
+		if (!match && !source.startsWith("aggr://")) return;
 		source = source.replace("aggr://", "");
-		if (!source.startsWith("vk:")) return null;
+		if (!match && !source.startsWith("vk:")) return;
 		source = source.replace("vk:", "");
+		if (match) source = match[2];
 
 		const { error, data } = await this.call("audio.getById", {
 			audios: [source]
 		});
 
 		if (error) throw error;
-		return assertType<ISourceVK>(data).response[0].url;
+		const tracks = assertType<ISourceVK>(data).response;
+
+		for (const track of tracks) {
+			if (!track.url) continue;
+			yield this.convert(track);
+		}
 	}
 }
 
 interface ISourceVK {
-	response: [{ url: string }];
+	response: ITrackVK[];
 }
 
 interface IResponseVK {

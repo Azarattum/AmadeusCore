@@ -57,7 +57,7 @@ export default abstract class Provider {
 		offset?: number
 	): AsyncGenerator<ITrack>;
 
-	abstract desource(source: string): Promise<string | null>;
+	abstract desource(source: string): AsyncGenerator<ITrack>;
 }
 
 export interface IParsed {

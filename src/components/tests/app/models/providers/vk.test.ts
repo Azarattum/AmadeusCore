@@ -7,35 +7,37 @@ fetchMock.config.Request = globalThis.Request;
 
 const provider = new VKProvider("token");
 
+const track = {
+	title: "1 (Test) (Test)",
+	artist: "2 & 0",
+	album: { title: "3" },
+	duration: 4,
+	date: 1617188680,
+	url: "5",
+	owner_id: 6,
+	id: 7
+};
+
+const expected = {
+	title: "1 (Test)",
+	artists: ["2", "0"],
+	album: "3",
+	length: 4,
+	year: 2021,
+	url: "5",
+	cover: undefined,
+	sources: ["aggr://vk:6_7"]
+};
+
 describe("Providers", () => {
 	it("get", async () => {
-		const track = {
-			title: "1 (Test) (Test)",
-			artist: "2 & 0",
-			album: { title: "3" },
-			duration: 4,
-			date: 1617188680,
-			url: "5",
-			owner_id: 6,
-			id: 7
-		};
-
 		fetchMock.getOnce("*", {
 			response: {
 				items: [track]
 			}
 		});
 
-		expect((await provider.get("hello").next()).value).toEqual({
-			title: "1 (Test)",
-			artists: ["2", "0"],
-			album: "3",
-			length: 4,
-			year: 2021,
-			url: "5",
-			cover: undefined,
-			sources: ["aggr://vk:6_7"]
-		});
+		expect((await provider.get("hello").next()).value).toEqual(expected);
 
 		expect(fetchMock).toHaveLastFetched(undefined, {
 			query: {
@@ -43,15 +45,32 @@ describe("Providers", () => {
 				q: "hello"
 			}
 		});
+
+		fetchMock.mockClear();
+		fetchMock.reset();
 	});
 
 	it("desource", async () => {
-		fetchMock.getOnce("*", {
-			response: [{ url: "42" }]
+		fetchMock.get("*", {
+			response: [track]
 		});
 
-		expect(await provider.desource("aggr://vk:6_7")).toEqual("42");
-		expect(fetchMock).toHaveLastFetched();
+		expect(
+			(await provider.desource("aggr://vk:6_77777").next()).value
+		).toEqual(expected);
+		expect(
+			(await provider.desource("http://vk.com/audio-6_7").next()).value
+		).toEqual(expected);
+		expect(
+			(await provider.desource("https://vk.com/audio7_4").next()).value
+		).toEqual(expected);
+		expect(
+			(await provider.desource("vk.com/audio-1_1").next()).value
+		).toEqual(expected);
+		expect(
+			(await provider.desource("lol.com/audio-1_1").next()).value
+		).toEqual(undefined);
+		expect(fetchMock).toHaveBeenCalledTimes(4);
 
 		fetchMock.mockClear();
 		fetchMock.reset();
@@ -73,12 +92,14 @@ describe("Providers", () => {
 	it("retry", async () => {
 		let tried = false;
 		fetchMock.get("*", () => {
-			if (tried) return { response: [{ url: "42" }] };
+			if (tried) return { response: [track] };
 			tried = true;
 			return 408;
 		});
 
-		expect(await provider.desource("aggr://vk:6_7")).toEqual("42");
+		expect(
+			(await provider.desource("aggr://vk:6_77777").next()).value
+		).toEqual(expected);
 		expect(fetchMock).toHaveFetchedTimes(2);
 		expect(tried);
 
