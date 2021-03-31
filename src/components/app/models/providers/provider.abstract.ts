@@ -1,10 +1,15 @@
 import { ITrack } from "../track.interface";
 import { log, LogType } from "../../../common/utils.class";
-import Fetcher from "../fetcher.abstract";
+import { gretch, GretchResponse } from "gretchen";
 
-export default abstract class Provider extends Fetcher {
+export default abstract class Provider {
+	protected token: string;
+	protected headers: Record<string, string> = {};
+	protected params: Record<string, string> = {};
+	protected abstract baseURL: string;
+
 	public constructor(token: string) {
-		super(token);
+		this.token = token;
 	}
 
 	protected async update<T>(
@@ -34,11 +39,23 @@ export default abstract class Provider extends Fetcher {
 		return Promise.all(updates);
 	}
 
+	protected call(
+		method: string,
+		params: Record<string, any> = {}
+	): Promise<GretchResponse<any, any>> {
+		const encoded = new URLSearchParams({ ...this.params, ...params });
+
+		return gretch(method + "?" + encoded.toString(), {
+			baseURL: this.baseURL,
+			headers: this.headers
+		}).json();
+	}
+
 	abstract get(
 		query: string,
 		count: number,
 		offset?: number
-	): Promise<ITrack[]>;
+	): AsyncGenerator<ITrack>;
 
 	abstract desource(source: string): Promise<string | null>;
 }
