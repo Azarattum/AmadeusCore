@@ -1,6 +1,6 @@
 import { ITrack } from "../track.interface";
 import { log, LogType } from "../../../common/utils.class";
-import { gretch, GretchResponse } from "gretchen";
+import { gretch } from "gretchen";
 
 export default abstract class Provider {
 	protected token: string;
@@ -39,16 +39,22 @@ export default abstract class Provider {
 		return Promise.all(updates);
 	}
 
-	protected call(
+	protected async call(
 		method: string,
 		params: Record<string, any> = {}
-	): Promise<GretchResponse<any, any>> {
+	): Promise<unknown> {
 		const encoded = new URLSearchParams({ ...this.params, ...params });
 
-		return gretch(method + "?" + encoded.toString(), {
-			baseURL: this.baseURL,
-			headers: this.headers
-		}).json();
+		const { error, data } = await gretch(
+			method + "?" + encoded.toString(),
+			{
+				baseURL: this.baseURL,
+				headers: this.headers
+			}
+		).json();
+
+		if (error) throw error;
+		return data;
 	}
 
 	abstract get(

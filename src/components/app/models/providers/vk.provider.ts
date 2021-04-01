@@ -27,18 +27,77 @@ export default class VKProvider extends Provider {
 		};
 	}
 
+	private async identify(source: string): Promise<ITrackVK[]> {
+		let match;
+		//From aggregator
+		if (source.startsWith("aggr://vk:")) {
+			const audios = await this.call("audio.getById", {
+				audios: [source.slice(10)]
+			});
+			return assertType<ISourceVK>(audios).response;
+		}
+
+		//From audio url
+		match = source.match(/(https?:\/\/)?vk\.com\/audio(-?[0-9]+_[0-9]+)/i);
+		if (match) {
+			const audios = await this.call("audio.getById", {
+				audios: [match[2]]
+			});
+			return assertType<ISourceVK>(audios).response;
+		}
+
+		//From artist
+		match = source.match(/(https?:\/\/)?vk\.com\/artist\/([a-z0-9_]+)/i);
+		if (match) {
+			const audios = await this.call("audio.getAudiosByArtist", {
+				artist_id: match[2],
+				count: 1000
+			});
+			return assertType<IResponseVK>(audios).response.items;
+		}
+
+		//From playlist
+		match = source.match(
+			/(https?:\/\/)?vk\.com\/audio_playlist(-?[0-9]+)_([0-9]+)/i
+		);
+		if (match) {
+			const audios = await this.call("audio.get", {
+				owner_id: +match[2],
+				album_id: +match[3],
+				count: 1000
+			});
+			return assertType<IResponseVK>(audios).response.items;
+		}
+
+		//From user's page
+		match = source.match(/(https?:\/\/)?vk\.com\/([a-z0-9_]+)/i);
+		if (match) {
+			const user = await this.call("users.get", {
+				user_ids: [match[2]]
+			});
+			const id = assertType<IUserVK>(user).response[0].id;
+
+			const audios = await this.call("audio.get", {
+				owner_id: id,
+				count: 1000
+			});
+			return assertType<IResponseVK>(audios).response.items;
+		}
+
+		return [];
+	}
+
 	private async search(
 		query: string,
 		count = 1,
 		offset = 0
 	): Promise<ITrackVK[]> {
-		const { error, data } = await this.call("audio.search", {
+		const data = await this.call("audio.search", {
 			q: query,
 			count,
 			offset
 		});
 
-		if (error) throw error;
 		return assertType<IResponseVK>(data).response.items;
 	}
 
@@ -56,27 +115,17 @@ export default class VKProvider extends Provider {
 	}
 
 	public async *desource(source: string): AsyncGenerator<ITrack> {
-		const handle = /(https?:\/\/)?vk\.com\/audio(-?[0-9]+_[0-9]+)/i;
-		const match = source.match(handle);
-
-		if (!match && !source.startsWith("aggr://")) return;
-		source = source.replace("aggr://", "");
-		if (!match && !source.startsWith("vk:")) return;
-		source = source.replace("vk:", "");
-		if (match) source = match[2];
-
-		const { error, data } = await this.call("audio.getById", {
-			audios: [source]
-		});
-
-		if (error) throw error;
-		const tracks = assertType<ISourceVK>(data).response;
+		const tracks = await this.identify(source);
 
 		for (const track of tracks) {
 			if (!track.url) continue;
 			yield this.convert(track);
 		}
 	}
+}
+
+interface IUserVK {
+	response: [{ id: number }];
 }
 
 interface ISourceVK {

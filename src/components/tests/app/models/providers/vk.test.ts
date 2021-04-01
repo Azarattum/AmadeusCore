@@ -51,8 +51,14 @@ describe("Providers", () => {
 	});
 
 	it("desource", async () => {
-		fetchMock.get("*", {
+		fetchMock.get(/getById/, {
 			response: [track]
+		});
+		fetchMock.get(/user/, {
+			response: [{ id: 42 }]
+		});
+		fetchMock.get("*", {
+			response: { items: [track] }
 		});
 
 		expect(
@@ -71,6 +77,17 @@ describe("Providers", () => {
 			(await provider.desource("lol.com/audio-1_1").next()).value
 		).toEqual(undefined);
 		expect(fetchMock).toHaveBeenCalledTimes(4);
+
+		expect(
+			(await provider.desource("vk.com/artist/smb_1").next()).value
+		).toEqual(expected);
+		expect(
+			(await provider.desource("vk.com/audio_playlist1_2_f").next()).value
+		).toEqual(expected);
+		expect(
+			(await provider.desource("vk.com/username").next()).value
+		).toEqual(expected);
+		expect(fetchMock).toHaveBeenCalledTimes(8);
 
 		fetchMock.mockClear();
 		fetchMock.reset();
