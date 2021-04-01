@@ -124,4 +124,22 @@ describe("Providers", () => {
 		fetchMock.mockClear();
 		fetchMock.reset();
 	});
+
+	it("empty", async () => {
+		let tried = false;
+		fetchMock.get("*", () => {
+			if (tried) return { response: [track] };
+			tried = true;
+			return 200;
+		});
+
+		expect((await provider.desource("aggr://vk:1_2").next()).value).toEqual(
+			expected
+		);
+		expect(fetchMock).toHaveFetchedTimes(2);
+		expect(tried);
+
+		fetchMock.mockClear();
+		fetchMock.reset();
+	});
 });

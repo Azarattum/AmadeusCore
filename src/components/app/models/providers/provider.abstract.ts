@@ -1,5 +1,5 @@
 import { ITrack } from "../track.interface";
-import { log, LogType } from "../../../common/utils.class";
+import { log, LogType, sleep } from "../../../common/utils.class";
 import { gretch } from "gretchen";
 
 export default abstract class Provider {
@@ -45,16 +45,20 @@ export default abstract class Provider {
 	): Promise<unknown> {
 		const encoded = new URLSearchParams({ ...this.params, ...params });
 
-		const { error, data } = await gretch(
-			method + "?" + encoded.toString(),
-			{
+		const use = () =>
+			gretch(method + "?" + encoded.toString(), {
 				baseURL: this.baseURL,
 				headers: this.headers
-			}
-		).json();
+			}).json();
 
-		if (error) throw error;
-		return data;
+		let res = await use();
+		if (res.error?.type === "invalid-json") {
+			await sleep(6);
+			res = await use();
+		}
+
+		if (res.error) throw res.error;
+		return res.data;
 	}
 
 	abstract get(
