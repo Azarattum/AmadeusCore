@@ -30,7 +30,7 @@ const expected = {
 	sources: ["aggr://vk:6_7"]
 };
 
-describe("Providers", () => {
+describe("VKProvider", () => {
 	it("get", async () => {
 		fetchMock.getOnce("*", {
 			response: {
@@ -102,42 +102,6 @@ describe("Providers", () => {
 		await expect(provider.get("something").next()).rejects.toThrowError(
 			TypeGuardError
 		);
-
-		fetchMock.mockClear();
-		fetchMock.reset();
-	});
-
-	it("retry", async () => {
-		let tried = false;
-		fetchMock.get("*", () => {
-			if (tried) return { response: [track] };
-			tried = true;
-			return 408;
-		});
-
-		expect(
-			(await provider.desource("aggr://vk:6_77777").next()).value
-		).toEqual(expected);
-		expect(fetchMock).toHaveFetchedTimes(2);
-		expect(tried);
-
-		fetchMock.mockClear();
-		fetchMock.reset();
-	});
-
-	it("empty", async () => {
-		let tried = false;
-		fetchMock.get("*", () => {
-			if (tried) return { response: [track] };
-			tried = true;
-			return 200;
-		});
-
-		expect((await provider.desource("aggr://vk:1_2").next()).value).toEqual(
-			expected
-		);
-		expect(fetchMock).toHaveFetchedTimes(2);
-		expect(tried);
 
 		fetchMock.mockClear();
 		fetchMock.reset();

@@ -1,8 +1,8 @@
 import { ITrack } from "../track.interface";
-import { log, LogType, sleep } from "../../../common/utils.class";
+import { sleep } from "../../../common/utils.class";
 import { gretch } from "gretchen";
 
-export default abstract class Provider {
+export default abstract class Provider<T> {
 	protected token: string;
 	protected headers: Record<string, string> = {};
 	protected params: Record<string, string> = {};
@@ -12,41 +12,15 @@ export default abstract class Provider {
 		this.token = token;
 	}
 
-	protected async update<T>(
-		args: any[][],
-		method: (...args: any) => Promise<T>,
-		callback: (result: T, index: number) => void
-	): Promise<void[]> {
-		const updates: Promise<void>[] = [];
-		for (const i in args) {
-			const promise = method
-				.bind(this)(...args[i])
-				.then(x => {
-					callback(x, +i);
-				})
-				.catch(e => {
-					log(
-						`${JSON.stringify(args[i])} skiped by ${
-							this.constructor.name
-						} (failed to load)!\n${e}`,
-						LogType.WARNING
-					);
-				});
-
-			updates.push(promise);
-		}
-
-		return Promise.all(updates);
-	}
-
 	protected async call(
 		method: string,
 		params: Record<string, any> = {}
 	): Promise<unknown> {
 		const encoded = new URLSearchParams({ ...this.params, ...params });
+		const args = encoded.toString() ? "?" + encoded.toString() : "";
 
 		const use = () =>
-			gretch(method + "?" + encoded.toString(), {
+			gretch(method + args, {
 				baseURL: this.baseURL,
 				headers: this.headers
 			}).json();
@@ -61,13 +35,39 @@ export default abstract class Provider {
 		return res.data;
 	}
 
-	abstract get(
+	public async *get(
 		query: string,
-		count: number,
-		offset?: number
-	): AsyncGenerator<ITrack>;
+		count = 1,
+		offset = 0
+	): AsyncGenerator<ITrack> {
+		const tracks = await this.search(query, count, offset);
 
-	abstract desource(source: string): AsyncGenerator<ITrack>;
+		for (const track of tracks) {
+			const converted = await this.convert(track);
+			if (!converted.url) continue;
+			yield converted;
+		}
+	}
+
+	public async *desource(source: string): AsyncGenerator<ITrack> {
+		const tracks = await this.identify(source);
+
+		for (const track of tracks) {
+			const converted = await this.convert(track);
+			if (!converted.url) continue;
+			yield converted;
+		}
+	}
+
+	protected abstract search(
+		query: string,
+		count?: number,
+		offset?: number
+	): Promise<T[]>;
+
+	protected abstract identify(source: string): Promise<T[]>;
+
+	protected abstract convert(track: T): Promise<ITrack>;
 }
 
 export interface IParsed {

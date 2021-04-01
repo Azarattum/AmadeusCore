@@ -3,7 +3,7 @@ import { parseArtists } from "../parser";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
 
-export default class VKProvider extends Provider {
+export default class VKProvider extends Provider<ITrackVK> {
 	protected baseURL = "https://api.vk.com/method/";
 	protected headers = {
 		"User-Agent":
@@ -14,20 +14,7 @@ export default class VKProvider extends Provider {
 		access_token: this.token
 	};
 
-	private async convert(track: ITrackVK): Promise<ITrack> {
-		return {
-			title: track.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
-			artists: parseArtists(track.artist),
-			album: track.album?.title || track.title,
-			length: track.duration,
-			year: new Date(track.date * 1000).getFullYear(),
-			cover: track.album?.thumb?.photo_1200,
-			url: track.url,
-			sources: [`aggr://vk:${track.owner_id}_${track.id}`]
-		};
-	}
-
-	private async identify(source: string): Promise<ITrackVK[]> {
+	protected async identify(source: string): Promise<ITrackVK[]> {
 		let match;
 		//From aggregator
 		if (source.startsWith("aggr://vk:")) {
@@ -87,7 +74,20 @@ export default class VKProvider extends Provider {
 		return [];
 	}
 
-	private async search(
+	protected async convert(track: ITrackVK): Promise<ITrack> {
+		return {
+			title: track.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
+			artists: parseArtists(track.artist),
+			album: track.album?.title || track.title,
+			length: track.duration,
+			year: new Date(track.date * 1000).getFullYear(),
+			cover: track.album?.thumb?.photo_1200,
+			url: track.url,
+			sources: [`aggr://vk:${track.owner_id}_${track.id}`]
+		};
+	}
+
+	protected async search(
 		query: string,
 		count = 1,
 		offset = 0
@@ -99,28 +99,6 @@ export default class VKProvider extends Provider {
 		});
 
 		return assertType<IResponseVK>(data).response.items;
-	}
-
-	public async *get(
-		query: string,
-		count = 1,
-		offset = 0
-	): AsyncGenerator<ITrack> {
-		const tracks = await this.search(query, count, offset);
-
-		for (const track of tracks) {
-			if (!track.url) continue;
-			yield this.convert(track);
-		}
-	}
-
-	public async *desource(source: string): AsyncGenerator<ITrack> {
-		const tracks = await this.identify(source);
-
-		for (const track of tracks) {
-			if (!track.url) continue;
-			yield this.convert(track);
-		}
 	}
 }
 
