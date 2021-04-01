@@ -1,34 +1,63 @@
 import { createHash } from "crypto";
+import { gretch } from "gretchen";
+import { assertType } from "typescript-is";
+import { parseArtists } from "../parser";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
 
-export default class YandexProvider extends Provider {
+export default class YandexProvider extends Provider<ITrackYandex> {
 	protected baseURL = "https://api.music.yandex.net/";
 	protected headers = {
 		"User-Agent": "Yandex-Music-API",
 		Authorization: `OAuth ${this.token}`
 	};
 
-	private async search(
+	protected async identify(source: string): Promise<ITrackYandex[]> {
+		//From aggregator
+		if (source.startsWith("aggr://yandex:")) {
+			const audio = await this.call(`tracks/${source.slice(14)}`);
+			return assertType<ISourceYandex>(audio).result;
+		}
+
+		return [];
+	}
+
+	protected async convert(track: ITrackYandex): Promise<ITrack> {
+		const converted = {
+			title: track.title,
+			artists: parseArtists(track.artists.map(x => x.name).join(", ")),
+			album: track.albums[0].title,
+			length: track.durationMs / 1000,
+			year: track.albums[0].year,
+			cover:
+				"https://" +
+				track.coverUri.slice(0, track.coverUri.length - 2) +
+				"800x800",
+			url: null as any,
+			sources: [`aggr://yandex:${track.id}`]
+		};
+
+		converted.url = await this.load(track.id);
+		return converted;
+	}
+
+	protected async search(
 		query: string,
 		count = 1,
 		offset = 0
 	): Promise<ITrackYandex[]> {
 		const perPage = 20;
-		const response = await this.call("search", {
+		const data = await this.call("search", {
 			type: "track",
 			text: query,
 			page: Math.floor(offset / perPage),
 			nococrrect: false
 		});
 
-		const json = await response.json();
-		const tracks = json["result"]["tracks"]?.["results"].slice(
-			offset % perPage,
-			count
-		);
+		const tracks = assertType<IResponseYandex>(
+			data
+		).result.tracks.results.slice(offset % perPage, count);
 
-		if (!tracks) return [];
 		const onPage = perPage - (offset % perPage);
 		if (count > onPage) {
 			tracks.push(
@@ -39,14 +68,17 @@ export default class YandexProvider extends Provider {
 		return tracks;
 	}
 
-	private async load(id: number): Promise<string> {
-		const response = await this.call(`tracks/${id}/download-info`);
+	private async load(id: number | string): Promise<string> {
+		const load = await this.call(`tracks/${id}/download-info`);
 
 		const url =
-			(await response.json())["result"][0]["downloadInfoUrl"] +
+			assertType<ILoadYandex>(load).result[0].downloadInfoUrl +
 			"&format=json";
 
-		const info = await (await fetch(url)).json();
+		const { error, data } = await gretch(url).json();
+		if (error) throw error;
+		const info = assertType<IInfoYandex>(data);
+
 		const trackUrl = `XGRlBW9FXlekgbPrRHuSiA${info.path.substr(1)}${
 			info.s
 		}`;
@@ -56,96 +88,41 @@ export default class YandexProvider extends Provider {
 
 		return `https://${info.host}/get-mp3/${sign}/${info.ts}${info.path}`;
 	}
-
-	public async get(query: string, count = 1, offset = 0): Promise<ITrack[]> {
-		const tracks = await this.search(query, count, offset);
-		const joins = /,|ft.|feat.|&|\+|\/|featuring|med|\||\band\b/;
-
-		const metas = tracks.map(x => {
-			const artists: string[] = [];
-			x.artists.forEach(x =>
-				artists.push(...x.name.split(joins).map(x => x?.trim()))
-			);
-
-			return {
-				title: x.title,
-				artists: [...new Set(artists)],
-				album: x.albums[0].title,
-				length: x.durationMs / 1000,
-				year: x.albums[0].year,
-				cover:
-					"https://" +
-					x.coverUri.slice(0, x.coverUri.length - 2) +
-					"800x800",
-				url: null as any,
-				sources: [`aggr://yandex:${x.id}`]
-			};
-		});
-
-		await this.update(
-			tracks.map(x => [x.id]),
-			this.load,
-			(x, i) => {
-				metas[i].url = x as any;
-			}
-		);
-
-		return metas.filter(x => x.url);
-	}
-
-	public async desource(source: string): Promise<string | null> {
-		if (!source.startsWith("aggr://")) return null;
-		source = source.replace("aggr://", "");
-		if (!source.startsWith("yandex:")) return null;
-		source = source.replace("yandex:", "");
-		if (!+source) return null;
-		const id = +source;
-
-		return this.load(id) || null;
-	}
 }
 
-interface IAlbumYandex {
-	id: number;
-	storageDir: string;
-	originalReleaseYear: number;
-	year: number;
-	artists: any[];
-	coverUri: string;
-	trackCount: number;
-	likesCount: number;
-	genre: string;
-	available: boolean;
-	contentWarning: string;
-	availableForPremiumUsers: boolean;
-	title: string;
-	availableRegions: any[];
-	labels: any[];
-	trackPosition: any[];
+interface IInfoYandex {
+	path: string;
+	host: string;
+	s: string;
+	ts: string;
 }
 
-interface IArtistYandex {
-	id: number;
-	name: string;
-	cover: any[];
-	composer: boolean;
-	various: boolean;
-	decomposed: any[];
+interface ILoadYandex {
+	result: { downloadInfoUrl: string }[];
+}
+
+interface ISourceYandex {
+	result: [ITrackYandex];
+}
+
+interface IResponseYandex {
+	result: { tracks: { results: ITrackYandex[] } };
 }
 
 interface ITrackYandex {
-	id: number;
-	available: boolean;
-	availableAsRbt: boolean;
-	availableForPremiumUsers: boolean;
-	lyricsAvailable: boolean;
-	rememberPosition: boolean;
+	id: number | string;
 	albums: IAlbumYandex[];
 	coverUri: string;
-	type: string;
 	durationMs: number;
-	explicit: boolean;
 	title: string;
 	artists: IArtistYandex[];
-	regions: string[];
+}
+
+interface IAlbumYandex {
+	year?: number;
+	title: string;
+}
+
+interface IArtistYandex {
+	name: string;
 }
