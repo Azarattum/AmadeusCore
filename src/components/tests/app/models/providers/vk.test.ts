@@ -1,9 +1,10 @@
+import * as fetch from "node-fetch";
 import fetchMock from "fetch-mock-jest";
 import { TypeGuardError } from "typescript-is";
 import VKProvider from "../../../../app/models/providers/vk.provider";
 
+Object.assign(globalThis, { ...fetch, fetch });
 fetchMock.config.overwriteRoutes = true;
-fetchMock.config.Request = globalThis.Request;
 
 const provider = new VKProvider("token");
 

@@ -5,8 +5,7 @@ import * as fetch from "node-fetch";
 
 //Configure environment
 DotEnv.config();
-Object.assign(globalThis, fetch);
-globalThis.fetch = fetch.default as any;
+Object.assign(globalThis, { ...fetch, fetch });
 
 //Application init
 const app = new App();
