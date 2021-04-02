@@ -12,27 +12,92 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		Authorization: `OAuth ${this.token}`
 	};
 
-	protected async identify(source: string): Promise<ITrackYandex[]> {
+	protected async *identify(source: string): AsyncGenerator<ITrackYandex> {
+		let match;
+
 		//From aggregator
 		if (source.startsWith("aggr://yandex:")) {
 			const audio = await this.call(`tracks/${source.slice(14)}`);
-			return assertType<ISourceYandex>(audio).result;
+			const tracks = assertType<ISourceYandex>(audio).result;
+			for (const track of tracks) yield track;
+
+			return;
 		}
 
-		return [];
+		//From track url
+		match = source.match(
+			/(https?:\/\/)?music\.yandex\.ru\/album\/([0-9]+)\/track\/([0-9]+)/i
+		);
+		if (match) {
+			const audios = await this.call(`tracks/${match[3]}`);
+			const tracks = assertType<ISourceYandex>(audios).result;
+			for (const track of tracks) yield track;
+
+			return;
+		}
+
+		//From track album
+		match = source.match(
+			/(https?:\/\/)?music\.yandex\.ru\/album\/([0-9]+)/i
+		);
+		if (match) {
+			const audios = await this.call(`albums/${match[2]}/with-tracks`);
+			const tracks = assertType<IAlbumTracksYandex>(
+				audios
+			).result.volumes.flat();
+			for (const track of tracks) yield track;
+
+			return;
+		}
+
+		//From track artist
+		match = source.match(
+			/(https?:\/\/)?music\.yandex\.ru\/artist\/([0-9]+)/i
+		);
+		if (match) {
+			let tracks;
+			let page = 0;
+			do {
+				const audios = await this.call(`artists/${match[2]}/tracks`, {
+					"page-size": 100,
+					page: page++
+				});
+				tracks = assertType<IArtistTracksYandex>(audios).result.tracks;
+				if (!tracks) return;
+				for await (const track of tracks) yield track;
+			} while (tracks);
+
+			return;
+		}
+
+		//From playlist
+		match = source.match(
+			/(https?:\/\/)?music\.yandex\.ru\/users\/([a-z0-9_]+)\/playlists\/([0-9]+)/i
+		);
+		if (match) {
+			const audios = await this.call(
+				`users/${match[2]}/playlists/${match[3]}`
+			);
+			const tracks = assertType<IPlaylistYandex>(audios).result.tracks;
+			if (!tracks) return;
+			for await (const track of tracks) yield track.track;
+
+			return;
+		}
 	}
 
 	protected async convert(track: ITrackYandex): Promise<ITrack> {
 		const converted = {
 			title: track.title,
 			artists: parseArtists(track.artists.map(x => x.name).join(", ")),
-			album: track.albums[0].title,
-			length: track.durationMs / 1000,
-			year: track.albums[0].year,
-			cover:
-				"https://" +
-				track.coverUri.slice(0, track.coverUri.length - 2) +
-				"800x800",
+			album: track.albums[0]?.title || track.title,
+			length: (track.durationMs || 0) / 1000,
+			year: track.albums[0]?.year,
+			cover: track.coverUri
+				? "https://" +
+				  track.coverUri.slice(0, track.coverUri.length - 2) +
+				  "800x800"
+				: undefined,
 			url: null as any,
 			sources: [`aggr://yandex:${track.id}`]
 		};
@@ -41,11 +106,11 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		return converted;
 	}
 
-	protected async search(
+	protected async *search(
 		query: string,
 		count = 1,
 		offset = 0
-	): Promise<ITrackYandex[]> {
+	): AsyncGenerator<ITrackYandex> {
 		const perPage = 20;
 		const data = await this.call("search", {
 			type: "track",
@@ -57,15 +122,17 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		const tracks = assertType<IResponseYandex>(
 			data
 		).result.tracks.results.slice(offset % perPage, count);
+		for (const track of tracks) {
+			yield track;
+		}
 
 		const onPage = perPage - (offset % perPage);
 		if (count > onPage) {
-			tracks.push(
-				...(await this.search(query, count - onPage, offset + onPage))
-			);
+			const next = this.search(query, count - onPage, offset + onPage);
+			for await (const track of next) {
+				yield track;
+			}
 		}
-
-		return tracks;
 	}
 
 	private async load(id: number | string): Promise<string> {
@@ -101,8 +168,20 @@ interface ILoadYandex {
 	result: { downloadInfoUrl: string }[];
 }
 
+interface IAlbumTracksYandex {
+	result: { volumes: ITrackYandex[][] };
+}
+
+interface IArtistTracksYandex {
+	result: { tracks?: ITrackYandex[] };
+}
+
+interface IPlaylistYandex {
+	result: { tracks: { track: ITrackYandex }[] };
+}
+
 interface ISourceYandex {
-	result: [ITrackYandex];
+	result: ITrackYandex[];
 }
 
 interface IResponseYandex {
@@ -112,8 +191,8 @@ interface IResponseYandex {
 interface ITrackYandex {
 	id: number | string;
 	albums: IAlbumYandex[];
-	coverUri: string;
-	durationMs: number;
+	coverUri?: string;
+	durationMs?: number;
 	title: string;
 	artists: IArtistYandex[];
 }
