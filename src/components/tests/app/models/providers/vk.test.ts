@@ -40,7 +40,7 @@ fetchMock.get("*", {
 	response: { items: [track] }
 });
 
-describe("VKProvider", () => {
+describe("VK", () => {
 	it("get", async () => {
 		expect((await provider.get("hello").next()).value).toEqual(expected);
 

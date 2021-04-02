@@ -53,7 +53,7 @@ fetchMock.get(/url/, {
 	ts: "d"
 });
 
-describe("YandexProvider", () => {
+describe("Yandex", () => {
 	it("get", async () => {
 		expect((await provider.get("hello").next()).value).toEqual(expected);
 
