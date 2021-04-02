@@ -110,12 +110,12 @@ interface IResponseSoundCloud {
 }
 
 interface ITrackSoundCloud {
-	artwork_url: string | null;
+	artwork_url?: string | null;
 	created_at: string;
 	full_duration: number;
 	id: number;
-	publisher_metadata: IArtistSoundCloud | null;
-	release_date: string | null;
+	publisher_metadata?: IArtistSoundCloud | null;
+	release_date?: string | null;
 	title: string;
 	media: { transcodings: ITranscodingsSoundCloud[] };
 	user: {
