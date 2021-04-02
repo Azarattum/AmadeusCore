@@ -42,7 +42,7 @@ export default abstract class Provider<T> {
 	): AsyncGenerator<ITrack> {
 		const tracks = await this.search(query, count, offset);
 
-		for (const track of tracks) {
+		for await (const track of tracks) {
 			const converted = await this.convert(track);
 			if (!converted.url) continue;
 			yield converted;
@@ -52,22 +52,22 @@ export default abstract class Provider<T> {
 	public async *desource(source: string): AsyncGenerator<ITrack> {
 		const tracks = await this.identify(source);
 
-		for (const track of tracks) {
+		for await (const track of tracks) {
 			const converted = await this.convert(track);
 			if (!converted.url) continue;
 			yield converted;
 		}
 	}
 
+	protected abstract convert(track: T): Promise<ITrack>;
+
+	protected abstract identify(source: string): AsyncGenerator<T>;
+
 	protected abstract search(
 		query: string,
 		count?: number,
 		offset?: number
-	): Promise<T[]>;
-
-	protected abstract identify(source: string): Promise<T[]>;
-
-	protected abstract convert(track: T): Promise<ITrack>;
+	): AsyncGenerator<T>;
 }
 
 export interface IParsed {

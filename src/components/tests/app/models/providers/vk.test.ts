@@ -30,14 +30,18 @@ const expected = {
 	sources: ["aggr://vk:6_7"]
 };
 
+fetchMock.get(/getById/, {
+	response: [track]
+});
+fetchMock.get(/user/, {
+	response: [{ id: 42 }]
+});
+fetchMock.get("*", {
+	response: { items: [track] }
+});
+
 describe("VKProvider", () => {
 	it("get", async () => {
-		fetchMock.getOnce("*", {
-			response: {
-				items: [track]
-			}
-		});
-
 		expect((await provider.get("hello").next()).value).toEqual(expected);
 
 		expect(fetchMock).toHaveLastFetched(undefined, {
@@ -48,50 +52,25 @@ describe("VKProvider", () => {
 		});
 
 		fetchMock.mockClear();
-		fetchMock.reset();
 	});
 
 	it("desource", async () => {
-		fetchMock.get(/getById/, {
-			response: [track]
-		});
-		fetchMock.get(/user/, {
-			response: [{ id: 42 }]
-		});
-		fetchMock.get("*", {
-			response: { items: [track] }
-		});
+		const desource = async (src: string) =>
+			(await provider.desource(src).next()).value;
 
-		expect(
-			(await provider.desource("aggr://vk:6_77777").next()).value
-		).toEqual(expected);
-		expect(
-			(await provider.desource("http://vk.com/audio-6_7").next()).value
-		).toEqual(expected);
-		expect(
-			(await provider.desource("https://vk.com/audio7_4").next()).value
-		).toEqual(expected);
-		expect(
-			(await provider.desource("vk.com/audio-1_1").next()).value
-		).toEqual(expected);
-		expect(
-			(await provider.desource("lol.com/audio-1_1").next()).value
-		).toEqual(undefined);
+		expect(await desource("aggr://vk:6_77777")).toEqual(expected);
+		expect(await desource("http://vk.com/audio-6_7")).toEqual(expected);
+		expect(await desource("https://vk.com/audio7_4")).toEqual(expected);
+		expect(await desource("vk.com/audio-1_1")).toEqual(expected);
+		expect(await desource("lol.com/audio-1_1")).toEqual(undefined);
 		expect(fetchMock).toHaveBeenCalledTimes(4);
-
-		expect(
-			(await provider.desource("vk.com/artist/smb_1").next()).value
-		).toEqual(expected);
-		expect(
-			(await provider.desource("vk.com/audio_playlist1_2_f").next()).value
-		).toEqual(expected);
-		expect(
-			(await provider.desource("vk.com/username").next()).value
-		).toEqual(expected);
-		expect(fetchMock).toHaveBeenCalledTimes(8);
-
 		fetchMock.mockClear();
-		fetchMock.reset();
+
+		expect(await desource("vk.com/artist/smb_1")).toEqual(expected);
+		expect(await desource("vk.com/audio_playlist1_2_f")).toEqual(expected);
+		expect(await desource("vk.com/username")).toEqual(expected);
+		expect(fetchMock).toHaveBeenCalledTimes(4);
+		fetchMock.mockClear();
 	});
 
 	it("error", async () => {
@@ -104,6 +83,5 @@ describe("VKProvider", () => {
 		);
 
 		fetchMock.mockClear();
-		fetchMock.reset();
 	});
 });

@@ -14,14 +14,17 @@ export default class VKProvider extends Provider<ITrackVK> {
 		access_token: this.token
 	};
 
-	protected async identify(source: string): Promise<ITrackVK[]> {
+	protected async *identify(source: string): AsyncGenerator<ITrackVK> {
 		let match;
 		//From aggregator
 		if (source.startsWith("aggr://vk:")) {
 			const audios = await this.call("audio.getById", {
 				audios: [source.slice(10)]
 			});
-			return assertType<ISourceVK>(audios).response;
+			const tracks = assertType<ISourceVK>(audios).response;
+			for (const track of tracks) yield track;
+
+			return;
 		}
 
 		//From audio url
@@ -30,17 +33,30 @@ export default class VKProvider extends Provider<ITrackVK> {
 			const audios = await this.call("audio.getById", {
 				audios: [match[2]]
 			});
-			return assertType<ISourceVK>(audios).response;
+			const tracks = assertType<ISourceVK>(audios).response;
+			for (const track of tracks) yield track;
+
+			return;
 		}
 
 		//From artist
 		match = source.match(/(https?:\/\/)?vk\.com\/artist\/([a-z0-9_]+)/i);
 		if (match) {
-			const audios = await this.call("audio.getAudiosByArtist", {
-				artist_id: match[2],
-				count: 1000
-			});
-			return assertType<IResponseVK>(audios).response.items;
+			let tracks;
+			let offset = 0;
+			do {
+				const audios = await this.call("audio.getAudiosByArtist", {
+					artist_id: match[2],
+					count: 100,
+					offset: offset
+				});
+
+				tracks = assertType<IResponseVK>(audios).response.items;
+				for await (const track of tracks) yield track;
+				offset += 100;
+			} while (tracks.length);
+
+			return;
 		}
 
 		//From playlist
@@ -48,12 +64,22 @@ export default class VKProvider extends Provider<ITrackVK> {
 			/(https?:\/\/)?vk\.com\/audio_playlist(-?[0-9]+)_([0-9]+)/i
 		);
 		if (match) {
-			const audios = await this.call("audio.get", {
-				owner_id: +match[2],
-				album_id: +match[3],
-				count: 1000
-			});
-			return assertType<IResponseVK>(audios).response.items;
+			let tracks;
+			let offset = 0;
+			do {
+				const audios = await this.call("audio.get", {
+					owner_id: +match[2],
+					album_id: +match[3],
+					count: 100,
+					offset: offset
+				});
+
+				tracks = assertType<IResponseVK>(audios).response.items;
+				for await (const track of tracks) yield track;
+				offset += 100;
+			} while (tracks.length);
+
+			return;
 		}
 
 		//From user's page
@@ -64,14 +90,22 @@ export default class VKProvider extends Provider<ITrackVK> {
 			});
 			const id = assertType<IUserVK>(user).response[0].id;
 
-			const audios = await this.call("audio.get", {
-				owner_id: id,
-				count: 1000
-			});
-			return assertType<IResponseVK>(audios).response.items;
-		}
+			let tracks;
+			let offset = 0;
+			do {
+				const audios = await this.call("audio.get", {
+					owner_id: id,
+					count: 100,
+					offset: offset
+				});
 
-		return [];
+				tracks = assertType<IResponseVK>(audios).response.items;
+				for await (const track of tracks) yield track;
+				offset += 100;
+			} while (tracks.length);
+
+			return;
+		}
 	}
 
 	protected async convert(track: ITrackVK): Promise<ITrack> {
@@ -87,18 +121,19 @@ export default class VKProvider extends Provider<ITrackVK> {
 		};
 	}
 
-	protected async search(
+	protected async *search(
 		query: string,
 		count = 1,
 		offset = 0
-	): Promise<ITrackVK[]> {
+	): AsyncGenerator<ITrackVK> {
 		const data = await this.call("audio.search", {
 			q: query,
 			count,
 			offset
 		});
 
-		return assertType<IResponseVK>(data).response.items;
+		const tracks = assertType<IResponseVK>(data).response.items;
+		for await (const track of tracks) yield track;
 	}
 }
 

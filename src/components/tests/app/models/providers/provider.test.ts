@@ -8,15 +8,16 @@ fetchMock.config.overwriteRoutes = true;
 
 class TestProvider extends Provider<any> {
 	protected baseURL: string = "";
-	protected async search(
+	protected async *search(
 		query: string,
 		count?: number,
 		offset?: number
-	): Promise<any[]> {
-		return [];
+	): AsyncGenerator<any> {
+		yield;
 	}
-	protected async identify(source: string): Promise<any[]> {
-		return [await this.call("*")];
+
+	protected async *identify(source: string): AsyncGenerator<any> {
+		yield await this.call("*");
 	}
 	protected async convert(track: any): Promise<ITrack> {
 		return track;
