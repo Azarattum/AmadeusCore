@@ -90,7 +90,8 @@ export function unemojify(text: string): string {
 	return text.replace(new RegExp(emoji, "ig"), "");
 }
 
-export function parseArtists(text: string): string[] {
+export function parseArtists(text?: string): string[] {
+	if (!text) return [];
 	const joins = /,|\bft\.?|\bfeat\.?|&|\+|\/|\bfeaturing|\bmed\b|\band\b/i;
 
 	return [

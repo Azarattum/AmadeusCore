@@ -108,19 +108,6 @@ export default class VKProvider extends Provider<ITrackVK> {
 		}
 	}
 
-	protected async convert(track: ITrackVK): Promise<ITrack> {
-		return {
-			title: track.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
-			artists: parseArtists(track.artist),
-			album: track.album?.title || track.title,
-			length: track.duration,
-			year: new Date(track.date * 1000).getFullYear(),
-			cover: track.album?.thumb?.photo_1200,
-			url: track.url,
-			sources: [`aggr://vk:${track.owner_id}_${track.id}`]
-		};
-	}
-
 	protected async *search(
 		query: string,
 		count = 1,
@@ -134,6 +121,19 @@ export default class VKProvider extends Provider<ITrackVK> {
 
 		const tracks = assertType<IResponseVK>(data).response.items;
 		for await (const track of tracks) yield track;
+	}
+
+	protected async convert(track: ITrackVK): Promise<ITrack> {
+		return {
+			title: track.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
+			artists: parseArtists(track.artist),
+			album: track.album?.title || track.title,
+			length: track.duration,
+			year: new Date(track.date * 1000).getFullYear(),
+			cover: track.album?.thumb?.photo_1200,
+			url: track.url,
+			sources: [`aggr://vk:${track.owner_id}_${track.id}`]
+		};
 	}
 }
 

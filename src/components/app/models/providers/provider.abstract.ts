@@ -59,7 +59,7 @@ export default abstract class Provider<T> {
 		}
 	}
 
-	protected abstract convert(track: T): Promise<ITrack>;
+	protected abstract convert(track: T): Promise<ITrack | { url: undefined }>;
 
 	protected abstract identify(source: string): AsyncGenerator<T>;
 

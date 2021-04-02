@@ -86,26 +86,6 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		}
 	}
 
-	protected async convert(track: ITrackYandex): Promise<ITrack> {
-		const converted = {
-			title: track.title,
-			artists: parseArtists(track.artists.map(x => x.name).join(", ")),
-			album: track.albums[0]?.title || track.title,
-			length: (track.durationMs || 0) / 1000,
-			year: track.albums[0]?.year,
-			cover: track.coverUri
-				? "https://" +
-				  track.coverUri.slice(0, track.coverUri.length - 2) +
-				  "800x800"
-				: undefined,
-			url: null as any,
-			sources: [`aggr://yandex:${track.id}`]
-		};
-
-		converted.url = await this.load(track.id);
-		return converted;
-	}
-
 	protected async *search(
 		query: string,
 		count = 1,
@@ -133,6 +113,26 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 				yield track;
 			}
 		}
+	}
+
+	protected async convert(track: ITrackYandex): Promise<ITrack> {
+		const converted = {
+			title: track.title,
+			artists: parseArtists(track.artists.map(x => x.name).join(", ")),
+			album: track.albums[0]?.title || track.title,
+			length: (track.durationMs || 0) / 1000,
+			year: track.albums[0]?.year,
+			cover: track.coverUri
+				? "https://" +
+				  track.coverUri.slice(0, track.coverUri.length - 2) +
+				  "800x800"
+				: undefined,
+			url: null as any,
+			sources: [`aggr://yandex:${track.id}`]
+		};
+
+		converted.url = await this.load(track.id);
+		return converted;
 	}
 
 	private async load(id: number | string): Promise<string> {
