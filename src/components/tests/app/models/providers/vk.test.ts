@@ -63,13 +63,13 @@ describe("VK", () => {
 		expect(await desource("https://vk.com/audio7_4")).toEqual(expected);
 		expect(await desource("vk.com/audio-1_1")).toEqual(expected);
 		expect(await desource("lol.com/audio-1_1")).toEqual(undefined);
-		expect(fetchMock).toHaveBeenCalledTimes(4);
+		expect(fetchMock).toHaveFetchedTimes(4);
 		fetchMock.mockClear();
 
 		expect(await desource("vk.com/artist/smb_1")).toEqual(expected);
 		expect(await desource("vk.com/audio_playlist1_2_f")).toEqual(expected);
 		expect(await desource("vk.com/username")).toEqual(expected);
-		expect(fetchMock).toHaveBeenCalledTimes(4);
+		expect(fetchMock).toHaveFetchedTimes(4);
 		fetchMock.mockClear();
 	});
 

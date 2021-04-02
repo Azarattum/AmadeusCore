@@ -86,27 +86,27 @@ describe("Yandex", () => {
 			(await provider.desource(src).next()).value;
 
 		expect(await desource("aggr://yandex:7")).toEqual(expected);
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
 		expect(await desource("music.yandex.ru/album/0/track/1")).toEqual(
 			expected
 		);
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
 		expect(await desource("music.yandex.ru/album/0/")).toEqual(expected);
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
 		expect(await desource("music.yandex.ru/artist/0")).toEqual(expected);
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
 		expect(await desource("music.yandex.ru/users/a/playlists/0")).toEqual(
 			expected
 		);
-		expect(fetchMock).toHaveBeenCalledTimes(3);
+		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 	});
 
