@@ -19,6 +19,7 @@
 		"musicgenres-json": "^1.0.2",
 		"node-fetch": "^2.6.1",
 		"typescript-is": "^0.18.2",
+		"ytdl-core": "^4.5.0",
 		"ytsr": "^3.4.0"
 	},
 	"devDependencies": {

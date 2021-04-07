@@ -159,8 +159,10 @@ export default class Restream extends PassThrough {
 	}
 
 	private writeAudio(audio: IInput): any {
+		const mimes = ["audio/mpeg", "audio/mp4"];
+
 		let stream = audio.stream;
-		if (audio.mime !== "audio/mpeg") {
+		if (!audio.mime || !mimes.includes(audio.mime)) {
 			stream = Ffmpeg(audio.stream as Readable)
 				.noVideo()
 				.format("mp3")
