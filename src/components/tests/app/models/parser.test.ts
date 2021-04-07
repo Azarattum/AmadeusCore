@@ -189,6 +189,13 @@ describe("Parser", () => {
 		val = parse("ECHO【Gumi English】Crusher-P: MiatriSs Remix");
 		expect(val.title).toBe("ECHO Crusher-P (Gumi English)");
 		expect(val.artists).toEqual(["MiatriSs"]);
+
+		val = parse(
+			"Endless Mistakes Cover - check out the original at https://soundcloud.com/"
+		);
+		expect(val.title).toBe("Endless Mistakes Cover");
+		expect(val.album).toBe("Endless Mistakes Cover");
+		expect(val.artists).toEqual(["Endless Mistakes"]);
 	});
 
 	it("parseArtists", () => {

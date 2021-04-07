@@ -59,6 +59,7 @@ export function unbrace(text: string): IUnbraced {
 }
 
 export function isJunk(text: string): boolean {
+	if (!text) return true;
 	const url = /[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/;
 	if (text.match(url)) return true;
 
@@ -157,8 +158,9 @@ export function toArtist(text: string): [string, string] | null {
 }
 
 export function split(text: string): string[] {
+	const url = /[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)/g;
 	const splits = new RegExp(separators.join("|"), "i");
-	return text.split(splits);
+	return text.replace(url, "").split(splits);
 }
 
 export function trim(text: string): string {
@@ -214,6 +216,12 @@ export default function parse(text: string): IParsed {
 	atoms = atoms.filter(x => x);
 
 	switch (atoms.length) {
+		case 0:
+			title = [...split(clean)].filter(x => !isJunk(x)).join("; ");
+			if (!title) title = clean;
+			if (!title) title = parts.join("; ");
+			if (!title) title = text;
+			break;
 		case 1:
 			title = atoms[0];
 			break;
@@ -231,6 +239,7 @@ export default function parse(text: string): IParsed {
 
 	meta = meta.filter(x => !isGenere(x));
 	artists = artists.map(x => trim(x)).filter(x => x);
+	album = album || title;
 	if (meta.length) title += ` (${meta.join(", ")})`;
 
 	return {
