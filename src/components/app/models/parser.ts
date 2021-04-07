@@ -65,6 +65,7 @@ export function isJunk(text: string): boolean {
 
 	const junk = [
 		r`originals?`,
+		r`of+icial?`,
 		r`MV`,
 		r`lyrics?`,
 		r`video`,

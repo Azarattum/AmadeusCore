@@ -126,7 +126,7 @@ describe("Parser", () => {
 		expect(val.title).toBe("New Friends and a Funeral");
 		expect(val.artists).toEqual(["Ambitiously Yours"]);
 
-		val = parse("Party in Peril: The Celestial Odyssey 06");
+		val = parse("Party in Peril: The Celestial Odyssey 06 (Oficial Audio)");
 		expect(val.title).toBe("The Celestial Odyssey 06");
 		expect(val.artists).toEqual(["Party in Peril"]);
 
