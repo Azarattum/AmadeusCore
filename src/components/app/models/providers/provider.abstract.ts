@@ -39,12 +39,8 @@ export default abstract class Provider<T> {
 		return res.data;
 	}
 
-	public async *get(
-		query: string,
-		count = 1,
-		offset = 0
-	): AsyncGenerator<ITrack> {
-		const tracks = await this.search(query, count, offset);
+	public async *get(query: string): AsyncGenerator<ITrack> {
+		const tracks = await this.search(query);
 
 		for await (const track of tracks) {
 			const converted = await this.convert(track);
@@ -67,11 +63,7 @@ export default abstract class Provider<T> {
 
 	protected abstract identify(source: string): AsyncGenerator<T>;
 
-	protected abstract search(
-		query: string,
-		count?: number,
-		offset?: number
-	): AsyncGenerator<T>;
+	protected abstract search(query: string): AsyncGenerator<T>;
 }
 
 export interface IParsed {

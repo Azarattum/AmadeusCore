@@ -108,19 +108,20 @@ export default class VKProvider extends Provider<ITrackVK> {
 		}
 	}
 
-	protected async *search(
-		query: string,
-		count = 1,
-		offset = 0
-	): AsyncGenerator<ITrackVK> {
-		const data = await this.call("audio.search", {
-			q: query,
-			count,
-			offset
-		});
+	protected async *search(query: string): AsyncGenerator<ITrackVK> {
+		let tracks;
+		let offset = 0;
+		do {
+			const audios = await this.call("audio.search", {
+				q: query,
+				count: 100,
+				offset: offset
+			});
 
-		const tracks = assertType<IResponseVK>(data).response.items;
-		for await (const track of tracks) yield track;
+			tracks = assertType<IResponseVK>(audios).response.items;
+			for await (const track of tracks) yield track;
+			offset += 100;
+		} while (tracks.length);
 	}
 
 	protected async convert(track: ITrackVK): Promise<ITrack> {

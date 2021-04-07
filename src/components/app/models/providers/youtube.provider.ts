@@ -54,23 +54,19 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		}
 	}
 
-	protected async *search(
-		query: string,
-		count = 1,
-		offset = 0
-	): AsyncGenerator<ITrackYouTube> {
-		let response = (await ytsr(query, {
-			pages: 1
-		})) as ContinueResult;
+	protected async *search(query: string): AsyncGenerator<ITrackYouTube> {
+		let response = (await ytsr(query, { pages: 1 })) as ContinueResult;
 		const tracks = response.items;
 
 		for await (const track of tracks) {
+			if (track.type !== "video") continue;
 			if (is<ITrackYouTube>(track)) yield track;
 		}
 
-		while (response.continuation && tracks.length < offset + count) {
+		while (response.continuation) {
 			response = await ytsr.continueReq(response.continuation);
 			for await (const track of response.items) {
+				if (track.type !== "video") continue;
 				if (is<ITrackYouTube>(track)) yield track;
 			}
 		}

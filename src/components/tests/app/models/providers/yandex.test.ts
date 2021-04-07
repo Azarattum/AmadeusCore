@@ -71,7 +71,7 @@ describe("Yandex", () => {
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		const data = provider.get("hello", 21);
+		const data = provider.get("hello");
 		await data.next();
 		await data.next();
 		expect(fetchMock).toHaveFetched(/search/, { query: { page: 0 } });

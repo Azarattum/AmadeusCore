@@ -65,21 +65,20 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 		}
 	}
 
-	protected async *search(
-		query: string,
-		count = 1,
-		offset = 0
-	): AsyncGenerator<ITrackSoundCloud> {
-		const data = await this.call("search/tracks", {
-			q: query,
-			limit: count,
-			offset
-		});
+	protected async *search(query: string): AsyncGenerator<ITrackSoundCloud> {
+		let tracks;
+		let page = "search/tracks";
+		do {
+			const audios = await this.call(page, { q: query, limit: 100 });
+			tracks = assertType<ICollectionSoundCloud>(audios);
+			if (!tracks) return;
 
-		const tracks = assertType<ICollectionSoundCloud>(data).collection;
-		for await (const track of tracks) {
-			if (is<ITrackSoundCloud>(track)) yield track;
-		}
+			for await (const track of tracks.collection) {
+				if (is<ITrackSoundCloud>(track)) yield track;
+			}
+
+			page = tracks.next_href?.replace(this.baseURL, "") as string;
+		} while (page);
 	}
 
 	protected async convert(

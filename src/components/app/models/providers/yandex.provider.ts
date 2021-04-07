@@ -86,33 +86,21 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		}
 	}
 
-	protected async *search(
-		query: string,
-		count = 1,
-		offset = 0
-	): AsyncGenerator<ITrackYandex> {
-		const perPage = 20;
-		const data = await this.call("search", {
-			type: "track",
-			text: query,
-			page: Math.floor(offset / perPage),
-			nococrrect: false
-		});
-
-		const tracks = assertType<IResponseYandex>(
-			data
-		).result.tracks.results.slice(offset % perPage, count);
-		for (const track of tracks) {
-			yield track;
-		}
-
-		const onPage = perPage - (offset % perPage);
-		if (count > onPage) {
-			const next = this.search(query, count - onPage, offset + onPage);
-			for await (const track of next) {
-				yield track;
-			}
-		}
+	protected async *search(query: string): AsyncGenerator<ITrackYandex> {
+		let tracks;
+		let page = 0;
+		do {
+			const audios = await this.call("search", {
+				type: "track",
+				text: query,
+				nococrrect: false,
+				"page-size": 100,
+				page: page++
+			});
+			tracks = assertType<IResponseYandex>(audios).result.tracks?.results;
+			if (!tracks) return;
+			for await (const track of tracks) yield track;
+		} while (tracks);
 	}
 
 	protected async convert(track: ITrackYandex): Promise<ITrack> {
@@ -185,7 +173,7 @@ interface ISourceYandex {
 }
 
 interface IResponseYandex {
-	result: { tracks: { results: ITrackYandex[] } };
+	result: { tracks?: { results: ITrackYandex[] } };
 }
 
 interface ITrackYandex {
