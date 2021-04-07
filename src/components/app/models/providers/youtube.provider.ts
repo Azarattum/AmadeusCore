@@ -4,14 +4,18 @@ import ytsr, { ContinueResult } from "ytsr";
 import ytdl from "ytdl-core";
 import parse from "../parser";
 import { is } from "typescript-is";
+import ytpl from "ytpl";
 
 export default class YouTubeProvider extends Provider<ITrackYouTube> {
 	protected baseURL = "";
 
 	public async *identify(source: string): AsyncGenerator<ITrackYouTube> {
 		//From aggregator
-		if (source.startsWith("aggr://youtube:")) {
-			const info = await ytdl.getBasicInfo(source.slice(15));
+		if (source.startsWith("aggr://youtube:")) source = source.slice(15);
+
+		//Video url
+		try {
+			const info = await ytdl.getBasicInfo(source);
 			const details = info.player_response.videoDetails;
 			const thumb = details.thumbnail.thumbnails.reduce(function(a, b) {
 				return a.height > b.height ? a : b;
@@ -26,6 +30,27 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 
 			yield track;
 			return;
+		} catch {
+			//Not video
+		}
+
+		//Playlist/Channel url
+		try {
+			let playlist = (await ytpl(source)) as ytpl.ContinueResult;
+			const tracks = playlist.items;
+
+			for await (const track of tracks) {
+				if (is<ITrackYouTube>(track)) yield track;
+			}
+
+			while (playlist.continuation) {
+				playlist = await ytpl.continueReq(playlist.continuation);
+				for await (const track of playlist.items) {
+					if (is<ITrackYouTube>(track)) yield track;
+				}
+			}
+		} catch {
+			//Not playlist or channel
 		}
 	}
 
