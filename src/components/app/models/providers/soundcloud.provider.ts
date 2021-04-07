@@ -1,5 +1,5 @@
 import { gretch } from "gretchen";
-import { assertType } from "typescript-is";
+import { assertType, is } from "typescript-is";
 import parse, { parseArtists } from "../parser";
 import { ITrack } from "../track.interface";
 import Provider from "./provider.abstract";
@@ -25,6 +25,44 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 
 			return;
 		}
+
+		//From url
+		const match = source.match(/(https?:\/\/)?soundcloud\.com\/.+/i);
+		if (!match) return;
+		source = source.replace(/\/$/, "");
+
+		try {
+			const data = await this.call("resolve", {
+				url: source
+			});
+
+			if (is<ITrackSoundCloud>(data)) {
+				yield data;
+			} else if (is<IArtistSoundCloud>(data)) {
+				let tracks;
+				let page = `users/${data.id}/tracks`;
+				do {
+					const audios = await this.call(page, { limit: 100 });
+					tracks = assertType<ICollectionSoundCloud>(audios);
+					if (!tracks) return;
+
+					for await (const track of tracks.collection) {
+						if (is<ITrackSoundCloud>(track)) yield track;
+					}
+
+					page = tracks.next_href?.replace(
+						this.baseURL,
+						""
+					) as string;
+				} while (page);
+			} else if (is<IPlaylistSoundCloud>(data)) {
+				for await (const track of data.tracks) {
+					if (is<ITrackSoundCloud>(track)) yield track;
+				}
+			}
+		} catch {
+			//Not found
+		}
 	}
 
 	protected async *search(
@@ -38,8 +76,10 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 			offset
 		});
 
-		const tracks = assertType<IResponseSoundCloud>(data).collection;
-		for await (const track of tracks) yield track;
+		const tracks = assertType<ICollectionSoundCloud>(data).collection;
+		for await (const track of tracks) {
+			if (is<ITrackSoundCloud>(track)) yield track;
+		}
 	}
 
 	protected async convert(
@@ -105,8 +145,9 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 	}
 }
 
-interface IResponseSoundCloud {
-	collection: ITrackSoundCloud[];
+interface ICollectionSoundCloud {
+	collection: (ITrackSoundCloud | Record<string, any>)[];
+	next_href?: string | null;
 }
 
 interface ITrackSoundCloud {
@@ -114,15 +155,22 @@ interface ITrackSoundCloud {
 	created_at: string;
 	full_duration: number;
 	id: number;
-	publisher_metadata?: IArtistSoundCloud | null;
+	publisher_metadata?: IMetaSoundCloud | null;
 	release_date?: string | null;
 	title: string;
 	media: { transcodings: ITranscodingsSoundCloud[] };
-	user: {
-		username: string;
-		full_name?: string | null;
-		avatar_url?: string | null;
-	};
+	user: IArtistSoundCloud;
+}
+
+interface IPlaylistSoundCloud {
+	tracks: (ITrackSoundCloud | Record<string, any>)[];
+}
+
+interface IArtistSoundCloud {
+	id: number;
+	username: string;
+	full_name?: string | null;
+	avatar_url?: string | null;
 }
 
 interface ITranscodingsSoundCloud {
@@ -130,7 +178,7 @@ interface ITranscodingsSoundCloud {
 	format: { protocol: "hls" | "progressive" };
 }
 
-interface IArtistSoundCloud {
+interface IMetaSoundCloud {
 	artist?: string | null;
 	album_title?: string | null;
 }

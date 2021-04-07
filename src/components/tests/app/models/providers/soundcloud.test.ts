@@ -18,6 +18,7 @@ const track = {
 		transcodings: [{ url: "url", format: { protocol: "progressive" } }]
 	},
 	user: {
+		id: 42,
 		username: "6",
 		avatar_url: "large.jpg"
 	}
@@ -37,9 +38,16 @@ const expected = {
 fetchMock.get(/search/, {
 	collection: [track]
 });
+fetchMock.get(/users\/1337\/tracks/, {
+	collection: [{}, {}],
+	next_href: "users/42/tracks"
+});
+fetchMock.get(/users\/42\/tracks/, { collection: [{}, track] });
 fetchMock.get(/tracks/, track);
 fetchMock.get(/notoriginal.jpg/, 408);
 fetchMock.get(/original.jpg/, 200);
+fetchMock.get(/aUser/, { id: 1337, username: "name" });
+fetchMock.get(/aPlaylist/, { tracks: [{}, track] });
 fetchMock.get(/url/, { url: "7" });
 
 describe("SoundCloud", () => {
@@ -62,6 +70,18 @@ describe("SoundCloud", () => {
 
 		expect(await desource("aggr://soundcloud:0")).toEqual(expected);
 		expect(fetchMock).toHaveFetchedTimes(3);
+		fetchMock.mockClear();
+
+		expect(await desource("soundcloud.com/tracks")).toEqual(expected);
+		expect(fetchMock).toHaveFetchedTimes(3);
+		fetchMock.mockClear();
+
+		expect(await desource("soundcloud.com/aPlaylist")).toEqual(expected);
+		expect(fetchMock).toHaveFetchedTimes(3);
+		fetchMock.mockClear();
+
+		expect(await desource("soundcloud.com/aUser")).toEqual(expected);
+		expect(fetchMock).toHaveFetchedTimes(5);
 		fetchMock.mockClear();
 	});
 
