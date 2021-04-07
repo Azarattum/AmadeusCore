@@ -7,7 +7,7 @@ Object.assign(globalThis, { ...fetch, fetch });
 fetchMock.config.overwriteRoutes = true;
 
 class TestProvider extends Provider<any> {
-	protected baseURL: string = "";
+	protected baseURL: string = "http://base";
 	protected async *search(
 		query: string,
 		count?: number,

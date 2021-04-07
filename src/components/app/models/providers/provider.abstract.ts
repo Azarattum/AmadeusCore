@@ -16,12 +16,16 @@ export default abstract class Provider<T> {
 		method: string,
 		params: Record<string, any> = {}
 	): Promise<unknown> {
-		const encoded = new URLSearchParams({ ...this.params, ...params });
-		const args = encoded.toString() ? "?" + encoded.toString() : "";
+		const url = new URL(method, this.baseURL);
+		const encoded = new URLSearchParams({
+			...Object.fromEntries(url.searchParams),
+			...this.params,
+			...params
+		});
+		url.search = encoded.toString();
 
 		const use = () =>
-			gretch(method + args, {
-				baseURL: this.baseURL,
+			gretch(url.toString(), {
 				headers: this.headers
 			}).json();
 
@@ -31,7 +35,7 @@ export default abstract class Provider<T> {
 			res = await use();
 		}
 
-		if (res.error) throw res.error;
+		if (res.error) throw { status: res.status, eroor: res.error };
 		return res.data;
 	}
 
