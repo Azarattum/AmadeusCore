@@ -13,7 +13,7 @@ describe("Parser", () => {
 		});
 
 		expect(unbrace("clean ([)h(ello)")).toEqual({
-			clean: "clean h",
+			clean: "clean  - h",
 			parts: ["ello"]
 		});
 
@@ -187,8 +187,8 @@ describe("Parser", () => {
 		expect(val.album).toEqual("MiatriSs");
 
 		val = parse("ECHO【Gumi English】Crusher-P: MiatriSs Remix");
-		expect(val.title).toBe("ECHO Crusher-P (Gumi English)");
-		expect(val.artists).toEqual(["MiatriSs"]);
+		expect(val.title).toBe("Crusher-P (Gumi English)");
+		expect(val.artists).toEqual(["MiatriSs", "ECHO"]);
 
 		val = parse(
 			"Endless Mistakes Cover - check out the original at https://soundcloud.com/"
@@ -196,6 +196,10 @@ describe("Parser", () => {
 		expect(val.title).toBe("Endless Mistakes Cover");
 		expect(val.album).toBe("Endless Mistakes Cover");
 		expect(val.artists).toEqual(["Endless Mistakes"]);
+
+		val = parse("Rihanna - The Monster (NO RAP/NO EMINEM) Edit +Lyrics");
+		expect(val.title).toBe("The Monster (NO RAP/NO EMINEM)");
+		expect(val.artists).toEqual(["Rihanna"]);
 	});
 
 	it("parseArtists", () => {

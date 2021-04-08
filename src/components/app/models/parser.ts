@@ -11,8 +11,7 @@ export const separators = [
 	"\\s-",
 	"--+",
 	"(\\s|^)\\.+(\\s|$)",
-	"\\/\\/+",
-	"\\s\\+\\s"
+	"\\/\\/+"
 ];
 
 export function unbrace(text: string): IUnbraced {
@@ -42,8 +41,8 @@ export function unbrace(text: string): IUnbraced {
 		}
 		if (closed == current) {
 			const lastChar = result.clean[result.clean.length - 1];
-			if (lastChar && !lastChar.match(/\s/)) {
-				result.clean += " ";
+			if (lastChar) {
+				result.clean += " - ";
 			}
 			current = -1;
 			continue;
@@ -52,7 +51,7 @@ export function unbrace(text: string): IUnbraced {
 		result.parts[result.parts.length - 1] += char;
 	}
 
-	result.clean = result.clean.trim();
+	result.clean = trim(result.clean);
 	result.parts = result.parts.map(x => x.trim()).filter(x => x);
 
 	return result;
@@ -172,7 +171,9 @@ export function trim(text: string): string {
 export function isGenere(text: string): boolean {
 	const MusicGenres = require("musicgenres-json");
 	const genres = new MusicGenres().get() as string[];
-	return genres.some(x => text.toLowerCase().includes(x.toLowerCase()));
+	return genres.some(x =>
+		text.toLowerCase().match(new RegExp(r`(\s|^)${x.toLowerCase()}(\s|$)`))
+	);
 }
 
 export default function parse(text: string): IParsed {
@@ -239,7 +240,7 @@ export default function parse(text: string): IParsed {
 	}
 
 	meta = meta.filter(x => !isGenere(x));
-	artists = artists.map(x => trim(x)).filter(x => x);
+	artists = artists.map(x => trim(x)).filter(x => !isJunk(x));
 	album = album || title;
 	if (meta.length) title += ` (${meta.join(", ")})`;
 
