@@ -8,12 +8,10 @@ fetchMock.config.overwriteRoutes = true;
 
 class TestProvider extends Provider<any> {
 	protected baseURL: string = "http://base";
-	protected async *search(
-		query: string,
-		count?: number,
-		offset?: number
-	): AsyncGenerator<any> {
-		yield;
+	protected async *search(query: string): AsyncGenerator<any> {
+		yield 1;
+		throw 2;
+		yield 3;
 	}
 
 	protected async *identify(source: string): AsyncGenerator<any> {
@@ -61,5 +59,13 @@ describe("Provider", () => {
 
 		fetchMock.mockClear();
 		fetchMock.reset();
+	});
+
+	it("throw", async () => {
+		const result = provider.get("");
+		console.warn = jest.fn();
+
+		await result.next();
+		expect(console.warn).toHaveBeenCalled();
 	});
 });

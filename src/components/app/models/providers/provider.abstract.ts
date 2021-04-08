@@ -1,5 +1,5 @@
 import { ITrack } from "../track.interface";
-import { sleep } from "../../../common/utils.class";
+import { sleep, wrn } from "../../../common/utils.class";
 import { gretch } from "gretchen";
 
 export default abstract class Provider<T = any> {
@@ -40,24 +40,34 @@ export default abstract class Provider<T = any> {
 	}
 
 	public async *get(query: string): AsyncGenerator<ITrack> {
-		const tracks = await this.search(query);
+		const tracks = this.search(query);
 
-		for await (const track of tracks) {
-			if (!this.validate(track)) continue;
-			const converted = await this.convert(track);
-			if (!converted.url) continue;
-			yield converted;
+		try {
+			for await (const track of tracks) {
+				if (!this.validate(track)) continue;
+				const converted = await this.convert(track);
+				if (!converted.url) continue;
+				yield converted;
+			}
+		} catch (e) {
+			wrn(`${this.constructor.name} failed to get "${query}"!\n${e}`);
 		}
 	}
 
 	public async *desource(source: string): AsyncGenerator<ITrack> {
-		const tracks = await this.identify(source);
+		const tracks = this.identify(source);
 
-		for await (const track of tracks) {
-			if (!this.validate(track)) continue;
-			const converted = await this.convert(track);
-			if (!converted.url) continue;
-			yield converted;
+		try {
+			for await (const track of tracks) {
+				if (!this.validate(track)) continue;
+				const converted = await this.convert(track);
+				if (!converted.url) continue;
+				yield converted;
+			}
+		} catch (e) {
+			wrn(
+				`${this.constructor.name} failed to desource "${source}"!\n${e}`
+			);
 		}
 	}
 
