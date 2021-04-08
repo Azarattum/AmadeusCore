@@ -94,6 +94,7 @@ export default class Utils {
 	 * @param proto A prototype value for conversion
 	 * @param data Data value to convert
 	 */
+	// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 	public static convertTo(proto: any, data: any): any {
 		if (typeof proto === "string") {
 			return typeof data === "object"
@@ -179,6 +180,43 @@ export default class Utils {
 
 		return array;
 	}
+
+	/**
+	 * Returns first n items from the given async generator
+	 * @param generator Generator function of items
+	 * @param n Number of items
+	 */
+	public static async nFirst<T>(
+		generator: AsyncGenerator<T>,
+		n: number
+	): Promise<T[]> {
+		const promises = [];
+		for (let i = 0; i < n; i++) {
+			promises.push(generator.next());
+		}
+
+		const resolved = await Promise.all(promises);
+		return resolved.filter(x => !x.done).map(x => x.value);
+	}
+
+	/**
+	 * Merges an array of async generators into a single one
+	 * @param generators Generators to merge
+	 */
+	public static async *mergeGenerators<T>(
+		generators: AsyncGenerator<T>[]
+	): AsyncGenerator<T> {
+		let available;
+		do {
+			available = 0;
+			for (const generator of generators) {
+				const item = await generator.next();
+				if (item.done) continue;
+				yield item.value;
+				available++;
+			}
+		} while (available);
+	}
 }
 
 /**
@@ -194,9 +232,24 @@ export enum LogType {
 
 //Shortcuts for exports
 const log = Utils.log;
+const wrn = (text: string): void => Utils.log(text, LogType.WARNING);
+const err = (text: string): void => Utils.log(text, LogType.ERROR);
 const format = Utils.format;
 const generateID = Utils.generateID;
 const convertTo = Utils.convertTo;
 const sleep = Utils.sleep;
 const shuffle = Utils.shuffle;
-export { log, format, generateID, convertTo, sleep, shuffle };
+const nFirst = Utils.nFirst;
+const mergeGenerators = Utils.mergeGenerators;
+export {
+	log,
+	wrn,
+	err,
+	format,
+	generateID,
+	convertTo,
+	sleep,
+	shuffle,
+	nFirst,
+	mergeGenerators
+};
