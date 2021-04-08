@@ -6,6 +6,7 @@ export const separators = [
 	"\\|",
 	'"',
 	"`",
+	"''+",
 	":",
 	"-\\s",
 	"\\s-",
@@ -81,6 +82,7 @@ export function isJunk(text: string): boolean {
 		r`download`,
 		r`copyright`,
 		r`royalty`,
+		r`tutorial`,
 		r`remaster(ed)?`
 	].map(x => new RegExp(r`(\b|^|\s)${x}(\b|$|\s)`, "i"));
 
@@ -134,6 +136,7 @@ export function toArtist(text: string): [string, string] | null {
 		"feat\\.?",
 		"featuring",
 		"med",
+		"(piano\\s+)?arrangement",
 		"by"
 	];
 

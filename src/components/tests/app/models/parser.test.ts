@@ -200,6 +200,13 @@ describe("Parser", () => {
 		val = parse("Rihanna - The Monster (NO RAP/NO EMINEM) Edit +Lyrics");
 		expect(val.title).toBe("The Monster (NO RAP/NO EMINEM)");
 		expect(val.artists).toEqual(["Rihanna"]);
+
+		val = parse(
+			"Fall - Ross Bugden ''Piano Tutorial'' (Piano Arrangement by AnubisMusic)"
+		);
+		expect(val.title).toBe("Ross Bugden");
+		expect(val.album).toBe("Ross Bugden");
+		expect(val.artists).toEqual(["AnubisMusic", "Fall"]);
 	});
 
 	it("parseArtists", () => {
