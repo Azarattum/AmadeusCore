@@ -25,7 +25,8 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 				id: details.videoId,
 				title: details.title,
 				author: { name: details.author },
-				bestThumbnail: thumb
+				bestThumbnail: thumb,
+				duration: details.lengthSeconds
 			};
 
 			yield track;
@@ -73,7 +74,9 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 	}
 
 	protected async convert(track: ITrackYouTube): Promise<ITrack> {
-		const author = track.author ? [track.author.name] : [];
+		const author = track.author
+			? [track.author.name.replace(/ - Topic$/, "")]
+			: [];
 		const { title, artists, year, album } = parse(track.title);
 
 		const converted = {
@@ -95,6 +98,15 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		converted.year = converted.year || date;
 
 		return converted;
+	}
+
+	protected validate(track: ITrackYouTube): boolean {
+		const length = +track.duration
+			.split(":")
+			.reduce((acc, time) => 60 * +acc + +time + "");
+
+		if (length > 1200) return false;
+		return true;
 	}
 
 	private async load(id: string): Promise<[string, string, number, number?]> {
@@ -132,6 +144,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 interface ITrackYouTube {
 	id: string;
 	title: string;
+	duration: string;
 	author?: { name: string };
 	bestThumbnail?: { url: string };
 }

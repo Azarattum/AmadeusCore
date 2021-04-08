@@ -122,6 +122,11 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 		return converted;
 	}
 
+	protected validate(track: ITrackSoundCloud): boolean {
+		if (track.full_duration > 1200 * 1000) return false;
+		return true;
+	}
+
 	private async load(
 		media: string,
 		cover?: string

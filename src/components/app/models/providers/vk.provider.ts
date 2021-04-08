@@ -136,6 +136,11 @@ export default class VKProvider extends Provider<ITrackVK> {
 			sources: [`aggr://vk:${track.owner_id}_${track.id}`]
 		};
 	}
+
+	protected validate(track: ITrackVK): boolean {
+		if (track.duration > 1200) return false;
+		return true;
+	}
 }
 
 interface IUserVK {

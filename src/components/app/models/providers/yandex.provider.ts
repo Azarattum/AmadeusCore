@@ -123,6 +123,12 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		return converted;
 	}
 
+	protected validate(track: ITrackYandex): boolean {
+		if (!track.durationMs) return false;
+		if (track.durationMs > 1200 * 1000) return false;
+		return true;
+	}
+
 	private async load(id: number | string): Promise<string> {
 		const load = await this.call(`tracks/${id}/download-info`);
 

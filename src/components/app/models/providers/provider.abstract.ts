@@ -2,7 +2,7 @@ import { ITrack } from "../track.interface";
 import { sleep } from "../../../common/utils.class";
 import { gretch } from "gretchen";
 
-export default abstract class Provider<T> {
+export default abstract class Provider<T = any> {
 	protected token: string;
 	protected headers: Record<string, string> = {};
 	protected params: Record<string, string> = {};
@@ -43,6 +43,7 @@ export default abstract class Provider<T> {
 		const tracks = await this.search(query);
 
 		for await (const track of tracks) {
+			if (!this.validate(track)) continue;
 			const converted = await this.convert(track);
 			if (!converted.url) continue;
 			yield converted;
@@ -53,10 +54,15 @@ export default abstract class Provider<T> {
 		const tracks = await this.identify(source);
 
 		for await (const track of tracks) {
+			if (!this.validate(track)) continue;
 			const converted = await this.convert(track);
 			if (!converted.url) continue;
 			yield converted;
 		}
+	}
+
+	protected validate(track: T): boolean {
+		return true;
 	}
 
 	protected abstract convert(track: T): Promise<ITrack | { url: undefined }>;
