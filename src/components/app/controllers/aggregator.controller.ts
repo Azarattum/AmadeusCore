@@ -85,7 +85,7 @@ export default class Aggregator extends Controller() {
 			let found = false;
 			for await (const item of generator) {
 				found = true;
-				if (this.validate(item)) yield item;
+				yield item;
 			}
 			if (found) return;
 		}
