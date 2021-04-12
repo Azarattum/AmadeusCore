@@ -1,5 +1,5 @@
 import Application, { handle } from "../common/application.abstract";
-import { log } from "../common/utils.class";
+import { generate, log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
 import { ITrack } from "./models/track.interface";
 import Preserver from "./controllers/preserver.controller";
@@ -7,6 +7,10 @@ import { Playlist } from "@prisma/client";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
 import Endpoint from "./controllers/endpoints/endpoint.abstract";
 import Scheduler from "./controllers/scheduler.controller";
+import YandexProvider from "./models/providers/yandex.provider";
+import VKProvider from "./models/providers/vk.provider";
+import SoundCloudProvider from "./models/providers/soundcloud.provider";
+import YouTubeProvider from "./models/providers/youtube.provider";
 
 /**
  * Application class
@@ -23,17 +27,19 @@ export default class App extends Application {
 	 * Initializes the app
 	 */
 	public async initialize(): Promise<void> {
+		//Initialize providers
+		let providers = [];
+		const token = (name: string) => process.env[`${name}_TOKEN`] || "";
+
+		providers.push(new VKProvider(token("VK")));
+		providers.push(new YandexProvider(token("YANDEX")));
+		providers.push(new SoundCloudProvider(token("SOUNDCLOUD")));
+		providers.push(new YouTubeProvider());
+		providers = providers.filter(x => (x as any).token);
+
 		await super.initialize(
-			[Telegram, process.env["BOT_TOKEN"]],
-			[
-				Aggregator,
-				{
-					vk: process.env["VK_TOKEN"],
-					yandex: process.env["YANDEX_TOKEN"],
-					soundcloud: process.env["SOUNDCLOUD_TOKEN"],
-					lastfm: process.env["LASTFM_TOKEN"]
-				}
-			]
+			[Telegram, token("BOT")],
+			[Aggregator, providers]
 		);
 	}
 
@@ -47,22 +53,8 @@ export default class App extends Application {
 		endpoint.on("searched", async (query: string) => {
 			log(`${name} searched for "${query}"...`);
 
-			const track = await aggregator.single(query);
-			if (!track) {
-				endpoint.sendTracks([]);
-				return;
-			}
-			endpoint.sendTracks([track]);
-		});
-
-		endpoint.on("extended", async () => {
-			log(`${name} requested more tracks...`);
-
-			const tracks = await aggregator.extend(async (tracks: ITrack[]) => {
-				endpoint.sendTracks(tracks);
-			});
-
-			log(`${tracks?.length || 0} tracks found for ${name}.`);
+			const track = await aggregator.get(query);
+			endpoint.sendTracks(track);
 		});
 
 		endpoint.on("playlists", async () => {
@@ -99,7 +91,7 @@ export default class App extends Application {
 			const endpoints = this.getComponents(Endpoint, preserver.tenant);
 
 			endpoints.forEach(x => {
-				x.sendTracks([track], playlist);
+				x.sendTracks(generate(track), playlist);
 			});
 		});
 	}
@@ -117,20 +109,17 @@ export default class App extends Application {
 
 			playlists.forEach(async playlist => {
 				endpoints.forEach(x => x.clearPlaylist(playlist));
-				const source = preserver.getTracks.bind(preserver);
-				const tracks = await aggregator.recommend(
-					source,
-					playlist,
-					async (tracks: ITrack[]): Promise<void> => {
-						for (const endpoint of endpoints) {
-							await endpoint.sendTracks(tracks, playlist);
-						}
-					}
-				);
+				//Get a sample of the last 100 user's tracks
+				const sample = await preserver.getTracks(100);
+				//Recommendations are based on this sample
+				const tracks = aggregator.recommend(sample);
 
-				log(
-					`Playlist "${playlist.title}" updated with ${tracks.length} tracks.`
-				);
+				//Send new tracks to every endpoint
+				for (const endpoint of endpoints) {
+					await endpoint.sendTracks(tracks, playlist);
+				}
+
+				log(`Playlist "${playlist.title}" updated with new tracks.`);
 			});
 		});
 	}

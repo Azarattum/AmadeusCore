@@ -5,12 +5,7 @@ import Tenant from "../../models/tenant";
 import { ITrack } from "../../models/track.interface";
 
 export default abstract class Endpoint extends Controller<
-	| "searched"
-	| "extended"
-	| "playlists"
-	| "playlisted"
-	| "relist"
-	| "triggered"
+	"searched" | "playlists" | "playlisted" | "relist" | "triggered"
 >() {
 	public tenant: Tenant;
 
@@ -19,7 +14,7 @@ export default abstract class Endpoint extends Controller<
 		this.tenant = args.relation as Tenant;
 	}
 
-	public static get relations(): object[] {
+	public static get relations(): Tenant[] {
 		return Tenant.tenants;
 	}
 
@@ -28,7 +23,7 @@ export default abstract class Endpoint extends Controller<
 	public abstract clearPlaylist(playlist: Playlist): Promise<void>;
 
 	public abstract sendTracks(
-		tracks: ITrack[],
+		tracks: AsyncGenerator<ITrack>,
 		playlist?: Playlist
 	): Promise<void>;
 }

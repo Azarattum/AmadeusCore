@@ -13,7 +13,7 @@ export default class Preserver extends Controller<"playlisted">() {
 	public tenant: Tenant;
 	private prisma: PrismaClient;
 
-	public static get relations(): object[] {
+	public static get relations(): Tenant[] {
 		return Tenant.tenants;
 	}
 

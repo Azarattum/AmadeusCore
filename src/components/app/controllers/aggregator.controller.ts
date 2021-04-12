@@ -1,12 +1,9 @@
 import Controller from "../../common/controller.abstract";
 import Provider from "../models/providers/provider.abstract";
-import SoundCloudProvider from "../models/providers/soundcloud.provider";
-import VKProvider from "../models/providers/vk.provider";
-import YandexProvider from "../models/providers/yandex.provider";
-import YouTubeProvider from "../models/providers/youtube.provider";
 import { compareTwoStrings } from "string-similarity";
 import { ITrack } from "../models/track.interface";
 import { mergeGenerators, nFirst } from "../../common/utils.class";
+import { ITrackInfo } from "../models/recommenders/recommender.abstract";
 
 /**
  * Aggregates track data from all Amadeus' providers
@@ -14,20 +11,8 @@ import { mergeGenerators, nFirst } from "../../common/utils.class";
 export default class Aggregator extends Controller() {
 	private providers: Provider[] = [];
 
-	public initialize(tokens: Record<string, string>): void {
-		type provider = new (token: string) => Provider;
-
-		const providers: Record<string, provider> = {
-			vk: VKProvider,
-			yandex: YandexProvider,
-			soundcloud: SoundCloudProvider,
-			youtube: YouTubeProvider
-		};
-
-		for (const i in providers) {
-			const provider = new providers[i](tokens[i]);
-			this.providers.push(provider);
-		}
+	public initialize(providers: Provider[]): void {
+		this.providers = providers;
 	}
 
 	public async *get(query: string): AsyncGenerator<ITrack> {
@@ -89,6 +74,10 @@ export default class Aggregator extends Controller() {
 			}
 			if (found) return;
 		}
+	}
+
+	public async *recommend(source: ITrackInfo[]): AsyncGenerator<ITrack> {
+		//
 	}
 
 	private stringify(track: ITrack): string {

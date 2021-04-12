@@ -1,4 +1,3 @@
-import { Playlist } from ".prisma/client";
 import Fetcher from "../fetcher.abstract";
 
 export default abstract class Recommender extends Fetcher {
@@ -8,10 +7,7 @@ export default abstract class Recommender extends Fetcher {
 		super(token);
 	}
 
-	public abstract get(
-		source: TrackSource,
-		playlist: Playlist
-	): Promise<string[]>;
+	public abstract recommend(source: ITrackInfo[]): Promise<string[]>;
 
 	protected async call(
 		method: string,
@@ -28,7 +24,7 @@ export default abstract class Recommender extends Fetcher {
 	}
 
 	protected async getSimilar(
-		track: { title: string; artists: string[] },
+		track: ITrackInfo,
 		limit?: number
 	): Promise<string[]> {
 		const similar = (
@@ -83,6 +79,7 @@ export default abstract class Recommender extends Fetcher {
 	}
 }
 
-export type TrackSource = (
-	count: number
-) => Promise<{ title: string; artists: string[] }[]>;
+export interface ITrackInfo {
+	title: string;
+	artists: string[];
+}
