@@ -217,6 +217,22 @@ export default class Utils {
 			}
 		} while (available);
 	}
+
+	/**
+	 * Creates an async generator from any item or an array of items
+	 * @param from Source item or array
+	 */
+	public static generate<T>(from: T | T[]): AsyncGenerator<T> {
+		return (async function*() {
+			if (Array.isArray(from)) {
+				for (const item of from) {
+					yield item;
+				}
+			} else {
+				yield from;
+			}
+		})();
+	}
 }
 
 /**
@@ -241,6 +257,7 @@ const sleep = Utils.sleep;
 const shuffle = Utils.shuffle;
 const nFirst = Utils.nFirst;
 const mergeGenerators = Utils.mergeGenerators;
+const generate = Utils.generate;
 export {
 	log,
 	wrn,
@@ -251,5 +268,6 @@ export {
 	sleep,
 	shuffle,
 	nFirst,
-	mergeGenerators
+	mergeGenerators,
+	generate
 };
