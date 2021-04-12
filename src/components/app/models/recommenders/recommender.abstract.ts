@@ -1,47 +1,20 @@
+import { wrn } from "../../../common/utils.class";
 import Fetcher from "../fetcher.abstract";
 
 export default abstract class Recommender extends Fetcher {
-	protected baseURL = "https://ws.audioscrobbler.com/2.0/";
+	protected abstract assemble(source: ITrackInfo[]): Promise<string[]>;
 
-	public constructor(token: string) {
-		super(token);
-	}
+	public recommend(source: ITrackInfo[]): Promise<string[]> {
+		return this.assemble(source).catch(e => {
+			wrn(
+				`${this.constructor.name} failed to recommend "${source
+					.map(x => x.title)
+					.join(", ")
+					.slice(0, 20)}..."!\n${e}`
+			);
 
-	public abstract recommend(source: ITrackInfo[]): Promise<string[]>;
-
-	protected async call(
-		method: string,
-		params: Record<string, any> = {}
-	): Promise<any> {
-		const payload = {
-			api_key: this.token,
-			format: "json",
-			method: method,
-			...params
-		};
-
-		return (await super.call("", payload)).json();
-	}
-
-	protected async getSimilar(
-		track: ITrackInfo,
-		limit?: number
-	): Promise<string[]> {
-		const similar = (
-			await this.call("track.getsimilar", {
-				track: track.title,
-				artist: track.artists.join(", "),
-				limit
-			})
-		)?.["similartracks"]?.["track"];
-
-		if (!similar) return [];
-
-		const result = similar.map((x: any) => {
-			return [x.artist?.name, x.name].filter(x => x).join(" - ");
-		}) as string[];
-
-		return result;
+			return [];
+		});
 	}
 
 	protected normalRand(max: number): number {

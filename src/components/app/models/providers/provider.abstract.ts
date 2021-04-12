@@ -1,44 +1,8 @@
 import { ITrack } from "../track.interface";
-import { sleep, wrn } from "../../../common/utils.class";
-import { gretch } from "gretchen";
+import { wrn } from "../../../common/utils.class";
+import Fetcher from "../fetcher.abstract";
 
-export default abstract class Provider<T = any> {
-	protected token: string;
-	protected headers: Record<string, string> = {};
-	protected params: Record<string, string> = {};
-	protected abstract baseURL: string;
-
-	public constructor(token: string) {
-		this.token = token;
-	}
-
-	protected async call(
-		method: string,
-		params: Record<string, any> = {}
-	): Promise<unknown> {
-		const url = new URL(method, this.baseURL);
-		const encoded = new URLSearchParams({
-			...Object.fromEntries(url.searchParams),
-			...this.params,
-			...params
-		});
-		url.search = encoded.toString();
-
-		const use = () =>
-			gretch(url.toString(), {
-				headers: this.headers
-			}).json();
-
-		let res = await use();
-		if (res.error?.type === "invalid-json") {
-			await sleep(6);
-			res = await use();
-		}
-
-		if (res.error) throw { status: res.status, eroor: res.error };
-		return res.data;
-	}
-
+export default abstract class Provider<T = any> extends Fetcher {
 	public async *get(query: string): AsyncGenerator<ITrack> {
 		const tracks = this.search(query);
 

@@ -2,17 +2,24 @@ import Controller from "../../common/controller.abstract";
 import Provider from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
 import { ITrack } from "../models/track.interface";
-import { mergeGenerators, nFirst } from "../../common/utils.class";
-import { ITrackInfo } from "../models/recommenders/recommender.abstract";
+import { mergeGenerators, nFirst, shuffle } from "../../common/utils.class";
+import Recommender, {
+	ITrackInfo
+} from "../models/recommenders/recommender.abstract";
 
 /**
  * Aggregates track data from all Amadeus' providers
  */
 export default class Aggregator extends Controller() {
 	private providers: Provider[] = [];
+	private recommenders: Recommender[] = [];
 
-	public initialize(providers: Provider[]): void {
+	public initialize(
+		providers: Provider[] = [],
+		recommenders: Recommender[] = []
+	): void {
 		this.providers = providers;
+		this.recommenders = recommenders;
 	}
 
 	public async *get(query: string): AsyncGenerator<ITrack> {
@@ -30,7 +37,7 @@ export default class Aggregator extends Controller() {
 		const promises = generators.map(x => nFirst(x, 3));
 		const items = (await Promise.all(promises)).flat();
 		items.sort((a, b) => {
-			const target = query.toLowerCase().trim();
+			const target = this.purify(query.toLowerCase().trim());
 			const trackA = compareTwoStrings(target, this.stringify(a));
 			const trackB = compareTwoStrings(target, this.stringify(b));
 			if (trackA === trackB) {
@@ -77,7 +84,14 @@ export default class Aggregator extends Controller() {
 	}
 
 	public async *recommend(source: ITrackInfo[]): AsyncGenerator<ITrack> {
-		//
+		const promises = this.recommenders.map(x => x.recommend(source));
+		let recommendations = (await Promise.all(promises)).flat();
+		recommendations = shuffle(recommendations).slice(0, 100);
+
+		for (const recommendation of recommendations) {
+			const track = (await this.get(recommendation).next()).value;
+			if (track) yield track;
+		}
 	}
 
 	private stringify(track: ITrack): string {
@@ -87,6 +101,10 @@ export default class Aggregator extends Controller() {
 			.join()
 			.toLowerCase()
 			.trim();
-		return `${artists} - ${title}`;
+		return this.purify(`${artists} - ${title}`);
+	}
+
+	private purify(title: string): string {
+		return title.replace(/[+,&]/g, " ");
 	}
 }

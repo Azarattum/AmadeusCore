@@ -10,7 +10,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 	protected baseURL = "";
 
 	public constructor() {
-		super("");
+		super("unused");
 	}
 
 	public async *identify(source: string): AsyncGenerator<ITrackYouTube> {

@@ -11,6 +11,7 @@ import YandexProvider from "./models/providers/yandex.provider";
 import VKProvider from "./models/providers/vk.provider";
 import SoundCloudProvider from "./models/providers/soundcloud.provider";
 import YouTubeProvider from "./models/providers/youtube.provider";
+import LastFMRecommender from "./models/recommenders/lastfm.recommender";
 
 /**
  * Application class
@@ -27,19 +28,22 @@ export default class App extends Application {
 	 * Initializes the app
 	 */
 	public async initialize(): Promise<void> {
-		//Initialize providers
-		let providers = [];
 		const token = (name: string) => process.env[`${name}_TOKEN`] || "";
 
+		let providers = [];
 		providers.push(new VKProvider(token("VK")));
 		providers.push(new YandexProvider(token("YANDEX")));
 		providers.push(new SoundCloudProvider(token("SOUNDCLOUD")));
 		providers.push(new YouTubeProvider());
 		providers = providers.filter(x => (x as any).token);
 
+		let recommenders = [];
+		recommenders.push(new LastFMRecommender(token("LASTFM")));
+		recommenders = recommenders.filter(x => (x as any).token);
+
 		await super.initialize(
 			[Telegram, token("BOT")],
-			[Aggregator, providers]
+			[Aggregator, providers, recommenders]
 		);
 	}
 
