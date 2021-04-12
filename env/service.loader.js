@@ -121,9 +121,13 @@ class ServiceWrapper {
 			// called in the service
 			if (type === "__exposed") {
 				const [name, id] = args;
-				this.exposer.expose(this.name.toLowerCase(), name, (...arg) => {
-					return this.original.call(id, ...arg);
-				});
+				this.exposer?.expose(
+					this.name.toLowerCase(),
+					name,
+					(...arg) => {
+						return this.original.call(id, ...arg);
+					}
+				);
 			}
 
 			//Typical named callbacks
@@ -145,7 +149,7 @@ class ServiceWrapper {
 	async close() {
 		const result = await this.original.close();
 		this.callbacks = {};
-		this.exposer.close(this.name.toLowerCase(), null);
+		this.exposer?.close(this.name.toLowerCase(), null);
 		return result;
 	}
 }

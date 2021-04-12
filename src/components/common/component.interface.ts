@@ -33,13 +33,13 @@ export interface IComponentType<T extends IComponent = IComponent> {
  */
 export interface IComponentOptions {
 	/**Exposer object to use within component */
-	exposer: Exposer;
+	exposer?: Exposer;
 
 	/**Component's relation */
-	relation: object | null;
+	relation?: object | null;
 
 	/**Application refresh callback */
-	refresh: () => void;
+	refresh?: () => void;
 }
 
 /**

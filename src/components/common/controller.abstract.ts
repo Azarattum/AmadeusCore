@@ -20,14 +20,14 @@ export default function Controller<T extends string>() {
 		/**Callbacks storage */
 		private callbacks: { [type: string]: Function[] } = {};
 		/**Exposer object */
-		private exposer: Exposer;
+		private exposer?: Exposer;
 		/**Relation reference */
 		private relation: object | null;
 
 		/**
 		 * Creates controller class
 		 */
-		public constructor({ exposer, relation }: IComponentOptions) {
+		public constructor({ exposer, relation }: IComponentOptions = {}) {
 			this.uuid = Utils.generateID();
 			this.name = this.constructor.name;
 			this.exposer = exposer;
@@ -47,7 +47,7 @@ export default function Controller<T extends string>() {
 		public close(): void {
 			//Close the controller
 			this.callbacks = {};
-			this.exposer.close(this.name.toLowerCase(), this.relation);
+			this.exposer?.close(this.name.toLowerCase(), this.relation);
 		}
 
 		/**
@@ -82,7 +82,7 @@ export default function Controller<T extends string>() {
 			const exposed =
 				func || ((this as any)[name] as Function).bind(this);
 
-			this.exposer.expose(
+			this.exposer?.expose(
 				this.name.toLowerCase(),
 				name,
 				exposed,
