@@ -5,7 +5,7 @@ import Tenant from "../../models/tenant";
 import { ITrack } from "../../models/track.interface";
 
 export default abstract class Endpoint extends Controller<
-	"searched" | "playlists" | "playlisted" | "relist" | "triggered"
+	"searched" | "playlisted" | "relisted" | "triggered"
 >() {
 	public tenant: Tenant;
 
@@ -18,11 +18,9 @@ export default abstract class Endpoint extends Controller<
 		return Tenant.tenants;
 	}
 
-	public abstract setPlaylists(playlists: string[]): Promise<void>;
+	public abstract clear(playlist?: Playlist): Promise<void>;
 
-	public abstract clearPlaylist(playlist: Playlist): Promise<void>;
-
-	public abstract sendTracks(
+	public abstract send(
 		tracks: AsyncGenerator<ITrack>,
 		playlist?: Playlist
 	): Promise<void>;

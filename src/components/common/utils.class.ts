@@ -180,59 +180,6 @@ export default class Utils {
 
 		return array;
 	}
-
-	/**
-	 * Returns first n items from the given async generator
-	 * @param generator Generator function of items
-	 * @param n Number of items
-	 */
-	public static async nFirst<T>(
-		generator: AsyncGenerator<T>,
-		n: number
-	): Promise<T[]> {
-		const promises = [];
-		for (let i = 0; i < n; i++) {
-			promises.push(generator.next());
-		}
-
-		const resolved = await Promise.all(promises);
-		return resolved.filter(x => !x.done).map(x => x.value);
-	}
-
-	/**
-	 * Merges an array of async generators into a single one
-	 * @param generators Generators to merge
-	 */
-	public static async *mergeGenerators<T>(
-		generators: AsyncGenerator<T>[]
-	): AsyncGenerator<T> {
-		let available;
-		do {
-			available = 0;
-			for (const generator of generators) {
-				const item = await generator.next();
-				if (item.done) continue;
-				yield item.value;
-				available++;
-			}
-		} while (available);
-	}
-
-	/**
-	 * Creates an async generator from any item or an array of items
-	 * @param from Source item or array
-	 */
-	public static generate<T>(from: T | T[]): AsyncGenerator<T> {
-		return (async function*() {
-			if (Array.isArray(from)) {
-				for (const item of from) {
-					yield item;
-				}
-			} else {
-				yield from;
-			}
-		})();
-	}
 }
 
 /**
@@ -255,19 +202,4 @@ const generateID = Utils.generateID;
 const convertTo = Utils.convertTo;
 const sleep = Utils.sleep;
 const shuffle = Utils.shuffle;
-const nFirst = Utils.nFirst;
-const mergeGenerators = Utils.mergeGenerators;
-const generate = Utils.generate;
-export {
-	log,
-	wrn,
-	err,
-	format,
-	generateID,
-	convertTo,
-	sleep,
-	shuffle,
-	nFirst,
-	mergeGenerators,
-	generate
-};
+export { log, wrn, err, format, generateID, convertTo, sleep, shuffle };

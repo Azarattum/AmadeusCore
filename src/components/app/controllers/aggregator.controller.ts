@@ -2,10 +2,11 @@ import Controller from "../../common/controller.abstract";
 import Provider from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
 import { ITrack } from "../models/track.interface";
-import { mergeGenerators, nFirst, shuffle } from "../../common/utils.class";
+import { shuffle } from "../../common/utils.class";
 import Recommender, {
 	ITrackInfo
 } from "../models/recommenders/recommender.abstract";
+import { first, mergeGenerators } from "../models/generator";
 
 /**
  * Aggregates track data from all Amadeus' providers
@@ -34,7 +35,7 @@ export default class Aggregator extends Controller() {
 
 		//Fetch and sort items (3 from every provider)
 		const generators = this.providers.map(x => x.get(query));
-		const promises = generators.map(x => nFirst(x, 3));
+		const promises = generators.map(x => first(x, 3));
 		const items = (await Promise.all(promises)).flat();
 		items.sort((a, b) => {
 			const target = this.purify(query.toLowerCase().trim());

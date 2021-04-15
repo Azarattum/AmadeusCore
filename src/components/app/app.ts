@@ -1,5 +1,5 @@
 import Application, { handle } from "../common/application.abstract";
-import { generate, log } from "../common/utils.class";
+import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
 import { ITrack } from "./models/track.interface";
 import Preserver from "./controllers/preserver.controller";
@@ -12,6 +12,7 @@ import VKProvider from "./models/providers/vk.provider";
 import SoundCloudProvider from "./models/providers/soundcloud.provider";
 import YouTubeProvider from "./models/providers/youtube.provider";
 import LastFMRecommender from "./models/recommenders/lastfm.recommender";
+import { generate } from "./models/generator";
 
 /**
  * Application class
@@ -58,16 +59,7 @@ export default class App extends Application {
 			log(`${name} searched for "${query}"...`);
 
 			const track = await aggregator.get(query);
-			endpoint.sendTracks(track);
-		});
-
-		endpoint.on("playlists", async () => {
-			log(`${name} requested his/her playlists.`);
-			const playlists = (await preserver.getPlaylists()).map(
-				x => x.title
-			);
-
-			endpoint.setPlaylists(playlists);
+			endpoint.send(track);
 		});
 
 		endpoint.on("playlisted", async (track: ITrack, playlist: string) => {
@@ -76,7 +68,7 @@ export default class App extends Application {
 			preserver.addTrack(track, playlist);
 		});
 
-		endpoint.on("relist", (playlist: string, update: any) => {
+		endpoint.on("relisted", (playlist: string, update: any) => {
 			log(`${name} updated "${playlist}" playlist.`);
 
 			preserver.updatePlaylist(playlist, update);
@@ -95,7 +87,7 @@ export default class App extends Application {
 			const endpoints = this.getComponents(Endpoint, preserver.tenant);
 
 			endpoints.forEach(x => {
-				x.sendTracks(generate(track), playlist);
+				x.send(generate(track), playlist);
 			});
 		});
 	}
@@ -112,7 +104,7 @@ export default class App extends Application {
 			);
 
 			playlists.forEach(async playlist => {
-				endpoints.forEach(x => x.clearPlaylist(playlist));
+				endpoints.forEach(x => x.clear(playlist));
 				//Get a sample of the last 100 user's tracks
 				const sample = await preserver.getTracks(100);
 				//Recommendations are based on this sample
@@ -120,7 +112,7 @@ export default class App extends Application {
 
 				//Send new tracks to every endpoint
 				for (const endpoint of endpoints) {
-					await endpoint.sendTracks(tracks, playlist);
+					await endpoint.send(tracks, playlist);
 				}
 
 				log(`Playlist "${playlist.title}" updated with new tracks.`);
