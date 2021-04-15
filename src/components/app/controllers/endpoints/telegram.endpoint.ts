@@ -68,7 +68,7 @@ export default class Telegram extends Endpoint {
 	}
 
 	public async sendTracks(
-		tracks: ITrack[],
+		tracks: AsyncGenerator<ITrack>,
 		playlist?: Playlist
 	): Promise<void> {
 		clearInterval(this.loader);
@@ -76,8 +76,8 @@ export default class Telegram extends Endpoint {
 		if (playlist && !playlist.telegram) return;
 		const telegramPlaylist = playlist?.telegram || undefined;
 
-		const generatePromises = function*(this: Telegram): any {
-			for (const track of tracks) {
+		const generatePromises = async function*(this: Telegram): any {
+			for await (const track of tracks) {
 				const tg = track.sources
 					.find(x => x.startsWith("tg://"))
 					?.slice(5);
@@ -296,20 +296,6 @@ export default class Telegram extends Endpoint {
 				this.clearPlaylist();
 				break;
 			}
-			case "playlist": {
-				const target = data["message"]?.["reply_to_message"];
-				if (target && target.audio) {
-					this.lastTrack =
-						this.tracks.get(target.message_id) || this.lastTrack;
-				}
-				this.emit("playlists");
-				break;
-			}
-			case "more": {
-				this.startLoader();
-				this.emit("extended");
-				break;
-			}
 		}
 	}
 
@@ -358,7 +344,7 @@ export default class Telegram extends Endpoint {
 		);
 	}
 
-	public static get relations(): object[] {
+	public static get relations(): Tenant[] {
 		return Tenant.tenants.filter(x => x.telegram);
 	}
 

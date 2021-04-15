@@ -50,7 +50,7 @@ export default class App extends Application {
 	@handle(Endpoint)
 	private onEndpoint(endpoint: Endpoint): void {
 		const name = endpoint.tenant.identifier;
-		const aggregator = this.getComponent(Aggregator, endpoint.tenant);
+		const aggregator = this.getComponent(Aggregator);
 		const preserver = this.getComponent(Preserver, endpoint.tenant);
 		const scheduler = this.getComponent(Scheduler, endpoint.tenant);
 
@@ -102,7 +102,7 @@ export default class App extends Application {
 
 	@handle(Scheduler)
 	private onScheduler(scheduler: Scheduler): void {
-		const aggregator = this.getComponent(Aggregator, scheduler.tenant);
+		const aggregator = this.getComponent(Aggregator);
 		const preserver = this.getComponent(Preserver, scheduler.tenant);
 		const endpoints = this.getComponents(Endpoint, scheduler.tenant);
 
