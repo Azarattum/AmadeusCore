@@ -1,15 +1,30 @@
 const Path = require("path");
 const TerserPlugin = require("terser-webpack-plugin");
-const WebpackCleanupPlugin = require("webpack-cleanup-plugin");
+const CleanPlugin = require("clean-webpack-plugin").CleanWebpackPlugin;
+const CopyPlugin = require("copy-webpack-plugin");
 const NodeExternals = require("webpack-node-externals");
 
-const prod = process.argv.indexOf("-p") !== -1;
+const prod = process.argv.indexOf("production") !== -1;
 
 module.exports = {
 	entry: "./src/index.ts",
 	mode: prod ? "production" : "development",
 	devtool: prod ? undefined : "source-map",
-	plugins: [prod ? new WebpackCleanupPlugin() : () => {}],
+	plugins: prod
+		? [
+				new CleanPlugin(),
+				new CopyPlugin({
+					patterns: [
+						"package.json",
+						"package-lock.json",
+						".env",
+						{ from: "prisma/schema.prisma", to: "prisma" },
+						{ from: "data/dummy.db", to: "data" },
+						{ from: "data/tenants.json", to: "data" }
+					]
+				})
+		  ]
+		: [new CleanPlugin()],
 	module: {
 		rules: [
 			{
@@ -44,7 +59,7 @@ module.exports = {
 			}
 		]
 	},
-	externals: [NodeExternals({ whitelist: [/^comlink/] })],
+	externals: [NodeExternals({ allowlist: [/^comlink/] })],
 	resolve: {
 		extensions: [".ts", ".js"]
 	},
