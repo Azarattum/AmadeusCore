@@ -6,7 +6,8 @@
 		"migrate": "prisma migrate dev --preview-feature",
 		"watch": "webpack-cli -w --config env/webpack.config.js",
 		"test": "jest --config env/jest.config.js",
-		"coverage": "jest --coverage --config env/jest.config.js"
+		"coverage": "jest --coverage --config env/jest.config.js",
+		"postinstall": "prisma generate"
 	},
 	"dependencies": {
 		"@prisma/client": "^2.19.0",

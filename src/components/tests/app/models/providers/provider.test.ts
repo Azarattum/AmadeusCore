@@ -22,7 +22,7 @@ class TestProvider extends Provider<any> {
 	}
 }
 
-const provider = new TestProvider("token");
+const provider = new TestProvider();
 
 describe("Provider", () => {
 	it("retry", async () => {

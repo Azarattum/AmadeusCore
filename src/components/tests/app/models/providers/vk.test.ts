@@ -1,12 +1,11 @@
 import * as fetch from "node-fetch";
 import fetchMock from "fetch-mock-jest";
-import { TypeGuardError } from "typescript-is";
 import VKProvider from "../../../../app/models/providers/vk.provider";
 
 Object.assign(globalThis, { ...fetch, fetch });
 fetchMock.config.overwriteRoutes = true;
 
-const provider = new VKProvider("token");
+const provider = new VKProvider();
 
 const track = {
 	title: "1 (Test) (Test)",
@@ -46,7 +45,7 @@ describe("VK", () => {
 
 		expect(fetchMock).toHaveLastFetched(undefined, {
 			query: {
-				access_token: "token",
+				access_token: "TOKEN",
 				q: "hello"
 			}
 		});
@@ -74,13 +73,13 @@ describe("VK", () => {
 	});
 
 	it("error", async () => {
+		console.warn = jest.fn();
 		fetchMock.getOnce("*", {
 			error: "some error"
 		});
 
-		await expect(provider.get("something").next()).rejects.toThrowError(
-			TypeGuardError
-		);
+		expect((await provider.get("something").next()).value).toBe(undefined);
+		expect(console.warn).toHaveBeenCalled();
 
 		fetchMock.mockClear();
 	});

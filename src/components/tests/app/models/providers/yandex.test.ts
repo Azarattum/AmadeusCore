@@ -1,12 +1,11 @@
 import * as fetch from "node-fetch";
 import fetchMock from "fetch-mock-jest";
-import { TypeGuardError } from "typescript-is";
 import YandexProvider from "../../../../app/models/providers/yandex.provider";
 
 Object.assign(globalThis, { ...fetch, fetch });
 fetchMock.config.overwriteRoutes = true;
 
-const provider = new YandexProvider("token");
+const provider = new YandexProvider();
 
 const track = {
 	id: 7,
@@ -63,7 +62,7 @@ describe("Yandex", () => {
 				text: "hello"
 			},
 			headers: {
-				Authorization: "OAuth token"
+				Authorization: "OAuth TOKEN"
 			}
 		});
 		expect(fetchMock).toHaveFetched(/7\/download/);
@@ -111,13 +110,13 @@ describe("Yandex", () => {
 	});
 
 	it("error", async () => {
+		console.warn = jest.fn();
 		fetchMock.get(/search/, {
 			error: "some error"
 		});
 
-		await expect(provider.get("something").next()).rejects.toThrowError(
-			TypeGuardError
-		);
+		expect((await provider.get("something").next()).value).toBe(undefined);
+		expect(console.warn).toHaveBeenCalled();
 
 		fetchMock.mockClear();
 	});

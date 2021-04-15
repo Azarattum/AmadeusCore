@@ -7,12 +7,6 @@ import { is } from "typescript-is";
 import ytpl from "ytpl";
 
 export default class YouTubeProvider extends Provider<ITrackYouTube> {
-	protected baseURL = "";
-
-	public constructor() {
-		super("unused");
-	}
-
 	public async *identify(source: string): AsyncGenerator<ITrackYouTube> {
 		//From aggregator
 		if (source.startsWith("aggr://youtube:")) source = source.slice(15);

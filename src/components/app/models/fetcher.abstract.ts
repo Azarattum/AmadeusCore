@@ -8,7 +8,11 @@ export default abstract class Fetcher {
 	protected token: string;
 	protected headers: Record<string, string> = {};
 	protected params: Record<string, string> = {};
-	protected abstract baseURL: string;
+	protected baseURL: string = "";
+
+	public constructor(token: string = "TOKEN") {
+		this.token = token;
+	}
 
 	protected async call(
 		method: string,
@@ -35,9 +39,5 @@ export default abstract class Fetcher {
 
 		if (res.error) throw { status: res.status, eroor: res.error };
 		return res.data;
-	}
-
-	public constructor(token: string) {
-		this.token = token;
 	}
 }

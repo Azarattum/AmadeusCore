@@ -1,12 +1,11 @@
 import * as fetch from "node-fetch";
 import fetchMock from "fetch-mock-jest";
-import { TypeGuardError } from "typescript-is";
 import SoundCloudProvider from "../../../../app/models/providers/soundcloud.provider";
 
 Object.assign(globalThis, { ...fetch, fetch });
 fetchMock.config.overwriteRoutes = true;
 
-const provider = new SoundCloudProvider("token");
+const provider = new SoundCloudProvider();
 
 const track = {
 	created_at: "2021-03-31",
@@ -56,7 +55,7 @@ describe("SoundCloud", () => {
 
 		expect(fetchMock).toHaveFetched(undefined, {
 			query: {
-				client_id: "token",
+				client_id: "TOKEN",
 				q: "hello"
 			}
 		});
@@ -86,13 +85,13 @@ describe("SoundCloud", () => {
 	});
 
 	it("error", async () => {
+		console.warn = jest.fn();
 		fetchMock.getOnce(/search/, {
 			error: "some error"
 		});
 
-		await expect(provider.get("something").next()).rejects.toThrowError(
-			TypeGuardError
-		);
+		expect((await provider.get("something").next()).value).toBe(undefined);
+		expect(console.warn).toHaveBeenCalled();
 
 		fetchMock.mockClear();
 	});
