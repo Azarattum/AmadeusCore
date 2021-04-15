@@ -37,23 +37,14 @@ export default class Aggregator extends Controller() {
 		const generators = this.providers.map(x => x.get(query));
 		const promises = generators.map(x => first(x, 3));
 		const items = (await Promise.all(promises)).flat();
-		items.sort((a, b) => {
-			const target = this.purify(query.toLowerCase().trim());
-			const trackA = compareTwoStrings(target, this.stringify(a));
-			const trackB = compareTwoStrings(target, this.stringify(b));
-			if (trackA === trackB) {
-				if (a.cover && !b.cover) return -1;
-				if (b.cover && !a.cover) return 1;
-			}
-
-			return trackB - trackA;
-		});
+		items.sort((a, b) => this.compare(a, b, query));
 
 		const seen = new Set();
 		//Return best sorted
 		for (const item of items) {
 			const hash = this.stringify(item);
-			if (seen.has(hash)) continue;
+			const rev = this.stringify(item, true);
+			if (seen.has(hash) || seen.has(rev)) continue;
 
 			yield item;
 			seen.add(hash);
@@ -63,7 +54,8 @@ export default class Aggregator extends Controller() {
 		const generator = mergeGenerators(generators);
 		for await (const item of generator) {
 			const hash = this.stringify(item);
-			if (seen.has(hash)) continue;
+			const rev = this.stringify(item, true);
+			if (seen.has(hash) || seen.has(rev)) continue;
 
 			yield item;
 			seen.add(hash);
@@ -95,13 +87,55 @@ export default class Aggregator extends Controller() {
 		}
 	}
 
-	private stringify(track: ITrack): string {
+	private compare(a: ITrack, b: ITrack, query: string) {
+		const target = this.purify(query.toLowerCase().trim());
+
+		//Exact title match
+		if (
+			!target.includes("-") &&
+			target === a.title.toLowerCase() &&
+			target === b.title.toLowerCase()
+		) {
+			return 0;
+		}
+
+		//Exact artist match
+		const nonspace = target.replace(/\s+/g, "");
+		if (
+			!target.includes("-") &&
+			nonspace ===
+				a.artists
+					.join()
+					.replace(/\s+/g, "")
+					.toLowerCase() &&
+			nonspace ===
+				b.artists
+					.join()
+					.replace(/\s+/g, "")
+					.toLowerCase()
+		) {
+			return 0;
+		}
+
+		const trackA = compareTwoStrings(target, this.stringify(a));
+		const trackB = compareTwoStrings(target, this.stringify(b));
+		if (trackA === trackB) {
+			if (a.cover && !b.cover) return -1;
+			if (b.cover && !a.cover) return 1;
+		}
+
+		return trackB - trackA;
+	}
+
+	private stringify(track: ITrack, reverse = false): string {
 		const title = track.title.toLowerCase().trim();
 		const artists = track.artists
 			.sort()
 			.join()
 			.toLowerCase()
 			.trim();
+
+		if (reverse) this.purify(`${title} - ${artists}`);
 		return this.purify(`${artists} - ${title}`);
 	}
 
