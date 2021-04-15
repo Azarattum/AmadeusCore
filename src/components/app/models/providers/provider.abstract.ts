@@ -14,7 +14,10 @@ export default abstract class Provider<T = any> extends Fetcher {
 				yield converted;
 			}
 		} catch (e) {
-			wrn(`${this.constructor.name} failed to get "${query}"!\n${e}`);
+			const err =
+				e.toString() === "[object Object]" ? JSON.stringify(e) : e;
+
+			wrn(`${this.constructor.name} failed to get "${query}"!\n${err}`);
 		}
 	}
 
@@ -29,8 +32,11 @@ export default abstract class Provider<T = any> extends Fetcher {
 				yield converted;
 			}
 		} catch (e) {
+			const err =
+				e.toString() === "[object Object]" ? JSON.stringify(e) : e;
+
 			wrn(
-				`${this.constructor.name} failed to desource "${source}"!\n${e}`
+				`${this.constructor.name} failed to desource "${source}"!\n${err}`
 			);
 		}
 	}
