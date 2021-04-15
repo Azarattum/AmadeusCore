@@ -18,10 +18,10 @@ export default abstract class Endpoint extends Controller<
 		return Tenant.tenants;
 	}
 
-	public abstract clear(playlist?: Playlist): Promise<void>;
+	public abstract clear(playlist?: Playlist): Promise<any>;
 
 	public abstract send(
 		tracks: AsyncGenerator<ITrack>,
 		playlist?: Playlist
-	): Promise<void>;
+	): Promise<any>;
 }
