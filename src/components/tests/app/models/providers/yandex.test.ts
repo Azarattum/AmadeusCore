@@ -52,9 +52,22 @@ fetchMock.get(/url/, {
 	ts: "d"
 });
 
+async function check(generator: AsyncGenerator<any>) {
+	const value = (await generator.next()).value;
+	expect(value).toEqual({
+		title: expected.title,
+		artists: expected.artists,
+		album: expected.album,
+		cover: expected.cover,
+		track: value.track
+	});
+	expect(typeof value.track).toBe("function");
+	expect(await value.track()).toEqual(expected);
+}
+
 describe("Yandex", () => {
 	it("get", async () => {
-		expect((await provider.get("hello").next()).value).toEqual(expected);
+		await check(provider.get("hello"));
 
 		expect(fetchMock).toHaveFetched(/search/, {
 			query: {
@@ -71,40 +84,36 @@ describe("Yandex", () => {
 		fetchMock.mockClear();
 
 		const data = provider.get("hello");
-		await data.next();
-		await data.next();
+		const a = (await data.next()).value;
+		const b = (await data.next()).value;
 		expect(fetchMock).toHaveFetched(/search/, { query: { page: 0 } });
 		expect(fetchMock).toHaveFetched(/search/, { query: { page: 1 } });
+		expect(fetchMock).toHaveFetchedTimes(2);
+		await a?.track();
+		await b?.track();
 		expect(fetchMock).toHaveFetchedTimes(6);
 
 		fetchMock.mockClear();
 	});
 
 	it("desource", async () => {
-		const desource = async (src: string) =>
-			(await provider.desource(src).next()).value;
-
-		expect(await desource("aggr://yandex:7")).toEqual(expected);
+		await check(provider.desource("aggr://yandex:7"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		expect(await desource("music.yandex.ru/album/0/track/1")).toEqual(
-			expected
-		);
+		await check(provider.desource("music.yandex.ru/album/0/track/1"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		expect(await desource("music.yandex.ru/album/0/")).toEqual(expected);
+		await check(provider.desource("music.yandex.ru/album/0/"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		expect(await desource("music.yandex.ru/artist/0")).toEqual(expected);
+		await check(provider.desource("music.yandex.ru/artist/0"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		expect(await desource("music.yandex.ru/users/a/playlists/0")).toEqual(
-			expected
-		);
+		await check(provider.desource("music.yandex.ru/users/a/playlists/0"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 	});

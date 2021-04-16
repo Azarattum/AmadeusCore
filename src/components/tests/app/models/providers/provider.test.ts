@@ -1,7 +1,7 @@
 import * as fetch from "node-fetch";
 import fetchMock from "fetch-mock-jest";
 import Provider from "../../../../app/models/providers/provider.abstract";
-import { ITrack } from "../../../../app/models/track.interface";
+import { IPreview } from "../../../../app/models/track.interface";
 
 Object.assign(globalThis, { ...fetch, fetch });
 fetchMock.config.overwriteRoutes = true;
@@ -17,7 +17,7 @@ class TestProvider extends Provider<any> {
 	protected async *identify(source: string): AsyncGenerator<any> {
 		yield await this.call("*");
 	}
-	protected async convert(track: any): Promise<ITrack> {
+	protected convert(track: any): IPreview {
 		return track;
 	}
 }
@@ -65,7 +65,8 @@ describe("Provider", () => {
 		const result = provider.get("");
 		console.warn = jest.fn();
 
-		await result.next();
+		expect((await result.next()).value).toBe(1);
+		expect((await result.next()).value).toBe(undefined);
 		expect(console.warn).toHaveBeenCalled();
 	});
 });

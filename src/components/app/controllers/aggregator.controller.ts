@@ -1,7 +1,7 @@
 import Controller from "../../common/controller.abstract";
 import Provider from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
-import { ITrack } from "../models/track.interface";
+import { IPreview } from "../models/track.interface";
 import { shuffle } from "../../common/utils.class";
 import Recommender, {
 	ITrackInfo
@@ -23,7 +23,7 @@ export default class Aggregator extends Controller() {
 		this.recommenders = recommenders;
 	}
 
-	public async *get(query: string): AsyncGenerator<ITrack> {
+	public async *get(query: string): AsyncGenerator<IPreview> {
 		//Return from desource
 		const source = this.desource([query]);
 		let fromSource = false;
@@ -62,7 +62,7 @@ export default class Aggregator extends Controller() {
 		}
 	}
 
-	public async *desource(sources: string[]): AsyncGenerator<ITrack> {
+	public async *desource(sources: string[]): AsyncGenerator<IPreview> {
 		for (const source of sources) {
 			const generators = this.providers.map(x => x.desource(source));
 			const generator = mergeGenerators(generators);
@@ -76,7 +76,7 @@ export default class Aggregator extends Controller() {
 		}
 	}
 
-	public async *recommend(source: ITrackInfo[]): AsyncGenerator<ITrack> {
+	public async *recommend(source: ITrackInfo[]): AsyncGenerator<IPreview> {
 		const promises = this.recommenders.map(x => x.recommend(source));
 		let recommendations = (await Promise.all(promises)).flat();
 		recommendations = shuffle(recommendations).slice(0, 100);
@@ -87,7 +87,7 @@ export default class Aggregator extends Controller() {
 		}
 	}
 
-	private compare(a: ITrack, b: ITrack, query: string) {
+	private compare(a: IPreview, b: IPreview, query: string) {
 		const target = this.purify(query.toLowerCase().trim());
 
 		//Exact title match
@@ -127,7 +127,7 @@ export default class Aggregator extends Controller() {
 		return trackB - trackA;
 	}
 
-	private stringify(track: ITrack, reverse = false): string {
+	private stringify(track: IPreview, reverse = false): string {
 		const title = track.title.toLowerCase().trim();
 		const artists = track.artists
 			.sort()

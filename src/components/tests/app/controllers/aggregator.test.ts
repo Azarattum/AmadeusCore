@@ -3,19 +3,27 @@ import Provider from "../../../app/models/providers/provider.abstract";
 import Recommender, {
 	ITrackInfo
 } from "../../../app/models/recommenders/recommender.abstract";
-import { ITrack } from "../../../app/models/track.interface";
+import { IPreview } from "../../../app/models/track.interface";
 
 class TestProvider extends Provider {
 	protected baseURL: string = "";
-	protected async convert(track: any): Promise<ITrack | { url: undefined }> {
+	protected convert(track: any): IPreview {
 		const data = track + "";
-		return {
+		const converted = {
 			title: data,
 			album: data,
 			artists: [data],
 			length: 0,
 			sources: [data],
 			url: data
+		};
+
+		return {
+			title: converted.title,
+			artists: converted.artists,
+			album: converted.album,
+
+			track: async () => converted
 		};
 	}
 	protected async *identify(
@@ -42,7 +50,7 @@ describe("Aggregator", () => {
 		const tracks = aggr.get("test");
 		const any = jest.fn();
 		for await (const track of tracks) {
-			expect(track).toEqual({
+			expect(await track.track()).toEqual({
 				title: "test",
 				album: "test",
 				artists: ["test"],
@@ -60,7 +68,7 @@ describe("Aggregator", () => {
 		const tracks = aggr.desource(["42"]);
 		const any = jest.fn();
 		for await (const track of tracks) {
-			expect(track).toEqual({
+			expect(await track.track()).toEqual({
 				title: "42",
 				album: "42",
 				artists: ["42"],
@@ -78,7 +86,7 @@ describe("Aggregator", () => {
 		const tracks = aggr.recommend([]);
 		const any = jest.fn();
 		for await (const track of tracks) {
-			expect(track).toEqual({
+			expect(await track.track()).toEqual({
 				title: "recommended",
 				album: "recommended",
 				artists: ["recommended"],

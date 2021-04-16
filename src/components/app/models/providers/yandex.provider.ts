@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { gretch } from "gretchen";
 import { assertType } from "typescript-is";
 import { parseArtists } from "../parser";
-import { ITrack } from "../track.interface";
+import { IPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
 export default class YandexProvider extends Provider<ITrackYandex> {
@@ -103,7 +103,7 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		} while (tracks);
 	}
 
-	protected async convert(track: ITrackYandex): Promise<ITrack> {
+	protected convert(track: ITrackYandex): IPreview {
 		const converted = {
 			title: track.title,
 			artists: parseArtists(track.artists.map(x => x.name).join(", ")),
@@ -119,8 +119,17 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 			sources: [`aggr://yandex:${track.id}`]
 		};
 
-		converted.url = await this.load(track.id);
-		return converted;
+		return {
+			title: converted.title,
+			artists: converted.artists,
+			album: converted.album,
+			cover: converted.cover,
+
+			track: async () => {
+				converted.url = await this.load(track.id);
+				return converted;
+			}
+		};
 	}
 
 	protected validate(track: ITrackYandex): boolean {

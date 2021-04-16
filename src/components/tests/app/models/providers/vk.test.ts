@@ -39,9 +39,22 @@ fetchMock.get("*", {
 	response: { items: [track] }
 });
 
+async function check(generator: AsyncGenerator<any>) {
+	const value = (await generator.next()).value;
+	expect(value).toEqual({
+		title: expected.title,
+		artists: expected.artists,
+		album: expected.album,
+		cover: expected.cover,
+		track: value.track
+	});
+	expect(typeof value.track).toBe("function");
+	expect(await value.track()).toEqual(expected);
+}
+
 describe("VK", () => {
 	it("get", async () => {
-		expect((await provider.get("hello").next()).value).toEqual(expected);
+		await check(provider.get("hello"));
 
 		expect(fetchMock).toHaveLastFetched(undefined, {
 			query: {
@@ -54,20 +67,19 @@ describe("VK", () => {
 	});
 
 	it("desource", async () => {
-		const desource = async (src: string) =>
-			(await provider.desource(src).next()).value;
-
-		expect(await desource("aggr://vk:6_77777")).toEqual(expected);
-		expect(await desource("http://vk.com/audio-6_7")).toEqual(expected);
-		expect(await desource("https://vk.com/audio7_4")).toEqual(expected);
-		expect(await desource("vk.com/audio-1_1")).toEqual(expected);
-		expect(await desource("lol.com/audio-1_1")).toEqual(undefined);
+		await check(provider.desource("aggr://vk:6_77777"));
+		await check(provider.desource("http://vk.com/audio-6_7"));
+		await check(provider.desource("https://vk.com/audio7_4"));
+		await check(provider.desource("vk.com/audio-1_1"));
+		expect(
+			(await provider.desource("lol.com/audio-1_1").next()).value
+		).toBe(undefined);
 		expect(fetchMock).toHaveFetchedTimes(4);
 		fetchMock.mockClear();
 
-		expect(await desource("vk.com/artist/smb_1")).toEqual(expected);
-		expect(await desource("vk.com/audio_playlist1_2_f")).toEqual(expected);
-		expect(await desource("vk.com/username")).toEqual(expected);
+		await check(provider.desource("vk.com/artist/smb_1"));
+		await check(provider.desource("vk.com/audio_playlist1_2_f"));
+		await check(provider.desource("vk.com/username"));
 		expect(fetchMock).toHaveFetchedTimes(4);
 		fetchMock.mockClear();
 	});

@@ -1,6 +1,6 @@
 import { assertType } from "typescript-is";
 import { parseArtists } from "../parser";
-import { ITrack } from "../track.interface";
+import { IPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
 export default class VKProvider extends Provider<ITrackVK> {
@@ -124,8 +124,8 @@ export default class VKProvider extends Provider<ITrackVK> {
 		} while (tracks.length);
 	}
 
-	protected async convert(track: ITrackVK): Promise<ITrack> {
-		return {
+	protected convert(track: ITrackVK): IPreview {
+		const converted = {
 			title: track.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
 			artists: parseArtists(track.artist),
 			album: track.album?.title || track.title,
@@ -134,6 +134,15 @@ export default class VKProvider extends Provider<ITrackVK> {
 			cover: track.album?.thumb?.photo_1200,
 			url: track.url,
 			sources: [`aggr://vk:${track.owner_id}_${track.id}`]
+		};
+
+		return {
+			title: converted.title,
+			artists: converted.artists,
+			album: converted.album,
+			cover: converted.cover,
+
+			track: async () => converted
 		};
 	}
 

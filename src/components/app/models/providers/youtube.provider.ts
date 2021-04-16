@@ -1,4 +1,4 @@
-import { ITrack } from "../track.interface";
+import { IPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 import ytsr, { ContinueResult } from "ytsr";
 import ytdl from "ytdl-core";
@@ -71,7 +71,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		}
 	}
 
-	protected async convert(track: ITrackYouTube): Promise<ITrack> {
+	protected convert(track: ITrackYouTube): IPreview {
 		const author = track.author
 			? [track.author.name.replace(/ - Topic$/, "")]
 			: [];
@@ -86,17 +86,26 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 				.reduce((acc, time) => 60 * +acc + +time + ""),
 			year: year,
 			cover: track?.bestThumbnail?.url || undefined,
-			url: null as any,
+			url: undefined as any,
 			sources: [`aggr://youtube:${track.id}`]
 		};
 
-		const [url, cover, date] = await this.load(track.id);
+		return {
+			title: converted.title,
+			artists: converted.artists,
+			album: converted.album,
+			cover: converted.cover,
 
-		converted.url = url;
-		converted.cover = cover || converted.cover;
-		converted.year = converted.year || date;
+			track: async () => {
+				const [url, cover, date] = await this.load(track.id);
 
-		return converted;
+				converted.url = url;
+				converted.cover = cover || converted.cover;
+				converted.year = converted.year || date;
+
+				return converted;
+			}
+		};
 	}
 
 	protected validate(track: ITrackYouTube): boolean {

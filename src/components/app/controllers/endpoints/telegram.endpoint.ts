@@ -3,7 +3,7 @@ import { Readable } from "stream";
 import { IComponentOptions } from "../../../common/component.interface";
 import { log, LogType } from "../../../common/utils.class";
 import Restream from "../../models/restream";
-import { ITrack } from "../../models/track.interface";
+import { IPreview, ITrack } from "../../models/track.interface";
 import AbortController from "abort-controller";
 import TelegramBase from "./telegram.base";
 
@@ -31,16 +31,16 @@ export default class Telegram extends TelegramBase {
 	}
 
 	public async send(
-		tracks: AsyncGenerator<ITrack>,
+		tracks: AsyncGenerator<IPreview>,
 		playlist?: Playlist
 	): Promise<any> {
 		clearInterval(this.loader);
 
 		const chat = playlist?.telegram || this.client;
-		for await (const track of tracks) {
-			await this.upload(track, chat).catch(e => {
+		for await (const preview of tracks) {
+			await this.upload(preview, chat).catch(e => {
 				log(
-					`Failed to send track "${track.title}"!\n${e}`,
+					`Failed to send track "${preview.title}"!\n${e}`,
 					LogType.ERROR
 				);
 			});
@@ -98,7 +98,8 @@ export default class Telegram extends TelegramBase {
 		this.emit("relisted", title, update);
 	}
 
-	private async upload(track: ITrack, chat: number): Promise<any> {
+	private async upload(preview: IPreview, chat: number): Promise<any> {
+		const track = await preview.track();
 		const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
 		if (tg) {
 			return this.call("sendAudio", {
@@ -122,7 +123,7 @@ export default class Telegram extends TelegramBase {
 		let loaded: number | null = 0;
 		let request: Promise<any> | null = null;
 		source.on("progress", async (progress: number) => {
-			if (chat) return;
+			if (chat !== this.client) return;
 			if (loaded === null) return;
 
 			loaded = progress;

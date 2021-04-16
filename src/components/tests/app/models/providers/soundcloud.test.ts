@@ -49,9 +49,25 @@ fetchMock.get(/aUser/, { id: 1337, username: "name" });
 fetchMock.get(/aPlaylist/, { tracks: [{}, track] });
 fetchMock.get(/url/, { url: "7" });
 
+async function check(generator: AsyncGenerator<any>, cover?: string) {
+	const value = (await generator.next()).value;
+	expect(value).toEqual({
+		title: expected.title,
+		artists: expected.artists,
+		album: expected.album,
+		cover: cover || expected.cover.replace("original", "t500x500"),
+		track: value.track
+	});
+	expect(typeof value.track).toBe("function");
+	expect(await value.track()).toEqual({
+		...expected,
+		cover: cover || expected.cover
+	});
+}
+
 describe("SoundCloud", () => {
 	it("get", async () => {
-		expect((await provider.get("hello").next()).value).toEqual(expected);
+		await check(provider.get("hello"));
 
 		expect(fetchMock).toHaveFetched(undefined, {
 			query: {
@@ -64,22 +80,19 @@ describe("SoundCloud", () => {
 	});
 
 	it("desource", async () => {
-		const desource = async (src: string) =>
-			(await provider.desource(src).next()).value;
-
-		expect(await desource("aggr://soundcloud:0")).toEqual(expected);
+		await check(provider.desource("aggr://soundcloud:0"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		expect(await desource("soundcloud.com/tracks")).toEqual(expected);
+		await check(provider.desource("soundcloud.com/tracks"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		expect(await desource("soundcloud.com/aPlaylist")).toEqual(expected);
+		await check(provider.desource("soundcloud.com/aPlaylist"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		expect(await desource("soundcloud.com/aUser")).toEqual(expected);
+		await check(provider.desource("soundcloud.com/aUser"));
 		expect(fetchMock).toHaveFetchedTimes(5);
 		fetchMock.mockClear();
 	});
@@ -99,9 +112,10 @@ describe("SoundCloud", () => {
 	it("cover", async () => {
 		fetchMock.get(/tracks/, { ...track, artwork_url: "notlarge.jpg" });
 
-		expect(
-			(await provider.desource("aggr://soundcloud:0").next()).value
-		).toEqual({ ...expected, cover: "nott500x500.jpg" });
+		await check(
+			provider.desource("aggr://soundcloud:0"),
+			"nott500x500.jpg"
+		);
 		expect(fetchMock).toHaveFetchedTimes(3, /notoriginal.jpg/);
 		expect(fetchMock).toHaveFetchedTimes(5);
 

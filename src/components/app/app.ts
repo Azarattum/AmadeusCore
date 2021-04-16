@@ -1,7 +1,7 @@
 import Application, { handle } from "../common/application.abstract";
 import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
-import { ITrack } from "./models/track.interface";
+import { IPreview } from "./models/track.interface";
 import Preserver from "./controllers/preserver.controller";
 import { Playlist } from "@prisma/client";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
@@ -62,7 +62,7 @@ export default class App extends Application {
 			endpoint.send(track);
 		});
 
-		endpoint.on("playlisted", async (track: ITrack, playlist: string) => {
+		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {
 			log(`${name} added track "${track.title}" to "${playlist}".`);
 
 			preserver.addTrack(track, playlist);
@@ -83,7 +83,7 @@ export default class App extends Application {
 
 	@handle(Preserver)
 	private onPreserver(preserver: Preserver): void {
-		preserver.on("playlisted", (track: ITrack, playlist: Playlist) => {
+		preserver.on("playlisted", (track: IPreview, playlist: Playlist) => {
 			const endpoints = this.getComponents(Endpoint, preserver.tenant);
 
 			endpoints.forEach(x => {

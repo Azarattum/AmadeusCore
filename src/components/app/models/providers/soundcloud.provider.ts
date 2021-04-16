@@ -1,7 +1,7 @@
 import { gretch } from "gretchen";
 import { assertType, is } from "typescript-is";
 import parse, { parseArtists } from "../parser";
-import { ITrack } from "../track.interface";
+import { IPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
 export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
@@ -81,22 +81,28 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 		} while (page);
 	}
 
-	protected async convert(
-		track: ITrackSoundCloud
-	): Promise<ITrack | { url: undefined }> {
+	protected convert(track: ITrackSoundCloud): IPreview | null {
 		const { title, album, artists, year } = parse(track.title);
 
+		//Check media
 		const media = track.media.transcodings
 			.filter(x => x.format.protocol == "progressive")?.[0]
 			?.url?.replace(this.baseURL, "");
 
-		if (!media) return { url: undefined };
+		if (!media) return null;
+		if (media.includes("preview")) return null;
 
+		//Find artists
 		artists.push(
 			...parseArtists(track.publisher_metadata?.artist || undefined)
 		);
 		if (!artists.length)
 			artists.push(track.user.full_name || track.user.username);
+
+		//Find cover
+		let cover = track.artwork_url || track.user.avatar_url || undefined;
+		if (!cover || cover.includes("default_avatar")) cover = undefined;
+		cover = cover?.replace("large.jpg", "t500x500.jpg");
 
 		const converted = {
 			title: title,
@@ -106,20 +112,26 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 			year:
 				year ||
 				new Date(track.release_date || track.created_at).getFullYear(),
-			cover: undefined as string | undefined,
-			url: undefined as string | undefined,
+			cover: cover,
+			url: undefined as any,
 			sources: [`aggr://soundcloud:${track.id}`]
 		};
 
-		const [url, cover] = await this.load(
-			media,
-			track.artwork_url || track.user.avatar_url || undefined
-		);
+		return {
+			title: converted.title,
+			artists: converted.artists,
+			album: converted.album,
+			cover: converted.cover,
 
-		converted.cover = cover;
-		converted.url = url;
+			track: async () => {
+				const [url, image] = await this.load(media, cover);
 
-		return converted;
+				converted.cover = image;
+				converted.url = url;
+
+				return converted;
+			}
+		};
 	}
 
 	protected validate(track: ITrackSoundCloud): boolean {
@@ -130,21 +142,16 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 	private async load(
 		media: string,
 		cover?: string
-	): Promise<[string?, string?]> {
+	): Promise<[string, string?]> {
 		if (cover) {
-			const original = cover.replace("large.jpg", "original.jpg");
+			const original = cover.replace("t500x500.jpg", "original.jpg");
 			const { status } = await gretch(original).flush();
-
 			if (status === 200) cover = original;
-			else cover = cover.replace("large.jpg", "t500x500.jpg");
-
-			if (cover.includes("default_avatar")) cover = undefined;
 		}
 
 		const data = await this.call(media);
 		const url = assertType<{ url: string }>(data).url;
 
-		if (url.includes("preview")) return [undefined, cover];
 		return [url, cover];
 	}
 }

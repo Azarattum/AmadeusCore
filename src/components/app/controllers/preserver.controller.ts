@@ -4,7 +4,7 @@ import { existsSync } from "fs";
 import { IComponentOptions } from "../../common/component.interface";
 import Controller from "../../common/controller.abstract";
 import Tenant from "../models/tenant";
-import { ITrack } from "../models/track.interface";
+import { IPreview, ITrack } from "../models/track.interface";
 
 /**
  * Stores and manages Amadeus' user's data
@@ -69,7 +69,7 @@ export default class Preserver extends Controller<"playlisted">() {
 		});
 	}
 
-	public async addTrack(track: ITrack, playlist: string): Promise<void> {
+	public async addTrack(track: IPreview, playlist: string): Promise<void> {
 		let found = await this.prisma.track.findFirst({
 			where: {
 				title: track.title,
@@ -92,7 +92,7 @@ export default class Preserver extends Controller<"playlisted">() {
 				}
 			});
 		} else {
-			found = await this.createTrack(track, playlist);
+			found = await this.createTrack(await track.track(), playlist);
 		}
 
 		const updated = await this.prisma.playlist.findUnique({

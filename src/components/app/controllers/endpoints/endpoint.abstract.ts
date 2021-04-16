@@ -2,7 +2,7 @@ import { Playlist } from "@prisma/client";
 import { IComponentOptions } from "../../../common/component.interface";
 import Controller from "../../../common/controller.abstract";
 import Tenant from "../../models/tenant";
-import { ITrack } from "../../models/track.interface";
+import { IPreview } from "../../models/track.interface";
 
 export default abstract class Endpoint extends Controller<
 	"searched" | "playlisted" | "relisted" | "triggered"
@@ -21,7 +21,7 @@ export default abstract class Endpoint extends Controller<
 	public abstract clear(playlist?: Playlist): Promise<any>;
 
 	public abstract send(
-		tracks: AsyncGenerator<ITrack>,
+		tracks: AsyncGenerator<IPreview>,
 		playlist?: Playlist
 	): Promise<any>;
 }
