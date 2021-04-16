@@ -81,18 +81,19 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 			title: title,
 			artists: artists.length ? artists : author,
 			album: album,
-			length: 0,
+			length: +track.duration
+				.split(":")
+				.reduce((acc, time) => 60 * +acc + +time + ""),
 			year: year,
 			cover: track?.bestThumbnail?.url || undefined,
 			url: null as any,
 			sources: [`aggr://youtube:${track.id}`]
 		};
 
-		const [url, cover, length, date] = await this.load(track.id);
+		const [url, cover, date] = await this.load(track.id);
 
 		converted.url = url;
 		converted.cover = cover || converted.cover;
-		converted.length = length;
 		converted.year = converted.year || date;
 
 		return converted;
@@ -107,7 +108,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		return true;
 	}
 
-	private async load(id: string): Promise<[string, string, number, number?]> {
+	private async load(id: string): Promise<[string, string, number?]> {
 		const info = await ytdl.getInfo(id);
 		const player = info.player_response;
 
@@ -129,13 +130,12 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		const thumb = info.videoDetails.thumbnails.reduce(function(a, b) {
 			return a.height > b.height ? a : b;
 		});
-		const length = +(format.approxDurationMs || 0) / 1000;
 		const year =
 			new Date(
 				player.microformat.playerMicroformatRenderer.uploadDate
 			).getFullYear() || undefined;
 
-		return [format.url, thumb.url, length, year];
+		return [format.url, thumb.url, year];
 	}
 }
 

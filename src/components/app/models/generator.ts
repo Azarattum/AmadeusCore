@@ -5,7 +5,7 @@
  */
 export async function first<T>(
 	generator: AsyncGenerator<T>,
-	count: number
+	count: number = 1
 ): Promise<T[]> {
 	const promises = [];
 	for (let i = 0; i < count; i++) {
