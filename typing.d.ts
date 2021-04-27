@@ -4,4 +4,6 @@ import { RequestInfo, RequestInit, Response } from "node-fetch";
 
 declare global {
 	function fetch(url: RequestInfo, init?: RequestInit): Promise<Response>;
+	type func = (...args: any[]) => any;
+	type obj = Record<any, any>;
 }

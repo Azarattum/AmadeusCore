@@ -1,12 +1,23 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
-import { IComponent, IComponentOptions } from "./component.interface";
+import {
+	EventBase,
+	EventFunc,
+	EventName,
+	EventResult,
+	IComponent,
+	IComponentOptions
+} from "./component.interface";
 import Exposer from "./exposer.class";
 import Utils from "./utils.class";
 
 /**
  * Event-driven controller generic type builder
  */
-export default function Controller<T extends string>() {
+export default function Controller<
+	T extends EventBase = never,
+	U extends EventBase = never
+>() {
 	/**
 	 * Abstract of the controller class
 	 */
@@ -18,11 +29,13 @@ export default function Controller<T extends string>() {
 		/**Controller name */
 		public readonly name: string;
 		/**Callbacks storage */
-		private callbacks: { [type: string]: Function[] } = {};
+		private callbacks: { [type: string]: func[] } = {};
+		/**Callbacks storage */
+		private wishes: { [type: string]: func } = {};
 		/**Exposer object */
 		private exposer?: Exposer;
 		/**Relation reference */
-		private relation: object | null;
+		private relation: obj | null;
 
 		/**
 		 * Creates controller class
@@ -37,7 +50,7 @@ export default function Controller<T extends string>() {
 		/**
 		 * No relations
 		 */
-		public static get relations(): object[] | null {
+		public static get relations(): obj[] | null {
 			return null;
 		}
 
@@ -55,20 +68,47 @@ export default function Controller<T extends string>() {
 		 * @param type Event type
 		 * @param callback Callback function
 		 */
-		public on(type: T, callback: Function): void {
+		public on(type: EventName<T>, callback: EventFunc<T>): void {
 			if (!(type in this.callbacks)) this.callbacks[type] = [];
 			this.callbacks[type].push(callback);
 		}
 
 		/**
+		 * Defines an executor for a controller's wish
+		 * @param what Wish name
+		 * @param callback Executor function
+		 */
+		public wants(what: EventName<U>, callback: EventFunc<T>): void {
+			this.wishes[what] = callback;
+		}
+
+		/**
 		 * Calls all the registered event listeners in the controller
 		 * @param type Event type
-		 * @param args Arguments to pass to callbacks
+		 * @param args Arguments to pass to the callbacks
 		 */
-		protected emit(type: T, ...args: any[]): void {
-			if (this.callbacks[type]) {
-				this.callbacks[type].forEach(x => x.call(x, ...args));
+		protected emit(type: EventName<T>, ...args: any[]): boolean {
+			const callbacks = this.callbacks[type];
+			callbacks?.forEach(x => x(...args));
+
+			return callbacks && callbacks.length > 0;
+		}
+
+		/**
+		 * Calls the wish executor and returns its result.
+		 * Throws if an executor is not implemented!
+		 * @param type Executor type
+		 * @param args Arguments to pass to the executor
+		 */
+		protected want(type: EventName<U>, ...args: any): EventResult<U> {
+			const wish = this.wishes[type];
+			if (!wish) {
+				throw new Error(
+					"Wish cannot be fullfiled! Executor not implemented!"
+				);
 			}
+
+			return wish(...args);
 		}
 
 		/**
@@ -78,9 +118,8 @@ export default function Controller<T extends string>() {
 		 * @param name Name of the exposed function (in the scope of service)
 		 * @param func Exposed function
 		 */
-		protected expose(name: string, func: Function | null = null): void {
-			const exposed =
-				func || ((this as any)[name] as Function).bind(this);
+		protected expose(name: string, func: func | null = null): void {
+			const exposed = func || ((this as any)[name] as func).bind(this);
 
 			this.exposer?.expose(
 				this.name.toLowerCase(),

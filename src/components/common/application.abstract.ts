@@ -19,7 +19,7 @@ export default abstract class Application {
 	/**Components types */
 	private readonly types: IComponentType[];
 	/**Relation map for dynamic components */
-	private readonly relations: Map<IComponent, object | null>;
+	private readonly relations: Map<IComponent, obj | null>;
 	/**Handlers map for each component type */
 	private readonly handlers: Map<IComponentType, ((self: any) => void)[]>;
 	/**Timeout id for debouncing refresh calls */
@@ -125,9 +125,9 @@ export default abstract class Application {
 			if (this.logging) log("Refreshing components...");
 
 			//Find all the relevant relations
-			const relations: Map<IComponentType, object[]> = new Map();
+			const relations: Map<IComponentType, obj[]> = new Map();
 			this.types.forEach(type => {
-				let array: object[] | null | undefined = relations.get(type);
+				let array: obj[] | null | undefined = relations.get(type);
 				if (array === undefined) {
 					array = type.relations;
 					if (array == null) return;
@@ -226,8 +226,8 @@ export default abstract class Application {
 	 * @param type Component's type
 	 */
 	protected getComponent<T extends IComponent>(
-		type: IComponentType<T> | (Function & { prototype: T }),
-		relation?: object
+		type: IComponentType<T> | { name: string; prototype: T },
+		relation?: obj
 	): T {
 		const component = this.components.find(
 			component =>
@@ -247,8 +247,8 @@ export default abstract class Application {
 	 * @param type Component's type
 	 */
 	protected getComponents<T extends IComponent>(
-		type: IComponentType<T> | (Function & { prototype: T }),
-		relation?: object
+		type: IComponentType<T> | { name: string; prototype: T },
+		relation?: obj
 	): T[] {
 		return this.components.filter(
 			component =>
@@ -317,7 +317,7 @@ export default abstract class Application {
 	 */
 	private registerComponent(
 		component: IComponentType,
-		relation?: object
+		relation?: obj
 	): IComponent | null {
 		try {
 			const created = new component({
@@ -357,7 +357,7 @@ export default abstract class Application {
  * @param type Component type to handle
  */
 export function handle<T extends IComponent>(
-	type: IComponentType<T> | (Function & { prototype: T })
+	type: IComponentType<T> | { name: string; prototype: T }
 ) {
 	return function(
 		target: Application,

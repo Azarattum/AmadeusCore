@@ -5,9 +5,9 @@ export default class Exposer {
 	/**Scope reference */
 	private scope: Record<string, any>;
 	/**Function records */
-	private records: Map<string, Map<string, Function[]>>;
+	private records: Map<string, Map<string, func[]>>;
 	/**Object relations */
-	private relations: Map<Function, object | null>;
+	private relations: Map<func, obj | null>;
 
 	/**
 	 * Creates an exposer on the given scope
@@ -24,7 +24,7 @@ export default class Exposer {
 	 * be exposed
 	 * @param relation Function's relation
 	 */
-	public close(module: string, relation: object | null): void {
+	public close(module: string, relation: obj | null): void {
 		const records = this.records.get(module);
 		if (!records) return;
 		let size = 0;
@@ -49,8 +49,8 @@ export default class Exposer {
 	public expose(
 		module: string,
 		name: string,
-		method: Function,
-		relation: object | null = null
+		method: func,
+		relation: obj | null = null
 	): void {
 		if (!this.records.get(module)) {
 			this.records.set(module, new Map());
@@ -63,15 +63,12 @@ export default class Exposer {
 		}
 
 		this.relations.set(method, relation);
-		this.records
-			.get(module)
-			?.get(name)
-			?.push(method);
+		this.records.get(module)?.get(name)?.push(method);
 
 		const bounds = this.relations;
 		const records = this.records.get(module);
 		const self = this.scope[module];
-		self[name] = function(...args: any[]): any | any[] {
+		self[name] = function (...args: any[]): any | any[] {
 			const methods = records?.get(name);
 			if (!methods || !methods.length) return;
 

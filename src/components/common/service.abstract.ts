@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import { IComponent } from "./component.interface";
 import Utils from "./utils.class";
@@ -17,11 +18,11 @@ export default function Service<T extends string>() {
 		/**Service name */
 		public readonly name: string;
 		/**Event resolution callback */
-		private resolve: Function | -1;
+		private resolve: func | -1;
 		/**Events queue */
 		private events: { type: T; args: any[] }[];
 		/**Map to all exposed functions */
-		private exposed: Map<string, Function>;
+		private exposed: Map<string, func>;
 
 		/**
 		 * Creates service class
@@ -91,9 +92,8 @@ export default function Service<T extends string>() {
 		 * @param name Name of the exposed function (in the scope of service)
 		 * @param func Exposed function
 		 */
-		protected expose(name: string, func: Function | null = null): void {
-			const exposed =
-				func || ((this as any)[name] as Function).bind(this);
+		protected expose(name: string, func: func | null = null): void {
+			const exposed = func || ((this as any)[name] as func).bind(this);
 			const id =
 				name +
 				"_" +
@@ -115,7 +115,7 @@ export default function Service<T extends string>() {
 		 * @param type Event type
 		 * @param callback Callback function
 		 */
-		public on(type: T, callback: Function): void {
+		public on(type: T, callback: func): void {
 			//Functionality will be taken by wrapper
 		}
 
