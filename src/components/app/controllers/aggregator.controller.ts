@@ -7,6 +7,7 @@ import Recommender, {
 	ITrackInfo
 } from "../models/recommenders/recommender.abstract";
 import { first, mergeGenerators } from "../models/generator";
+import { is } from "typescript-is";
 
 /**
  * Aggregates track data from all Amadeus' providers
@@ -62,8 +63,29 @@ export default class Aggregator extends Controller() {
 		}
 	}
 
-	public async *desource(sources: string[]): AsyncGenerator<IPreview> {
+	public async *desource(
+		sources: ({ sources: string[] | string } | string)[]
+	): AsyncGenerator<IPreview> {
 		for (const source of sources) {
+			if (typeof source === "object") {
+				let data = source.sources;
+				//Desource JSON sources format
+				if (typeof data === "string") {
+					try {
+						const parsed = JSON.parse(data);
+						if (is<string[]>(parsed)) data = parsed;
+						else throw "";
+					} catch {
+						data = [data.toString()];
+					}
+				}
+
+				for await (const item of this.desource(data)) {
+					yield item;
+				}
+				continue;
+			}
+
 			const generators = this.providers.map(x => x.desource(source));
 			const generator = mergeGenerators(generators);
 

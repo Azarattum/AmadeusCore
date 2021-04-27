@@ -80,6 +80,36 @@ describe("Aggregator", () => {
 		}
 
 		expect(any).toHaveBeenCalledTimes(1);
+
+		const jsoned = aggr.desource([{ sources: '["42"]' }]);
+		for await (const track of jsoned) {
+			expect(await track.track()).toEqual({
+				title: "42",
+				album: "42",
+				artists: ["42"],
+				length: 0,
+				sources: ["42"],
+				url: "42"
+			});
+			any();
+		}
+
+		expect(any).toHaveBeenCalledTimes(2);
+
+		const objects = aggr.desource([{ sources: "42" }]);
+		for await (const track of objects) {
+			expect(await track.track()).toEqual({
+				title: "42",
+				album: "42",
+				artists: ["42"],
+				length: 0,
+				sources: ["42"],
+				url: "42"
+			});
+			any();
+		}
+
+		expect(any).toHaveBeenCalledTimes(3);
 	});
 
 	it("recommend", async () => {
