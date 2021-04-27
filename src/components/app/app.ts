@@ -12,7 +12,7 @@ import VKProvider from "./models/providers/vk.provider";
 import SoundCloudProvider from "./models/providers/soundcloud.provider";
 import YouTubeProvider from "./models/providers/youtube.provider";
 import LastFMRecommender from "./models/recommenders/lastfm.recommender";
-import { generate } from "./models/generator";
+import { clonable, generate } from "./models/generator";
 
 /**
  * Application class
@@ -108,11 +108,11 @@ export default class App extends Application {
 				//Get a sample of the last 100 user's tracks
 				const sample = await preserver.getTracks(100);
 				//Recommendations are based on this sample
-				const tracks = aggregator.recommend(sample);
+				const tracks = clonable(aggregator.recommend(sample));
 
 				//Send new tracks to every endpoint
 				for (const endpoint of endpoints) {
-					await endpoint.send(tracks, playlist);
+					await endpoint.send(tracks.clone(), playlist);
 				}
 
 				log(`Playlist "${playlist.title}" updated with new tracks.`);

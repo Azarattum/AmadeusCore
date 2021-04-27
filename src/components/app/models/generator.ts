@@ -50,3 +50,40 @@ export function generate<T>(from: T | T[]): AsyncGenerator<T> {
 		}
 	})();
 }
+
+/**
+ * Creates an async generator which can be cloned.
+ * The return history of the generator is preserved for every instance
+ * @param generator Original generator
+ */
+export function clonable<T>(
+	generator: AsyncGenerator<T>
+): AsyncClonableGenerator<T> {
+	const cache: any[] = [];
+
+	return (function make(n) {
+		return {
+			next(arg: any) {
+				const len = cache.length;
+				if (n >= len) cache[len] = generator.next(arg);
+				return cache[n++];
+			},
+			clone() {
+				return make(n);
+			},
+			throw(error: any) {
+				return generator.throw(error);
+			},
+			return(value: any) {
+				return generator.return(value);
+			},
+			[Symbol.asyncIterator]() {
+				return this;
+			}
+		};
+	})(0);
+}
+
+type AsyncClonableGenerator<T> = AsyncGenerator<T> & {
+	clone: () => AsyncClonableGenerator<T>;
+};
