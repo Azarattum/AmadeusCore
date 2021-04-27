@@ -9,7 +9,9 @@ import { IPreview, ITrack } from "../models/track.interface";
 /**
  * Stores and manages Amadeus' user's data
  */
-export default class Preserver extends Controller<"playlisted">() {
+export default class Preserver extends Controller<
+	["playlisted", (track: IPreview, updated: Playlist) => void]
+>() {
 	public tenant: Tenant;
 	private prisma: PrismaClient;
 
@@ -101,7 +103,7 @@ export default class Preserver extends Controller<"playlisted">() {
 			}
 		});
 
-		this.emit("playlisted", track, updated);
+		if (updated) this.emit("playlisted", track, updated);
 	}
 
 	public async getTracks(
@@ -159,7 +161,7 @@ export default class Preserver extends Controller<"playlisted">() {
 	}
 }
 
-interface IPlaylistUpdate {
+export interface IPlaylistUpdate {
 	telegram?: number;
 	type?: number;
 }

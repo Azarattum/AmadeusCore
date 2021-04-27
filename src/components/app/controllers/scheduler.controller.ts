@@ -5,12 +5,14 @@ import Tenant from "../models/tenant";
 /**
  * Schedules user's trigger events
  */
-export default class Scheduler extends Controller<"triggered">() {
+export default class Scheduler extends Controller<
+	["triggered", (playlists: string[] | undefined) => void]
+>() {
 	public tenant: Tenant;
 	private hour: number;
 	private timeout?: number;
 
-	public static get relations(): object[] {
+	public static get relations(): obj[] {
 		return Tenant.tenants;
 	}
 

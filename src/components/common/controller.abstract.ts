@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import {
+	EventBind,
 	EventBase,
-	EventFunc,
-	EventName,
-	EventResult,
 	IComponent,
-	IComponentOptions
+	IComponentOptions,
+	EventCall,
+	EventResult
 } from "./component.interface";
 import Exposer from "./exposer.class";
 import Utils from "./utils.class";
@@ -68,7 +68,7 @@ export default function Controller<
 		 * @param type Event type
 		 * @param callback Callback function
 		 */
-		public on(type: EventName<T>, callback: EventFunc<T>): void {
+		public on(...[type, callback]: EventBind<T>): void {
 			if (!(type in this.callbacks)) this.callbacks[type] = [];
 			this.callbacks[type].push(callback);
 		}
@@ -78,7 +78,7 @@ export default function Controller<
 		 * @param what Wish name
 		 * @param callback Executor function
 		 */
-		public wants(what: EventName<U>, callback: EventFunc<T>): void {
+		public wants(...[what, callback]: EventBind<U>): void {
 			this.wishes[what] = callback;
 		}
 
@@ -87,7 +87,7 @@ export default function Controller<
 		 * @param type Event type
 		 * @param args Arguments to pass to the callbacks
 		 */
-		protected emit(type: EventName<T>, ...args: any[]): boolean {
+		protected emit(...[type, ...args]: EventCall<T>): boolean {
 			const callbacks = this.callbacks[type];
 			callbacks?.forEach(x => x(...args));
 
@@ -100,7 +100,9 @@ export default function Controller<
 		 * @param type Executor type
 		 * @param args Arguments to pass to the executor
 		 */
-		protected want(type: EventName<U>, ...args: any): EventResult<U> {
+		protected want<W extends EventCall<U>>(
+			...[type, ...args]: W
+		): EventResult<W, U> {
 			const wish = this.wishes[type];
 			if (!wish) {
 				throw new Error(

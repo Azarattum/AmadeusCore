@@ -18,3 +18,5 @@ export interface ITrack {
 	url: string;
 	sources: string[];
 }
+
+export type Tracks = AsyncGenerator<IPreview>;

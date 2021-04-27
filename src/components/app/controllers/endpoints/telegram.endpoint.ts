@@ -30,9 +30,9 @@ export default class Telegram extends TelegramBase {
 		Telegram.close();
 	}
 
-	public async send(
+	public async add(
 		tracks: AsyncGenerator<IPreview>,
-		playlist?: Playlist
+		playlist: Playlist
 	): Promise<any> {
 		clearInterval(this.loader);
 
@@ -62,9 +62,13 @@ export default class Telegram extends TelegramBase {
 		return await Promise.all(promises);
 	}
 	
-	protected onMessage(message: string): void {
+	protected async onMessage(message: string): Promise<void> {
 		this.load();
-		this.emit("searched", message);
+		const tracks = this.want("query", message);
+		const best = (await tracks.next()).value;
+		clearInterval(this.loader);
+
+		this.upload(best, this.client);
 	}
 
 	protected onCommand(command: string): void {
@@ -82,8 +86,8 @@ export default class Telegram extends TelegramBase {
 			type: 0
 		};
 
-		if (!description) return this.emit("relisted", title, update);
-		description = description.toLocaleLowerCase();
+		if (!description) return this.emit("relisted", title, update) as any;
+		description = description.toLowerCase();
 
 		if (description.includes(UNTRACKED_TAG)) {
 			update.type = -1;

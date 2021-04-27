@@ -55,28 +55,23 @@ export default class App extends Application {
 		const preserver = this.getComponent(Preserver, endpoint.tenant);
 		const scheduler = this.getComponent(Scheduler, endpoint.tenant);
 
-		endpoint.on("searched", async (query: string) => {
-			log(`${name} searched for "${query}"...`);
-
-			const track = await aggregator.get(query);
-			endpoint.send(track);
+		endpoint.wants("query", (query: string) => {
+			log(`${name} queried "${query}" from ${endpoint.name}.`);
+			return aggregator.get(query);
 		});
 
 		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {
 			log(`${name} added track "${track.title}" to "${playlist}".`);
-
 			preserver.addTrack(track, playlist);
 		});
 
 		endpoint.on("relisted", (playlist: string, update: any) => {
 			log(`${name} updated "${playlist}" playlist.`);
-
 			preserver.updatePlaylist(playlist, update);
 		});
 
 		endpoint.on("triggered", (playlist: string) => {
 			log(`${name} triggered an update on "${playlist}" playlist.`);
-
 			scheduler.trigger([playlist]);
 		});
 	}
@@ -87,7 +82,7 @@ export default class App extends Application {
 			const endpoints = this.getComponents(Endpoint, preserver.tenant);
 
 			endpoints.forEach(x => {
-				x.send(generate(track), playlist);
+				x.add(generate(track), playlist);
 			});
 		});
 	}
@@ -112,7 +107,7 @@ export default class App extends Application {
 
 				//Send new tracks to every endpoint
 				for (const endpoint of endpoints) {
-					await endpoint.send(tracks.clone(), playlist);
+					await endpoint.add(tracks.clone(), playlist);
 				}
 
 				log(`Playlist "${playlist.title}" updated with new tracks.`);

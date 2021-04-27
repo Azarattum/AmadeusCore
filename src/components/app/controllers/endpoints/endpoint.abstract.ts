@@ -1,11 +1,21 @@
 import { Playlist } from "@prisma/client";
 import { IComponentOptions } from "../../../common/component.interface";
 import Controller from "../../../common/controller.abstract";
+import { ITrackInfo } from "../../models/recommenders/recommender.abstract";
 import Tenant from "../../models/tenant";
-import { IPreview } from "../../models/track.interface";
+import { IPreview, Tracks } from "../../models/track.interface";
+import { IPlaylistUpdate } from "../preserver.controller";
 
 export default abstract class Endpoint extends Controller<
-	"searched" | "playlisted" | "relisted" | "triggered"
+	//Events
+	| ["playlisted", (track: IPreview, playlist: string) => void]
+	| ["triggered", (playlist: string) => void]
+	| ["relisted", (playlist: string, update: IPlaylistUpdate) => void],
+	//Whishes
+	| ["query", (query: string) => Tracks]
+	| ["artist", (name: string) => Tracks]
+	| ["similar", (track: ITrackInfo) => Tracks]
+	| ["tracks", (playlist?: string) => Tracks]
 >() {
 	public tenant: Tenant;
 
@@ -14,14 +24,20 @@ export default abstract class Endpoint extends Controller<
 		this.tenant = args.relation as Tenant;
 	}
 
-	public static get relations(): Tenant[] {
+	public static get relations(): obj[] {
 		return Tenant.tenants;
 	}
 
-	public abstract clear(playlist?: Playlist): Promise<any>;
+	/**
+	 * Removes all the tracks from the given playlist
+	 * @param playlist Playlist to clear
+	 */
+	public async clear(playlist: Playlist): Promise<void> {}
 
-	public abstract send(
-		tracks: AsyncGenerator<IPreview>,
-		playlist?: Playlist
-	): Promise<any>;
+	/**
+	 * Adds new tracks to a playlist in the current endpoint
+	 * @param tracks Added tracks
+	 * @param playlist Playlist to add
+	 */
+	public async add(tracks: Tracks, playlist: Playlist): Promise<void> {}
 }

@@ -47,19 +47,22 @@ export interface IComponentOptions {
  */
 export type EventBase = [string, func] | string;
 /**
- * Name of a bindable event
+ * Bind event params
  */
-export type EventName<T extends EventBase> = T extends string ? T : T[0];
+export type EventBind<T extends EventBase> = T extends string ? [T, func] : T;
 /**
- * Callback of a bindable event
+ * Call event params
  */
-export type EventFunc<T extends EventBase> = T extends string ? func : T[1];
+export type EventCall<T extends EventBase> = T extends string
+	? [T, ...Parameters<func>]
+	: [T[0], ...Parameters<T[1] extends func ? T[1] : any>];
 /**
  * Resulting type of the event's callback
  */
-export type EventResult<T extends EventBase> = ReturnType<
-	T[1] extends func ? T[1] : any
->;
+export type EventResult<
+	T extends EventCall<U>,
+	U extends EventBase
+> = ReturnType<Extract<U, { 0: T[0] }>[1]>;
 
 /**
  * Exposes function with `this.expose()` of current component.
@@ -69,14 +72,14 @@ export type EventResult<T extends EventBase> = ReturnType<
  */
 export function expose(...args: any[]): any {
 	let name: string = "";
-	const decorator = function (
+	const decorator = function(
 		target: IComponent & { expose: (name: string, func: func) => void },
 		key: string,
 		descriptor: PropertyDescriptor
 	): void {
 		name = name || key;
 		const original = target.initialize;
-		target.initialize = function (...args: any[]): any {
+		target.initialize = function(...args: any[]): any {
 			const func = descriptor.value?.bind(this);
 			if (func) this.expose?.(name, func);
 
