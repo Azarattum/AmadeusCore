@@ -145,7 +145,7 @@ export default class Aggregator extends Controller() {
 		const title = track.title.toLowerCase().trim();
 		const artists = track.artists.sort().join().toLowerCase().trim();
 
-		if (reverse) this.purify(`${title} - ${artists}`);
+		if (reverse) return this.purify(`${title} - ${artists}`);
 		return this.purify(`${artists} - ${title}`);
 	}
 
