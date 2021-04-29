@@ -14,7 +14,7 @@ export default class LastFMRecommender extends Recommender {
 	};
 
 	public async assemble(source: ITrackInfo[]): Promise<string[]> {
-		const tracks = this.normalPick(source);
+		const tracks = this.normalPick(source, source.length);
 		const results: string[] = [];
 
 		for (const track of tracks) {
