@@ -15,7 +15,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		try {
 			const info = await ytdl.getBasicInfo(source);
 			const details = info.player_response.videoDetails;
-			const thumb = details.thumbnail.thumbnails.reduce(function(a, b) {
+			const thumb = details.thumbnail.thumbnails.reduce(function (a, b) {
 				return a.height > b.height ? a : b;
 			});
 
@@ -95,6 +95,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 			artists: converted.artists,
 			album: converted.album,
 			cover: converted.cover,
+			source: converted.sources[0],
 
 			track: async () => {
 				const [url, cover, date] = await this.load(track.id);
@@ -136,7 +137,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 			});
 		}
 
-		const thumb = info.videoDetails.thumbnails.reduce(function(a, b) {
+		const thumb = info.videoDetails.thumbnails.reduce(function (a, b) {
 			return a.height > b.height ? a : b;
 		});
 		const year =

@@ -4,15 +4,25 @@
  * @param count Number of items
  */
 export async function first<T>(
+	generator: AsyncGenerator<T>
+): Promise<T | undefined>;
+export async function first<T>(
 	generator: AsyncGenerator<T>,
-	count: number = 1
-): Promise<T[]> {
+	count: number
+): Promise<T[]>;
+
+export async function first<T>(
+	generator: AsyncGenerator<T>,
+	count?: number
+): Promise<T[] | T> {
 	const promises = [];
-	for (let i = 0; i < count; i++) {
+	for (let i = 0; i < (count || 1); i++) {
 		promises.push(generator.next());
 	}
 
 	const resolved = await Promise.all(promises);
+
+	if (count == null) return resolved[0].value;
 	return resolved.filter(x => !x.done).map(x => x.value);
 }
 
@@ -40,7 +50,7 @@ export async function* mergeGenerators<T>(
  * @param from Source item or array
  */
 export function generate<T>(from: T | T[]): AsyncGenerator<T> {
-	return (async function*() {
+	return (async function* () {
 		if (Array.isArray(from)) {
 			for (const item of from) {
 				yield item;

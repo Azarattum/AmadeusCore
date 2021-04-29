@@ -14,6 +14,7 @@ export default abstract class Endpoint extends Controller<
 	//Whishes
 	| ["query", (query: string) => Tracks]
 	| ["artist", (name: string) => Tracks]
+	| ["album", (title: string) => Tracks]
 	| ["similar", (track: ITrackInfo) => Tracks]
 	| ["tracks", (playlist?: string) => Tracks]
 >() {

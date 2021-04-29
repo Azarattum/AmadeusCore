@@ -2,7 +2,7 @@ import Application, { handle } from "../common/application.abstract";
 import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
 import { IPreview } from "./models/track.interface";
-import Preserver from "./controllers/preserver.controller";
+import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
 import { Playlist } from "@prisma/client";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
 import Endpoint from "./controllers/endpoints/endpoint.abstract";
@@ -65,7 +65,7 @@ export default class App extends Application {
 			preserver.addTrack(track, playlist);
 		});
 
-		endpoint.on("relisted", (playlist: string, update: any) => {
+		endpoint.on("relisted", (playlist: string, update: IPlaylistUpdate) => {
 			log(`${name} updated "${playlist}" playlist.`);
 			preserver.updatePlaylist(playlist, update);
 		});

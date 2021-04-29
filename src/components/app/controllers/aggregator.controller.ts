@@ -125,16 +125,8 @@ export default class Aggregator extends Controller() {
 		const nonspace = target.replace(/\s+/g, "");
 		if (
 			!target.includes("-") &&
-			nonspace ===
-				a.artists
-					.join()
-					.replace(/\s+/g, "")
-					.toLowerCase() &&
-			nonspace ===
-				b.artists
-					.join()
-					.replace(/\s+/g, "")
-					.toLowerCase()
+			nonspace === a.artists.join().replace(/\s+/g, "").toLowerCase() &&
+			nonspace === b.artists.join().replace(/\s+/g, "").toLowerCase()
 		) {
 			return 0;
 		}
@@ -151,11 +143,7 @@ export default class Aggregator extends Controller() {
 
 	private stringify(track: IPreview, reverse = false): string {
 		const title = track.title.toLowerCase().trim();
-		const artists = track.artists
-			.sort()
-			.join()
-			.toLowerCase()
-			.trim();
+		const artists = track.artists.sort().join().toLowerCase().trim();
 
 		if (reverse) this.purify(`${title} - ${artists}`);
 		return this.purify(`${artists} - ${title}`);

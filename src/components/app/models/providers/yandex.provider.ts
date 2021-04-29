@@ -124,6 +124,7 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 			artists: converted.artists,
 			album: converted.album,
 			cover: converted.cover,
+			source: converted.sources[0],
 
 			track: async () => {
 				converted.url = await this.load(track.id);
@@ -152,9 +153,7 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		const trackUrl = `XGRlBW9FXlekgbPrRHuSiA${info.path.substr(1)}${
 			info.s
 		}`;
-		const sign = createHash("md5")
-			.update(trackUrl)
-			.digest("hex");
+		const sign = createHash("md5").update(trackUrl).digest("hex");
 
 		return `https://${info.host}/get-mp3/${sign}/${info.ts}${info.path}`;
 	}

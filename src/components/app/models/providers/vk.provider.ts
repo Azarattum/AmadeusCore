@@ -141,6 +141,7 @@ export default class VKProvider extends Provider<ITrackVK> {
 			artists: converted.artists,
 			album: converted.album,
 			cover: converted.cover,
+			source: converted.sources[0],
 
 			track: async () => converted
 		};

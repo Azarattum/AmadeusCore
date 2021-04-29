@@ -122,6 +122,7 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 			artists: converted.artists,
 			album: converted.album,
 			cover: converted.cover,
+			source: converted.sources[0],
 
 			track: async () => {
 				const [url, image] = await this.load(media, cover);

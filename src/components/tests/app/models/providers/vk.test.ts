@@ -46,7 +46,8 @@ async function check(generator: AsyncGenerator<any>) {
 		artists: expected.artists,
 		album: expected.album,
 		cover: expected.cover,
-		track: value.track
+		track: value.track,
+		source: expected.sources[0]
 	});
 	expect(typeof value.track).toBe("function");
 	expect(await value.track()).toEqual(expected);

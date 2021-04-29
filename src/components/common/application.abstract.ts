@@ -171,7 +171,7 @@ export default abstract class Application {
 					if (component) this.initializeComponent(component);
 				});
 			});
-		});
+		}, 0);
 	}
 
 	/**
@@ -359,7 +359,7 @@ export default abstract class Application {
 export function handle<T extends IComponent>(
 	type: IComponentType<T> | { name: string; prototype: T }
 ) {
-	return function(
+	return function (
 		target: Application,
 		_: string,
 		descriptor: TypedPropertyDescriptor<(self: T) => any>
@@ -369,7 +369,7 @@ export function handle<T extends IComponent>(
 		const handler = descriptor.value;
 
 		const original = target["registerHandlers"];
-		target["registerHandlers"] = function(...args): any {
+		target["registerHandlers"] = function (...args): any {
 			let handlers = this["handlers"].get(type as any);
 			if (!handlers) handlers = [];
 			handlers.push(handler.bind(this));

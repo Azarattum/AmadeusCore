@@ -162,6 +162,6 @@ export default class Preserver extends Controller<
 }
 
 export interface IPlaylistUpdate {
-	telegram?: number;
+	telegram?: number | null;
 	type?: number;
 }

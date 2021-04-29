@@ -22,6 +22,7 @@ class TestProvider extends Provider {
 			title: converted.title,
 			artists: converted.artists,
 			album: converted.album,
+			source: converted.sources[0],
 
 			track: async () => converted
 		};

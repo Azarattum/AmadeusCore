@@ -127,11 +127,12 @@ export default function Service<T extends string>() {
 			this.resolve = -1;
 			this.events = [];
 
-			if ((self as any).ports) {
-				for (const port of (self as any).ports) {
+			const self = (globalThis as any).self;
+			if (self?.ports) {
+				for (const port of self.ports) {
 					port.close();
 				}
-				(self as any).ports = [];
+				self.ports = [];
 			}
 		}
 	}

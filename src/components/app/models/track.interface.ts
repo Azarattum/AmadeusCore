@@ -3,6 +3,7 @@ export interface IPreview {
 	artists: string[];
 	album: string;
 	cover?: string;
+	source: string;
 
 	track: () => Promise<ITrack>;
 }

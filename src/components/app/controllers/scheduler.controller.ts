@@ -10,7 +10,7 @@ export default class Scheduler extends Controller<
 >() {
 	public tenant: Tenant;
 	private hour: number;
-	private timeout?: number;
+	private timeout?: NodeJS.Timeout;
 
 	public static get relations(): obj[] {
 		return Tenant.tenants;
@@ -24,7 +24,7 @@ export default class Scheduler extends Controller<
 	}
 
 	public close(): void {
-		clearTimeout(this.timeout);
+		if (this.timeout) clearTimeout(this.timeout);
 	}
 
 	public trigger(playlists?: string[]): void {
@@ -33,7 +33,7 @@ export default class Scheduler extends Controller<
 	}
 
 	private schedule(): void {
-		clearTimeout(this.timeout);
+		if (this.timeout) clearTimeout(this.timeout);
 
 		const offset = new Date().getTimezoneOffset() / 60;
 		const hour = 1000 * 60 * 60;
@@ -43,6 +43,6 @@ export default class Scheduler extends Controller<
 		let target = now - (now % day) + (this.hour + offset) * hour;
 		if (target <= now) target += day;
 
-		this.timeout = +setTimeout(this.trigger.bind(this), target - now);
+		this.timeout = setTimeout(this.trigger.bind(this), target - now);
 	}
 }
