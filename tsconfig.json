@@ -3,6 +3,9 @@
 		"experimentalDecorators": true,
 		"target": "es2019",
 		"outDir": "./dist",
+		"lib": [
+			"es2019"
+		],
 		"sourceMap": true,
 		"strict": true,
 		"allowJs": true,
