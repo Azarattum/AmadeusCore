@@ -1,11 +1,10 @@
 import { Playlist } from ".prisma/client";
-import { Readable } from "stream";
 import { IComponentOptions } from "../../../common/component.interface";
-import { log, LogType } from "../../../common/utils.class";
 import Restream from "../../models/restream";
-import { IPreview, ITrack } from "../../models/track.interface";
-import AbortController from "abort-controller";
-import TelegramBase from "./telegram.base";
+import { IPreview } from "../../models/track.interface";
+import TelegramBase, { ICallbackData } from "./telegram.base";
+import { first } from "../../models/generator";
+import { err } from "../../../common/utils.class";
 
 const UNTRACKED_TAG = "#untracked";
 const DISCOVER_TAG = "#discover";
@@ -13,62 +12,116 @@ const LISTEN_TAG = "#listen";
 
 export default class Telegram extends TelegramBase {
 	protected client: number;
-	private loader?: number;
+	private loader?: NodeJS.Timeout;
 	private messages: Record<number, number[]> = {};
-	private aborts: Record<number, Set<AbortController>> = {};
 
 	public constructor(args: IComponentOptions) {
 		super(args);
 		this.client = this.tenant.telegram;
 	}
 
-	public initialize(token: string): void {
-		Telegram.initialize(token, this);
+	public async initialize(token: string): Promise<void> {
+		return Telegram.initialize(token, this);
 	}
 
 	public async close(): Promise<void> {
 		Telegram.close();
 	}
 
-	public async add(
-		tracks: AsyncGenerator<IPreview>,
-		playlist: Playlist
-	): Promise<any> {
-		clearInterval(this.loader);
+	public async clear(playlist?: Playlist): Promise<void> {
+		if (!playlist) this.load(ClientState.None);
+		const id = playlist?.telegram || this.client;
 
-		const chat = playlist?.telegram || this.client;
-		for await (const preview of tracks) {
-			await this.upload(preview, chat).catch(e => {
-				log(
-					`Failed to send track "${preview.title}"!\n${e}`,
-					LogType.ERROR
+		const messages = this.messages[id] || [];
+		const promises = messages.map(x =>
+			Telegram.call("deleteMessage", { chat_id: id, message_id: x })
+		);
+
+		await Promise.all(promises);
+	}
+
+	protected async onMessage(message: string): Promise<void> {
+		this.load(ClientState.Searching);
+		const tracks = this.want("query", message);
+		const track = await first(tracks);
+
+		if (track) {
+			this.load(ClientState.Uploading);
+			const buttons = this.createButtons(message);
+			await this.upload(track, buttons).catch(e =>
+				err(`Failed to send audio!\n${e}`)
+			);
+		}
+		this.load(ClientState.None);
+	}
+
+	protected async onCallback(
+		data: ICallbackData,
+		id: string,
+		message: number,
+		chat: number
+	): Promise<void> {
+		switch (data.type) {
+			case "more": {
+				if (!data.query) return;
+				const tracks = await this.want("query", data.query);
+				if (!tracks) return;
+				first(tracks);
+				const selection = await first(tracks, 10);
+
+				Telegram.call("editMessageReplyMarkup", {
+					chat_id: chat,
+					message_id: message,
+					reply_markup: {
+						inline_keyboard: [
+							this.createButtons(data.query),
+							...this.createList(selection, data)
+						]
+					}
+				}).catch(() => {});
+
+				break;
+			}
+
+			case "close": {
+				Telegram.call("editMessageReplyMarkup", {
+					chat_id: chat,
+					message_id: message,
+					reply_markup: {
+						inline_keyboard: [this.createButtons(data.query)]
+					}
+				}).catch(() => {});
+
+				break;
+			}
+
+			case "download": {
+				const source = data.source;
+				if (source == null) return;
+				this.load(ClientState.Searching);
+				const track = await first(this.want("query", source));
+				if (!track) {
+					this.load(ClientState.None);
+					return;
+				}
+
+				this.load(ClientState.Uploading);
+				await this.upload(track, this.createButtons()).catch(err =>
+					err(`Failed to send audio!\n${err}`)
 				);
-			});
+				this.load(ClientState.None);
+
+				break;
+			}
 		}
 	}
 
-	public async clear(playlist?: Playlist): Promise<any> {
-		const id = playlist?.telegram || this.client;
-		this.aborts[id]?.forEach(x => x.abort());
-
-		const messages = this.messages[id] || [];
-		const promises = messages.map(x => {
-			return this.call("deleteMessage", {
-				chat_id: id,
-				message_id: x
-			});
-		});
-
-		return await Promise.all(promises);
+	protected onTagged(channel: string): void {
+		this.emit("triggered", channel);
 	}
-	
-	protected async onMessage(message: string): Promise<void> {
-		this.load();
-		const tracks = this.want("query", message);
-		const best = (await tracks.next()).value;
-		clearInterval(this.loader);
 
-		this.upload(best, this.client);
+	protected onPost(text: string, channel: string): void {
+		throw new Error("Method not implemented.");
 	}
 
 	protected onCommand(command: string): void {
@@ -102,182 +155,110 @@ export default class Telegram extends TelegramBase {
 		this.emit("relisted", title, update);
 	}
 
-	private async upload(preview: IPreview, chat: number): Promise<any> {
+	private createList(
+		tracks: IPreview[],
+		params: Record<string, any> = {}
+	): Record<string, any>[] {
+		const list = tracks.map((x, i) => [
+			{
+				text: `${x.artists.join(", ")} - ${x.title}`,
+				callback_data: JSON.stringify({
+					type: "download",
+					source: x.source
+				})
+			}
+		]);
+
+		const close = {
+			text: "✖",
+			callback_data: JSON.stringify({ ...params, type: "close" })
+		};
+
+		list.push([close]);
+		return list;
+	}
+
+	private createButtons(query?: string): Record<string, any>[] {
+		const options = {
+			"👤": "artist",
+			"📻": "similar",
+			"💿": "album"
+		} as Record<string, string>;
+		if (query) options["➕"] = "more";
+
+		return Object.entries(options).map(x => ({
+			text: x[0],
+			callback_data: JSON.stringify({
+				type: x[1],
+				query
+			})
+		}));
+	}
+
+	private async upload(
+		preview: IPreview,
+		buttons?: Record<string, any>[],
+		chat = this.client
+	): Promise<number> {
 		const track = await preview.track();
 		const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
+
+		let message;
 		if (tg) {
-			return this.call("sendAudio", {
+			message = await Telegram.call("sendAudio", {
 				chat_id: chat,
 				audio: tg,
 				disable_notification: true
 			});
+		} else {
+			const stream = await Restream.fromTrack(track);
+
+			message = await Telegram.call("sendAudio", {
+				chat_id: chat,
+				audio: [stream.source, stream.filename],
+				title: track.title,
+				performer: track.artists.join(", "),
+				duration: track.length,
+				disable_notification: true,
+				reply_markup: buttons
+					? { inline_keyboard: [buttons] }
+					: undefined
+			});
 		}
 
-		const status = await this.sendStatus(track, chat);
-		let source: Restream | null = await Restream.fromTrack(track);
-		const abort = new AbortController();
+		const id = message.message_id;
 
 		this.messages[chat] ??= [];
-		this.messages[chat].push(status[0])
-
-		this.aborts[chat] ??= new Set();
-		this.aborts[chat].add(abort);
-
-		let file: string | null = null;
-		let loaded: number | null = 0;
-		let request: Promise<any> | null = null;
-		source.on("progress", async (progress: number) => {
-			if (chat !== this.client) return;
-			if (loaded === null) return;
-
-			loaded = progress;
-			await request;
-			if (loaded != progress) return;
-			if (file) return;
-
-			request = this.updateStatus(status, progress, track, {
-				abort
-			}).catch(() => null);
-		});
-
-		source.on("beforeEnd", async () => {
-			loaded = null;
-			await request;
-			source?.end();
-		});
-
-		const options = { source, playlist: chat, abort };
-		file = (
-			await this.updateStatus(status, 1, track, options).catch(e => {
-				if (e.message?.toString().startsWith("AbortError")) {
-					return [null, null];
-				}
-
-				source?.destroy();
-				throw e;
-			})
-		)[1];
-		abort.abort();
-		this.aborts[chat].delete(abort);
-
-		source.removeAllListeners();
-		source.destroy();
-		source = null;
-
-		if (!file) return;
-		track.sources.push(`tg://${file}`);
+		this.messages[chat].push(id);
+		const file =
+			message.audio?.file_id || (message as any).document?.file_id;
+		if (file) track.sources.push(`tg://${file}`);
+		return id;
 	}
 
-	private async sendStatus(
-		track: ITrack,
-		playlist?: number
-	): Promise<[number, string]> {
-		const name = track.artists.join(", ") + " - " + track.title;
-		const url = track.url;
-
-		const empty = [Readable.from(["0"]), "Loading"];
-		let response = await this.call("sendAudio", {
-			...(playlist ? { chat_id: playlist } : {}),
-			audio: url || empty,
-			caption: name,
-			disable_notification: true
-		});
-
-		if (!response.ok) {
-			response = await this.call("sendAudio", {
-				...(playlist ? { chat_id: playlist } : {}),
-				audio: empty,
-				caption: name,
-				disable_notification: true
-			});
+	private load(state = ClientState.None): void {
+		if (state === ClientState.None && this.loader) {
+			clearInterval(this.loader);
+			return;
 		}
 
-		const result = (await response.json())["result"];
-		const message = +result["message_id"];
-		const file =
-			result["audio"]?.["file_id"] || result["document"]?.["file_id"];
-		return [message, file];
-	}
-
-	private async updateStatus(
-		status: [number, string],
-		progress: number,
-		track: ITrack,
-		{ source, playlist, abort }: IUpdateOptions
-	): Promise<[number, string]> {
-		const name = track.artists.join(", ") + " - " + track.title;
-		const index = Math.min(
-			name.length,
-			Math.ceil(name.length * progress * 1.11111)
-		);
-		const formatted =
-			"<u>" + name.slice(0, index) + "</u>" + name.slice(index);
-
-		const media = {
-			type: "audio",
-			parse_mode: "HTML",
-			media:
-				source && typeof source != "string"
-					? "attach://audio"
-					: source || status[1],
-
-			title: track.title,
-			performer: track.artists.join(", "),
-			duration: Math.round(track.length),
-			caption: !source ? formatted : undefined
-		};
-
-		const audio =
-			source && typeof source != "string"
-				? [source, name + ".mp3"]
-				: undefined;
-
-		const payload = {
-			...(playlist ? { chat_id: playlist } : {}),
-			message_id: status[0],
-			media,
-			audio
-		};
-
-		const response = await this.call("editMessageMedia", payload, abort);
-		if (!response.ok) {
-			if (!source) return status;
-			throw new Error(await response.text());
-		}
-
-		const result = (await response.json())["result"];
-		const message = +result["message_id"];
-		const file =
-			result["audio"]?.["file_id"] || result["document"]?.["file_id"];
-		return [message, file];
-	}
-
-	private load(): void {
 		const action = (): void => {
-			this.call("sendChatAction", {
-				action: "record_voice"
+			Telegram.call("sendChatAction", {
+				chat_id: this.client,
+				action:
+					state === ClientState.Searching
+						? "record_voice"
+						: "upload_voice"
 			});
 		};
-		clearInterval(this.loader);
-		this.loader = +setInterval(action, 3000);
+		if (this.loader) clearInterval(this.loader);
+		this.loader = setInterval(action, 3000);
 		action();
-	}
-
-	private call(
-		method: string,
-		params: Record<string, any> = {},
-		abort?: AbortController
-	): Promise<Response> {
-		return Telegram.call(
-			method,
-			{ chat_id: this.client, ...params },
-			abort
-		);
 	}
 }
 
-interface IUpdateOptions {
-	source?: Readable | string;
-	playlist?: number;
-	abort?: AbortController;
+enum ClientState {
+	None,
+	Searching,
+	Uploading
 }
