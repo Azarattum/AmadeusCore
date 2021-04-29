@@ -6,22 +6,21 @@ export default class Form extends PassThrough {
 	private params: [string, string | number | boolean][];
 	private streams: [string, [Readable, string]][];
 
-	public constructor(
-		params: Record<
-			string,
-			string | number | boolean | [Readable, string]
-		> = {}
-	) {
+	public constructor(params: Record<string, any> = {}) {
 		super();
+		const isFile = (x: any) => x?.[0] instanceof Readable;
 		const entries = Object.entries(params);
-		this.params = entries.filter(x => !Array.isArray(x[1])) as any;
-		this.streams = entries.filter(x => Array.isArray(x[1])) as any;
+		this.params = entries.filter(x => !isFile(x[1])) as any;
+		this.streams = entries.filter(x => isFile(x[1])) as any;
 
-		this.once("resume", async () => {
-			await this.writeParams();
-			await this.writeStreams();
-			await this.endStream();
-		});
+		if (!entries.length) this.end();
+		else {
+			this.once("resume", async () => {
+				await this.writeParams();
+				await this.writeStreams();
+				await this.endStream();
+			});
+		}
 	}
 
 	public static get headers(): Record<string, string> {
