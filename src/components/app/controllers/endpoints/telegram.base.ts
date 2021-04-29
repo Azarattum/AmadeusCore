@@ -222,12 +222,12 @@ export default abstract class TelegramBase extends Endpoint {
 			const client = await this.check(id);
 			if (!client) return;
 
-			this.call("deleteMessage", {
-				chat_id: id,
-				message_id: post.message_id
-			});
-
 			if (text?.includes(`@${this.username}`)) {
+				this.call("deleteMessage", {
+					chat_id: id,
+					message_id: post.message_id
+				});
+
 				await client.onTagged(title);
 			} else if (audio) {
 				await client.onPost(audio, title);

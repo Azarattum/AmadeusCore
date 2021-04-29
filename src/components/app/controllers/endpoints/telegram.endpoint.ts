@@ -1,7 +1,7 @@
 import { Playlist } from ".prisma/client";
 import { IComponentOptions } from "../../../common/component.interface";
 import Restream from "../../models/restream";
-import { IPreview } from "../../models/track.interface";
+import { IPreview, Tracks } from "../../models/track.interface";
 import TelegramBase, { ICallbackData } from "./telegram.base";
 import { first } from "../../models/generator";
 import { err } from "../../../common/utils.class";
@@ -38,6 +38,15 @@ export default class Telegram extends TelegramBase {
 		);
 
 		await Promise.all(promises);
+	}
+
+	public async add(tracks: Tracks, playlist: Playlist): Promise<void> {
+		if (!playlist.telegram) return;
+		for await (const track of tracks) {
+			await this.upload(track, undefined, playlist.telegram).catch(e =>
+				err(`Failed to add audio!\n${e}`)
+			);
+		}
 	}
 
 	protected async onMessage(message: string): Promise<void> {
