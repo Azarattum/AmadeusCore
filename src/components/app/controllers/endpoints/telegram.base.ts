@@ -176,10 +176,14 @@ export default abstract class TelegramBase extends Endpoint {
 				return;
 			}
 
-			const { id, username } = message.from;
+			const { id, username, first_name } = message.from;
 			const client = this.clients.get(id);
 			if (!client) {
-				wrn(`Unauthorized access attempt from @${username} (${id})!`);
+				wrn(
+					`Unauthorized access attempt from @${
+						username || first_name
+					} (${id})!`
+				);
 				return;
 			}
 
@@ -249,10 +253,14 @@ export default abstract class TelegramBase extends Endpoint {
 				return;
 			}
 
-			const { id, username } = query.from;
+			const { id, username, first_name } = query.from;
 			const client = this.clients.get(id);
 			if (!client) {
-				wrn(`Unauthorized access attempt from @${username} (${id})!`);
+				wrn(
+					`Unauthorized access attempt from @${
+						username || first_name
+					} (${id})!`
+				);
 				return;
 			}
 
@@ -276,7 +284,7 @@ export interface ICallbackData {
 }
 
 interface IMessage {
-	from: { id: number; username: string };
+	from: { id: number; username?: string; first_name: string };
 	message_id: number;
 	text?: string;
 	audio?: { performer?: string; title: string };
@@ -296,7 +304,7 @@ interface IPost {
 
 interface IQuery {
 	id: string;
-	from: { id: number; username: string };
+	from: { id: number; username?: string; first_name: string };
 	message: { message_id: number };
 	data: string;
 }
