@@ -72,6 +72,13 @@ export default class Preserver extends Controller<
 	}
 
 	public async addTrack(track: IPreview, playlist: string): Promise<void> {
+		const check = await this.prisma.playlist.findUnique({
+			where: {
+				title: playlist
+			}
+		});
+		if (check && check.type > 0) return;
+
 		let found = await this.prisma.track.findFirst({
 			where: {
 				title: track.title,

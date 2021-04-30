@@ -61,7 +61,6 @@ export default class App extends Application {
 		});
 
 		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {
-			log(`${name} added track "${track.title}" to "${playlist}".`);
 			preserver.addTrack(track, playlist);
 		});
 
@@ -78,7 +77,10 @@ export default class App extends Application {
 
 	@handle(Preserver)
 	private onPreserver(preserver: Preserver): void {
+		const name = preserver.tenant.identifier;
+
 		preserver.on("playlisted", (track: IPreview, playlist: Playlist) => {
+			log(`${name} added track "${track.title}" to "${playlist.title}".`);
 			const endpoints = this.getComponents(Endpoint, preserver.tenant);
 
 			endpoints.forEach(x => {
