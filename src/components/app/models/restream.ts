@@ -50,8 +50,12 @@ export default class Restream {
 
 	public get filename(): string {
 		const type = this.audio.mime === "audio/mpeg" ? "mp3" : "m4a";
-		if (!this.meta.artists) return `${this.meta.title}.${type}`;
-		return `${this.meta.artists.join(", ")} - ${this.meta.title}.${type}`;
+		let name = !this.meta.artists
+			? `${this.meta.title}.${type}`
+			: `${this.meta.artists.join(", ")} - ${this.meta.title}.${type}`;
+
+		name = name.replace(/[\\/:*?"<>|]/g, "");
+		return name;
 	}
 
 	private useMP4(): Readable {
@@ -203,6 +207,7 @@ export default class Restream {
 									chunk.slice(size)
 								])
 							);
+							box = Buffer.alloc(0);
 							state++;
 						} else {
 							callback(null, Buffer.from([]));
@@ -272,7 +277,7 @@ export default class Restream {
 	private get mp4Cover(): Buffer {
 		if (!this.image) return Buffer.from([]);
 
-		const buffers = [];
+		let buffers = [];
 		const size = 4 * 4 + 8 + this.image.byteLength;
 
 		const sizeBuffer = Buffer.alloc(4);
@@ -289,7 +294,11 @@ export default class Restream {
 		buffers.push(Buffer.from([0, 0, 0, 0xe, 0, 0, 0, 0]));
 		buffers.push(this.image);
 
-		return Buffer.concat(buffers);
+		const result = Buffer.concat(buffers);
+		buffers = [];
+		delete this.image;
+
+		return result;
 	}
 
 	private get id3Header(): Readable {
