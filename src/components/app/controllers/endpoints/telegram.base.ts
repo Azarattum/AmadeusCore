@@ -76,16 +76,27 @@ export default abstract class TelegramBase extends Endpoint {
 			headers: Form.headers,
 			body: new Form(params),
 			signal: mixedAbort.signal
-		}).catch(error => {
-			const text = JSON.stringify(error);
+		}).catch(e => {
+			const text = JSON.stringify(e);
 			throw new Error(`Failed to execute "${method}"!\n${text}`);
 		});
 
-		const data = await response.json().catch(async error => {
+		if (Math.floor(response.status / 100) !== 2) {
 			throw new Error(
-				`JSON parse failed upon "${method}" execution!\n${await response.text()}`
+				`Failed to execute "${method}"!\n${response.status}: ${response.statusText}`
 			);
-		});
+		}
+
+		const text = await response.text();
+
+		let data;
+		try {
+			data = JSON.parse(text);
+		} catch {
+			throw new Error(
+				`JSON parse failed upon "${method}" execution!\n${text}`
+			);
+		}
 
 		if (!("result" in data)) {
 			const text = JSON.stringify(data);
@@ -135,7 +146,7 @@ export default abstract class TelegramBase extends Endpoint {
 		for (const update of data.result) {
 			if (!update["update_id"]) continue;
 			this.update(update).catch(e =>
-				err(`Failed to process update!\n${e}`)
+				err(`Failed to process update!\n${e?.stack || e}`)
 			);
 			offset = Math.max(offset, update["update_id"] + 1);
 		}

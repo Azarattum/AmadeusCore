@@ -33,7 +33,6 @@ export default class Utils {
 					prefix + "\x1b[31m\x1b[1m%c\u2718 " + text + "\x1b[0m",
 					"color:red;font-weight:bold;"
 				);
-				console.trace("");
 				break;
 			}
 

@@ -10,7 +10,7 @@ export default abstract class Recommender extends Fetcher {
 				`${this.constructor.name} failed to recommend "${source
 					.map(x => x.title)
 					.join(", ")
-					.slice(0, 20)}..."!\n${e}`
+					.slice(0, 20)}..."!\n${e?.stack || e}`
 			);
 
 			return [];

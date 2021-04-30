@@ -44,7 +44,7 @@ export default class Telegram extends TelegramBase {
 		if (!playlist.telegram) return;
 		for await (const track of tracks) {
 			await this.upload(track, undefined, playlist.telegram).catch(e =>
-				err(`Failed to add audio!\n${e}`)
+				err(`Failed to add audio!\n${e?.stack || e}`)
 			);
 		}
 	}
@@ -58,7 +58,7 @@ export default class Telegram extends TelegramBase {
 			this.load(ClientState.Uploading);
 			const buttons = this.createButtons(message);
 			await this.upload(track, buttons).catch(e =>
-				err(`Failed to send audio!\n${e}`)
+				err(`Failed to send audio!\n${e?.stack || e}`)
 			);
 		}
 		this.load(ClientState.None);
@@ -115,8 +115,8 @@ export default class Telegram extends TelegramBase {
 				}
 
 				this.load(ClientState.Uploading);
-				await this.upload(track, this.createButtons()).catch(err =>
-					err(`Failed to send audio!\n${err}`)
+				await this.upload(track, this.createButtons()).catch(e =>
+					err(`Failed to send audio!\n${e?.stack || e}`)
 				);
 				this.load(ClientState.None);
 
