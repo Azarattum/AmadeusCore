@@ -9,15 +9,21 @@ import { err } from "../../../common/utils.class";
 const UNTRACKED_TAG = "#untracked";
 const DISCOVER_TAG = "#discover";
 const LISTEN_TAG = "#listen";
+const PER_PAGE = 10;
+const CACHE_LIMIT = 10;
 
 export default class Telegram extends TelegramBase {
 	protected client: number;
 	private loader?: NodeJS.Timeout;
-	private messages: Record<number, number[]> = {};
+	private messages: Record<number, Record<number, IMessage>> = {};
+	private cache: TrackCache;
 
 	public constructor(args: IComponentOptions) {
 		super(args);
 		this.client = this.tenant.telegram;
+		this.cache = {
+			query: {}
+		};
 	}
 
 	public async initialize(token: string): Promise<void> {
@@ -33,8 +39,9 @@ export default class Telegram extends TelegramBase {
 		const id = playlist?.telegram || this.client;
 
 		const messages = this.messages[id] || [];
-		const promises = messages.map(x =>
-			Telegram.call("deleteMessage", { chat_id: id, message_id: x })
+
+		const promises = Object.keys(messages).map(x =>
+			Telegram.call("deleteMessage", { chat_id: id, message_id: +x })
 		);
 
 		await Promise.all(promises);
@@ -43,7 +50,7 @@ export default class Telegram extends TelegramBase {
 	public async add(tracks: Tracks, playlist: Playlist): Promise<void> {
 		if (!playlist.telegram) return;
 		for await (const track of tracks) {
-			await this.upload(track, undefined, playlist.telegram).catch(e =>
+			await this.upload(track, null, playlist.telegram).catch(e =>
 				err(`Failed to add audio!\n${e?.stack || e}`)
 			);
 		}
@@ -51,13 +58,11 @@ export default class Telegram extends TelegramBase {
 
 	protected async onMessage(message: string): Promise<void> {
 		this.load(ClientState.Searching);
-		const tracks = this.want("query", message);
-		const track = await first(tracks);
+		const tracks = await this.requestTracks(message, "query", 0, 1);
 
-		if (track) {
+		if (tracks[0]) {
 			this.load(ClientState.Uploading);
-			const buttons = this.createButtons(message);
-			await this.upload(track, buttons).catch(e =>
+			await this.upload(tracks[0], message).catch(e =>
 				err(`Failed to send audio!\n${e?.stack || e}`)
 			);
 		}
@@ -66,46 +71,56 @@ export default class Telegram extends TelegramBase {
 
 	protected async onCallback(
 		data: ICallbackData,
-		id: string,
 		message: number,
 		chat: number
 	): Promise<void> {
+		const ctx = this.messages[chat]?.[message];
+		if (!ctx) return;
+
+		const update = async (): Promise<boolean> => {
+			const list = await this.createList(ctx);
+			const buttons = [this.createButtons(ctx.query), ...list];
+
+			Telegram.call("editMessageReplyMarkup", {
+				chat_id: chat,
+				message_id: message,
+				reply_markup: { inline_keyboard: buttons }
+			}).catch(() => {});
+			return !!list.length;
+		};
+
 		switch (data.type) {
 			case "more": {
-				if (!data.query) return;
-				const tracks = await this.want("query", data.query);
-				if (!tracks) return;
-				first(tracks);
-				const selection = await first(tracks, 10);
-
-				Telegram.call("editMessageReplyMarkup", {
-					chat_id: chat,
-					message_id: message,
-					reply_markup: {
-						inline_keyboard: [
-							this.createButtons(data.query),
-							...this.createList(selection, data)
-						]
-					}
-				}).catch(() => {});
-
+				if (!ctx.query) return;
+				ctx.page = 0;
+				ctx.type = "query";
+				await update();
 				break;
 			}
 
 			case "close": {
-				Telegram.call("editMessageReplyMarkup", {
-					chat_id: chat,
-					message_id: message,
-					reply_markup: {
-						inline_keyboard: [this.createButtons(data.query)]
-					}
-				}).catch(() => {});
+				ctx.type = undefined;
+				ctx.page = undefined;
+				await update();
+				break;
+			}
 
+			case "next": {
+				if (ctx.page == null) return;
+				ctx.page++;
+				if (!(await update())) ctx.page--;
+				break;
+			}
+
+			case "prev": {
+				if (!ctx.page) return;
+				ctx.page--;
+				await update();
 				break;
 			}
 
 			case "download": {
-				const source = data.source;
+				const source = data.arg;
 				if (source == null) return;
 				this.load(ClientState.Searching);
 				const track = await first(this.want("query", source));
@@ -113,13 +128,11 @@ export default class Telegram extends TelegramBase {
 					this.load(ClientState.None);
 					return;
 				}
-
 				this.load(ClientState.Uploading);
-				await this.upload(track, this.createButtons()).catch(e =>
+				await this.upload(track, "").catch(e =>
 					err(`Failed to send audio!\n${e?.stack || e}`)
 				);
 				this.load(ClientState.None);
-
 				break;
 			}
 		}
@@ -164,26 +177,97 @@ export default class Telegram extends TelegramBase {
 		this.emit("relisted", title, update);
 	}
 
-	private createList(
-		tracks: IPreview[],
-		params: Record<string, any> = {}
-	): Record<string, any>[] {
+	private async requestTracks(
+		query: string,
+		from: TrackSource = "query",
+		offset = 0,
+		count = 10
+	): Promise<IPreview[]> {
+		const cached = this.cache[from]?.[query];
+		const source = cached || {
+			history: [],
+			iterator: this.want(from, query)
+		};
+		if (!cached) {
+			this.cache[from] ??= {};
+			this.cache[from][query] = source;
+			//Cache control
+			const keys = Object.keys(this.cache[from]);
+			if (keys.length > CACHE_LIMIT) {
+				delete this.cache[from][keys[0]];
+			}
+		}
+
+		const tracks = [];
+		//Load from history
+		if (offset < source.history.length) {
+			tracks.push(...source.history.slice(offset, offset + count));
+		}
+		//Request new data
+		if (offset + count > source.history.length) {
+			const length = offset + count - source.history.length;
+			const loaded = await first(source.iterator, length);
+			source.history.push(...loaded);
+			tracks.push(...loaded);
+		}
+
+		return tracks;
+	}
+
+	private async createList(ctx: IMessage): Promise<Record<string, any>[]> {
+		if (ctx.query == null || ctx.type == null || ctx.page == null) {
+			return [];
+		}
+
+		const tracks = await this.requestTracks(
+			ctx.query,
+			ctx.type,
+			ctx.page * PER_PAGE + 1,
+			PER_PAGE
+		);
+
 		const list = tracks.map((x, i) => [
 			{
 				text: `${x.artists.join(", ")} - ${x.title}`,
 				callback_data: JSON.stringify({
 					type: "download",
-					source: x.source
+					arg: x.source
 				})
 			}
 		]);
 
 		const close = {
-			text: "✖",
-			callback_data: JSON.stringify({ ...params, type: "close" })
+			text: "❌",
+			callback_data: JSON.stringify({ type: "close" })
 		};
 
-		list.push([close]);
+		const prev = {
+			text: "👈",
+			callback_data: JSON.stringify({ type: "prev" })
+		};
+
+		const next = {
+			text: "👉",
+			callback_data: JSON.stringify({ type: "next" })
+		};
+
+		const page = {
+			text: "⬇️",
+			callback_data: JSON.stringify({ type: "page" })
+		};
+
+		const shuffle = {
+			text: "🔀",
+			callback_data: JSON.stringify({ type: "shuffle" })
+		};
+
+		const all = {
+			text: "⏬",
+			callback_data: JSON.stringify({ type: "all" })
+		};
+
+		if (list.length) list.push([prev, close, next]);
+		if (list.length) list.push([page, shuffle, all]);
 		return list;
 	}
 
@@ -193,31 +277,35 @@ export default class Telegram extends TelegramBase {
 			"📻": "similar",
 			"💿": "album"
 		} as Record<string, string>;
-		if (query) options["➕"] = "more";
+		if (query) options["🔎"] = "more";
 
 		return Object.entries(options).map(x => ({
 			text: x[0],
 			callback_data: JSON.stringify({
-				type: x[1],
-				query
+				type: x[1]
 			})
 		}));
 	}
 
 	private async upload(
 		preview: IPreview,
-		buttons?: Record<string, any>[],
+		query: string | null,
 		chat = this.client
 	): Promise<number> {
 		const track = await preview.track();
 		const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
+
+		const buttons = query !== null ? this.createButtons(query) : null;
 
 		let message;
 		if (tg) {
 			message = await Telegram.call("sendAudio", {
 				chat_id: chat,
 				audio: tg,
-				disable_notification: true
+				disable_notification: true,
+				reply_markup: buttons
+					? { inline_keyboard: [buttons] }
+					: undefined
 			});
 		} else {
 			const stream = await Restream.fromTrack(track);
@@ -236,9 +324,14 @@ export default class Telegram extends TelegramBase {
 		}
 
 		const id = message.message_id;
+		this.messages[chat] ??= {};
+		this.messages[chat][id] = {
+			title: track.title,
+			artists: track.artists,
+			album: track.album
+		};
+		if (query) this.messages[chat][id].query = query;
 
-		this.messages[chat] ??= [];
-		this.messages[chat].push(id);
 		const file =
 			message.audio?.file_id || (message as any).document?.file_id;
 		if (file) track.sources.push(`tg://${file}`);
@@ -271,3 +364,20 @@ enum ClientState {
 	Searching,
 	Uploading
 }
+
+type TrackSource = "query";
+
+interface IMessage {
+	type?: TrackSource;
+	query?: string;
+	page?: number;
+
+	artists: string[];
+	title: string;
+	album: string;
+}
+
+type TrackCache = Record<
+	TrackSource,
+	Record<string, { history: IPreview[]; iterator: Tracks }>
+>;

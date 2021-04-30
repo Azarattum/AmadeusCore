@@ -20,7 +20,6 @@ export default abstract class TelegramBase extends Endpoint {
 	): void;
 	protected abstract onCallback(
 		data: ICallbackData,
-		id: string,
 		message: number,
 		chat: number
 	): void;
@@ -263,12 +262,7 @@ export default abstract class TelegramBase extends Endpoint {
 			try {
 				const parsed = JSON.parse(query.data);
 				assertType<ICallbackData>(parsed);
-				await client.onCallback(
-					parsed,
-					query.id,
-					query.message.message_id,
-					id
-				);
+				await client.onCallback(parsed, query.message.message_id, id);
 			} catch {
 				//Ignore errors here
 			}
@@ -278,8 +272,7 @@ export default abstract class TelegramBase extends Endpoint {
 
 export interface ICallbackData {
 	type: string;
-	query?: string;
-	source?: string;
+	arg?: string;
 }
 
 interface IMessage {
