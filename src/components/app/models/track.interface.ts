@@ -21,3 +21,15 @@ export interface ITrack {
 }
 
 export type Tracks = AsyncGenerator<IPreview>;
+
+export function stringify(track: IPreview, reverse = false): string {
+	const title = track.title.toLowerCase().trim();
+	const artists = track.artists.sort().join().toLowerCase().trim();
+
+	if (reverse) return purify(`${title} - ${artists}`);
+	return purify(`${artists} - ${title}`);
+}
+
+export function purify(title: string): string {
+	return title.replace(/[+,&]/g, " ");
+}

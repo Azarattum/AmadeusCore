@@ -1,7 +1,7 @@
 import Controller from "../../common/controller.abstract";
 import Provider from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
-import { IPreview } from "../models/track.interface";
+import { IPreview, purify, stringify } from "../models/track.interface";
 import { shuffle } from "../../common/utils.class";
 import Recommender, {
 	ITrackInfo
@@ -43,8 +43,8 @@ export default class Aggregator extends Controller() {
 		const seen = new Set();
 		//Return best sorted
 		for (const item of items) {
-			const hash = this.stringify(item);
-			const rev = this.stringify(item, true);
+			const hash = stringify(item);
+			const rev = stringify(item, true);
 			if (seen.has(hash) || seen.has(rev)) continue;
 
 			yield item;
@@ -54,8 +54,8 @@ export default class Aggregator extends Controller() {
 		//Return the rest
 		const generator = mergeGenerators(generators);
 		for await (const item of generator) {
-			const hash = this.stringify(item);
-			const rev = this.stringify(item, true);
+			const hash = stringify(item);
+			const rev = stringify(item, true);
 			if (seen.has(hash) || seen.has(rev)) continue;
 
 			yield item;
@@ -110,7 +110,7 @@ export default class Aggregator extends Controller() {
 	}
 
 	private compare(a: IPreview, b: IPreview, query: string) {
-		const target = this.purify(query.toLowerCase().trim());
+		const target = purify(query.toLowerCase().trim());
 
 		//Exact title match
 		if (
@@ -131,25 +131,13 @@ export default class Aggregator extends Controller() {
 			return 0;
 		}
 
-		const trackA = compareTwoStrings(target, this.stringify(a));
-		const trackB = compareTwoStrings(target, this.stringify(b));
+		const trackA = compareTwoStrings(target, stringify(a));
+		const trackB = compareTwoStrings(target, stringify(b));
 		if (trackA === trackB) {
 			if (a.cover && !b.cover) return -1;
 			if (b.cover && !a.cover) return 1;
 		}
 
 		return trackB - trackA;
-	}
-
-	private stringify(track: IPreview, reverse = false): string {
-		const title = track.title.toLowerCase().trim();
-		const artists = track.artists.sort().join().toLowerCase().trim();
-
-		if (reverse) return this.purify(`${title} - ${artists}`);
-		return this.purify(`${artists} - ${title}`);
-	}
-
-	private purify(title: string): string {
-		return title.replace(/[+,&]/g, " ");
 	}
 }

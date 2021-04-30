@@ -1,7 +1,7 @@
 import { Playlist } from ".prisma/client";
 import { IComponentOptions } from "../../../common/component.interface";
 import Restream from "../../models/restream";
-import { IPreview, Tracks } from "../../models/track.interface";
+import { IPreview, stringify, Tracks } from "../../models/track.interface";
 import TelegramBase, { ICallbackData } from "./telegram.base";
 import { first } from "../../models/generator";
 import { err } from "../../../common/utils.class";
@@ -17,6 +17,7 @@ export default class Telegram extends TelegramBase {
 	private loader?: NodeJS.Timeout;
 	private messages: Record<number, Record<number, IMessage>> = {};
 	private cache: TrackCache;
+	private issued: Set<string> = new Set();
 
 	public constructor(args: IComponentOptions) {
 		super(args);
@@ -50,6 +51,7 @@ export default class Telegram extends TelegramBase {
 	public async add(tracks: Tracks, playlist: Playlist): Promise<void> {
 		if (!playlist.telegram) return;
 		for await (const track of tracks) {
+			if (this.issued.delete(stringify(track))) continue;
 			await this.upload(track, null, playlist.telegram).catch(e =>
 				err(`Failed to add audio!\n${e?.stack || e}`)
 			);
@@ -142,8 +144,23 @@ export default class Telegram extends TelegramBase {
 		this.emit("triggered", channel);
 	}
 
-	protected onPost(text: string, channel: string): void {
-		throw new Error("Method not implemented.");
+	protected async onPost(
+		text: string,
+		channel: string,
+		file?: string
+	): Promise<void> {
+		const track = await first(this.want("query", text));
+		if (!track) return;
+		this.issued.add(stringify(track));
+
+		const load = track.track;
+		track.track = async () => {
+			const loaded = await load();
+			if (file) loaded.sources.push(`tg://${file}`);
+			return loaded;
+		};
+
+		this.emit("playlisted", track, channel);
 	}
 
 	protected onCommand(command: string): void {
@@ -332,8 +349,7 @@ export default class Telegram extends TelegramBase {
 		};
 		if (query) this.messages[chat][id].query = query;
 
-		const file =
-			message.audio?.file_id || (message as any).document?.file_id;
+		const file = message.audio?.file_id || message.document?.file_id;
 		if (file) track.sources.push(`tg://${file}`);
 		return id;
 	}

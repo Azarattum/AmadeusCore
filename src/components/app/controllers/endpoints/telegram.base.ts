@@ -12,7 +12,11 @@ export default abstract class TelegramBase extends Endpoint {
 	protected abstract onMessage(message: string): void;
 	protected abstract onCommand(command: string): void;
 	protected abstract onTagged(channel: string): void;
-	protected abstract onPost(text: string, channel: string): void;
+	protected abstract onPost(
+		text: string,
+		channel: string,
+		file?: string
+	): void;
 	protected abstract onChat(
 		id: number,
 		title: string,
@@ -244,7 +248,8 @@ export default abstract class TelegramBase extends Endpoint {
 
 				await client.onTagged(title);
 			} else if (audio) {
-				await client.onPost(audio, title);
+				const file = post.audio?.file_id || post.document?.file_id;
+				await client.onPost(audio, title, file);
 			}
 		} else if (data["callback_query"]) {
 			const query = data["callback_query"];
@@ -299,7 +304,8 @@ interface IPost {
 	chat: { id: number; title: string };
 	message_id: number;
 	text?: string;
-	audio?: { performer?: string; title: string };
+	audio?: { performer?: string; title: string; file_id?: string };
+	document?: { file_id?: string };
 }
 
 interface IQuery {
