@@ -32,8 +32,8 @@ export default class App extends Application {
 		const token = (name: string) => process.env[`${name}_TOKEN`] || "";
 
 		let providers = [];
-		providers.push(new YandexProvider(token("YANDEX")));
 		providers.push(new VKProvider(token("VK")));
+		providers.push(new YandexProvider(token("YANDEX")));
 		providers.push(new SoundCloudProvider(token("SOUNDCLOUD")));
 		providers.push(new YouTubeProvider());
 		providers = providers.filter(x => (x as any).token);

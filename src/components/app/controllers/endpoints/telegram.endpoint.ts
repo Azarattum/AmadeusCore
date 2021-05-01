@@ -4,7 +4,7 @@ import Restream from "../../models/restream";
 import { IPreview, stringify, Tracks } from "../../models/track.interface";
 import TelegramBase, { ICallbackData } from "./telegram.base";
 import { first } from "../../models/generator";
-import { err, generateID } from "../../../common/utils.class";
+import { err, generateID, shuffle } from "../../../common/utils.class";
 import AbortController from "abort-controller";
 import { Readable } from "stream";
 
@@ -15,7 +15,8 @@ const PER_PAGE = 10;
 const CACHE_LIMIT = 10;
 const LIMITS = {
 	"0": 1, //Searches
-	"1": 3 //Downloads
+	"1": 3, //Downloads
+	"2": 1 //Queueing
 } as Record<TaskType, number>;
 
 export default class Telegram extends TelegramBase {
@@ -141,6 +142,74 @@ export default class Telegram extends TelegramBase {
 				await this.upload(track, "").catch(e =>
 					err(`Failed to send audio!\n${e?.stack || e}`)
 				);
+				break;
+			}
+
+			case "page": {
+				if (!ctx.query || !ctx.type || ctx.page == null) return;
+				const tracks = await this.requestTracks(
+					ctx.query,
+					ctx.type,
+					ctx.page * PER_PAGE + 1,
+					PER_PAGE
+				);
+
+				tracks.forEach(x =>
+					this.upload(x, "").catch(e =>
+						err(`Failed to send audio!\n${e?.stack || e}`)
+					)
+				);
+
+				break;
+			}
+
+			case "shuffle": {
+				if (!ctx.query || !ctx.type || ctx.page == null) return;
+				let tracks = await this.requestTracks(
+					ctx.query,
+					ctx.type,
+					0,
+					200
+				);
+				tracks = shuffle(tracks).slice(0, 10);
+
+				tracks.forEach(x =>
+					this.upload(x, "").catch(e =>
+						err(`Failed to send audio!\n${e?.stack || e}`)
+					)
+				);
+
+				break;
+			}
+
+			case "all": {
+				if (!ctx.query || !ctx.type || ctx.page == null) return;
+
+				const abort = new AbortController();
+				const task = await this.startTask(TaskType.Queueing, abort);
+				let page = 0;
+
+				while (!abort.signal.aborted) {
+					const tracks = await this.requestTracks(
+						ctx.query,
+						ctx.type,
+						PER_PAGE * page + 1,
+						PER_PAGE
+					);
+					if (!tracks.length) break;
+					if (abort.signal.aborted) break;
+
+					await Promise.all(
+						tracks.map(x =>
+							this.upload(x, "").catch(e =>
+								err(`Failed to send audio!\n${e?.stack || e}`)
+							)
+						)
+					);
+					page++;
+				}
+				this.endTask(task);
+
 				break;
 			}
 		}
@@ -489,7 +558,8 @@ interface ITask {
 
 enum TaskType {
 	Searching,
-	Uploading
+	Uploading,
+	Queueing
 }
 
 type TrackCache = Record<
