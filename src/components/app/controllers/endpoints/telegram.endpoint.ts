@@ -13,6 +13,10 @@ const DISCOVER_TAG = "#discover";
 const LISTEN_TAG = "#listen";
 const PER_PAGE = 10;
 const CACHE_LIMIT = 10;
+const LIMITS = {
+	"0": 1, //Searches
+	"1": 3 //Downloads
+} as Record<TaskType, number>;
 
 export default class Telegram extends TelegramBase {
 	protected client: number;
@@ -233,11 +237,14 @@ export default class Telegram extends TelegramBase {
 			//Request new data
 			if (offset + count > source.history.length) {
 				const abort = new AbortController();
-				if (!source.history.length) {
+				if (!offset) {
 					task = await this.startTask(TaskType.Searching, abort);
 				}
 
 				const length = offset + count - source.history.length;
+				const skip = Math.max(offset - source.history.length, 0);
+
+				if (skip) first(source.iterator, skip);
 				const loaded = await first(source.iterator, length);
 				if (abort.signal.aborted) return tracks;
 
@@ -329,7 +336,22 @@ export default class Telegram extends TelegramBase {
 		playlist: number = this.client
 	): Promise<string> {
 		const id = generateID();
-		this.tasks.set(id, { type, playlist, abort });
+
+		const limit = LIMITS[type];
+		let resolve: (() => void) | undefined;
+		let waiting: Promise<void> | undefined;
+		const tasks = [...this.tasks.values()].filter(
+			x => x.type === type && !x.resolve
+		);
+
+		if (tasks.length >= limit) {
+			waiting = new Promise(loaded => {
+				resolve = loaded;
+			});
+		}
+
+		this.tasks.set(id, { type, playlist, abort, resolve });
+		await waiting;
 
 		const action = (): void => {
 			const tasks = [...this.tasks.values()];
@@ -357,8 +379,20 @@ export default class Telegram extends TelegramBase {
 	}
 
 	private endTask(id: string) {
+		const task = this.tasks.get(id);
+		if (!task) return;
+		task.abort?.abort();
 		this.tasks.get(id)?.abort?.abort();
 		this.tasks.delete(id);
+
+		//Resove the first queued element
+		for (const value of this.tasks.values()) {
+			if (value.type !== task.type) continue;
+			if (!value.resolve) continue;
+			value.resolve();
+			value.resolve = undefined;
+			break;
+		}
 	}
 
 	private async upload(
@@ -369,8 +403,10 @@ export default class Telegram extends TelegramBase {
 		let source: Readable | undefined;
 		const abort = new AbortController();
 		const task = await this.startTask(TaskType.Uploading, abort, chat);
+		if (abort.signal.aborted) return;
 		try {
 			const track = await preview.track();
+			if (abort.signal.aborted) return;
 			const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
 
 			const buttons = query !== null ? this.createButtons(query) : null;
@@ -391,6 +427,7 @@ export default class Telegram extends TelegramBase {
 				);
 			} else {
 				const stream = await Restream.fromTrack(track);
+				if (abort.signal.aborted) return;
 				source = stream.source;
 				message = await Telegram.call(
 					"sendAudio",
@@ -447,6 +484,7 @@ interface ITask {
 	type: TaskType;
 	playlist: number;
 	abort?: AbortController;
+	resolve?: () => void;
 }
 
 enum TaskType {
