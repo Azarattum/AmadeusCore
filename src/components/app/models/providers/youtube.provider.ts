@@ -114,7 +114,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 			.split(":")
 			.reduce((acc, time) => 60 * +acc + +time + "");
 
-		if (length > 1200) return false;
+		if (length > 600) return false;
 		return true;
 	}
 

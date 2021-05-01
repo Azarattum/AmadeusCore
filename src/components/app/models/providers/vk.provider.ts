@@ -61,7 +61,7 @@ export default class VKProvider extends Provider<ITrackVK> {
 
 		//From playlist
 		match = source.match(
-			/(https?:\/\/)?vk\.com\/audio_playlist(-?[0-9]+)_([0-9]+)/i
+			/(https?:\/\/)?vk\.com\/(?:music\?z=)?audio_playlist(-?[0-9]+)_([0-9]+)/i
 		);
 		if (match) {
 			let tracks;
