@@ -15,6 +15,7 @@ export default abstract class TelegramBase extends Endpoint {
 	protected abstract onPost(
 		text: string,
 		channel: string,
+		chat: number,
 		file?: string
 	): void;
 	protected abstract onChat(
@@ -249,7 +250,7 @@ export default abstract class TelegramBase extends Endpoint {
 				await client.onTagged(title);
 			} else if (audio) {
 				const file = post.audio?.file_id || post.document?.file_id;
-				await client.onPost(audio, title, file);
+				await client.onPost(audio, title, id, file);
 			}
 		} else if (data["callback_query"]) {
 			const query = data["callback_query"];
