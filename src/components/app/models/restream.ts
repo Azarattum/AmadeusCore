@@ -35,7 +35,7 @@ export default class Restream {
 
 	public get source(): Readable {
 		const type = this.audio.mime;
-		if (type === "audio/mp4") return this.useMP4();
+		// if (type === "audio/mp4") return this.useMP4();
 		if (type === "audio/mpeg") return this.useID3();
 
 		//Covert to mp3
