@@ -126,7 +126,9 @@ export default class VKProvider extends Provider<ITrackVK> {
 
 	protected convert(track: ITrackVK): IPreview {
 		const converted = {
-			title: track.title.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, ""),
+			title: track.title
+				.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, "")
+				.replace(/\s+\(Album\s+Version\)\s*/i, ""),
 			artists: parseArtists(track.artist),
 			album: track.album?.title || track.title,
 			length: track.duration,

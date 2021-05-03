@@ -2,7 +2,7 @@ import { IPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 import ytsr, { ContinueResult } from "ytsr";
 import ytdl from "ytdl-core";
-import parse from "../parser";
+import parse, { parseArtists } from "../parser";
 import { is } from "typescript-is";
 import ytpl from "ytpl";
 
@@ -72,9 +72,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 	}
 
 	protected convert(track: ITrackYouTube): IPreview {
-		const author = track.author
-			? [track.author.name.replace(/ - Topic$/, "")]
-			: [];
+		const author = parseArtists(track.author?.name);
 		const { title, artists, year, album } = parse(track.title);
 
 		const converted = {

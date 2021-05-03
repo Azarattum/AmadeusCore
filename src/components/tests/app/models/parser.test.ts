@@ -60,7 +60,7 @@ describe("Parser", () => {
 		expect(val.artists).toEqual(["varg"]);
 
 		val = parse("Falling in drop C.");
-		expect(val.title).toBe("Falling in drop C.");
+		expect(val.title).toBe("Falling in drop C");
 		expect(val.artists).toEqual([]);
 
 		val = parse("Voodoo People - Quadsep - 1995");
@@ -207,6 +207,10 @@ describe("Parser", () => {
 		expect(val.title).toBe("Ross Bugden");
 		expect(val.album).toBe("Ross Bugden");
 		expect(val.artists).toEqual(["AnubisMusic", "Fall"]);
+
+		val = parse("Karliene. - Elizabeth");
+		expect(val.title).toBe("Elizabeth");
+		expect(val.artists).toEqual(["Karliene"]);
 	});
 
 	it("parseArtists", () => {

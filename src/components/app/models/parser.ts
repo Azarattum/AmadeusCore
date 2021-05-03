@@ -21,8 +21,8 @@ export function unbrace(text: string): IUnbraced {
 		parts: []
 	};
 
-	const opening = "[({【";
-	const closing = "])}】";
+	const opening = "[({【「";
+	const closing = "])}】」";
 	let current = -1;
 
 	for (let i = 0; i < text.length; i++) {
@@ -64,6 +64,7 @@ export function isJunk(text: string): boolean {
 	if (text.match(url)) return true;
 
 	const junk = [
+		r`album`,
 		r`originals?`,
 		r`of+icial?`,
 		r`MV`,
@@ -73,7 +74,7 @@ export function isJunk(text: string): boolean {
 		r`only`,
 		r`mix`,
 		r`full`,
-		r`subtitles?`,
+		r`sub(titles?)?`,
 		r`quality`,
 		r`(HD|HQ|[0-9]{3,4}p|4Kb)`,
 		r`[0-9]{3,4}(p|bpmb)`,
@@ -83,6 +84,8 @@ export function isJunk(text: string): boolean {
 		r`copyright`,
 		r`royalty`,
 		r`tutorial`,
+		r`amv`,
+		r`explicit`,
 		r`remaster(ed)?`
 	].map(x => new RegExp(r`(\b|^|\s)${x}(\b|$|\s)`, "i"));
 
@@ -95,6 +98,7 @@ export function unemojify(text: string): string {
 
 export function parseArtists(text?: string): string[] {
 	if (!text) return [];
+	text = text.replace(/ - Topic$/i, "");
 	const joins = /,|\bft\.?|\bfeat\.?|&|\+|\/|\bfeaturing|\bmed\b|\band\b/i;
 
 	return [
@@ -167,7 +171,7 @@ export function split(text: string): string[] {
 }
 
 export function trim(text: string): string {
-	const trim = /^[@'"`«»|—\-–/\\:\s]+|['"`«»|—\-–/\\:\s]+$/gi;
+	const trim = /^[@'"`«»|—\-–/\\:\s.]+|['"`«»|—\-–/\\:\s.]+$/gi;
 	return text.replace(trim, "");
 }
 

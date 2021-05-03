@@ -34,8 +34,8 @@ export default class App extends Application {
 		let providers = [];
 		providers.push(new VKProvider(token("VK")));
 		providers.push(new YandexProvider(token("YANDEX")));
-		providers.push(new SoundCloudProvider(token("SOUNDCLOUD")));
 		providers.push(new YouTubeProvider());
+		providers.push(new SoundCloudProvider(token("SOUNDCLOUD")));
 		providers = providers.filter(x => (x as any).token);
 
 		let recommenders = [];

@@ -8,6 +8,7 @@ import Recommender, {
 } from "../models/recommenders/recommender.abstract";
 import { first, mergeGenerators } from "../models/generator";
 import { is } from "typescript-is";
+import parse from "../models/parser";
 
 /**
  * Aggregates track data from all Amadeus' providers
@@ -36,7 +37,7 @@ export default class Aggregator extends Controller() {
 
 		//Fetch and sort items (3 from every provider)
 		const generators = this.providers.map(x => x.get(query));
-		const promises = generators.map(x => first(x, 3));
+		const promises = generators.map(x => first(x, 4));
 		const items = (await Promise.all(promises)).flat();
 		items.sort((a, b) => this.compare(a, b, query));
 
@@ -111,6 +112,7 @@ export default class Aggregator extends Controller() {
 
 	private compare(a: IPreview, b: IPreview, query: string) {
 		const target = purify(query.toLowerCase().trim());
+		const parsed = stringify(parse(query) as IPreview);
 
 		//Exact title match
 		if (
@@ -131,8 +133,10 @@ export default class Aggregator extends Controller() {
 			return 0;
 		}
 
-		const trackA = compareTwoStrings(target, stringify(a));
-		const trackB = compareTwoStrings(target, stringify(b));
+		let trackA = compareTwoStrings(target, stringify(a));
+		let trackB = compareTwoStrings(target, stringify(b));
+		trackA = Math.max(trackA, compareTwoStrings(parsed, stringify(a)));
+		trackB = Math.max(trackB, compareTwoStrings(parsed, stringify(b)));
 		if (trackA === trackB) {
 			if (a.cover && !b.cover) return -1;
 			if (b.cover && !a.cover) return 1;
