@@ -135,12 +135,6 @@ export default class Restream {
 		let offset = 8;
 		const size = box.readUInt32BE();
 
-		let leftovers = Buffer.from([]);
-		if (size < box.byteLength) {
-			leftovers = box.slice(size);
-			box = box.slice(0, size);
-		}
-
 		while (offset < size) {
 			const size = box.readUInt32BE(offset);
 			const name = box.slice(offset + 4, offset + 8).toString();
@@ -157,16 +151,79 @@ export default class Restream {
 
 		box = Buffer.concat([box, this.mp4Tags]);
 		box.writeInt32BE(box.length);
-		return Buffer.concat([box, leftovers]);
+		return box;
 	}
 
 	private get mp4Transform(): Transform {
-		const moov = new Uint8Array([0x6d, 0x6f, 0x6f, 0x76]);
+		// Part of code that tries to covert from MPEG-DASH (unsuccessful)
+		//   Unfortunately we do not know sample sizes in advance
+		//   which are needed in "moov.trak" of the top level
+		//
+		// const data = {
+		// 	header: Buffer.from("\0\0\0 ftypM4A \0\0\0\x01iso6mp41M4A mp42")
+		// };
+		// let firstMdat = true;
+		// let global = 0;
 
-		let state = TransformState.SearchingMoov;
-		let size: number;
-		let offset: number;
-		let box: Buffer;
+		let state = TransformState.StartBox;
+		let boxSize: number, boxType: string;
+		const box: Buffer[] = [];
+
+		const transform = (boxPart: Buffer, final = false): Buffer => {
+			if (boxType === "moov") {
+				box.push(boxPart);
+				if (final) return this.mp4Process(Buffer.concat(box));
+				return Buffer.alloc(0);
+			}
+			return boxPart;
+			// Part of code that tries to covert from MPEG-DASH (unsuccessful)
+			//   Unfortunately we do not know sample sizes in advance
+			//   which are needed in "moov.trak" of the top level
+			//
+			// if (boxType === "ftyp") {
+			// 	if (global) return Buffer.alloc(0);
+			// 	return data.header;
+			// }
+			// if (boxType === "mdat") {
+			// 	if (global) return boxPart;
+			// 	if (firstMdat) {
+			// 		boxPart.writeUInt32BE(4294967295);
+			// 		firstMdat = false;
+			// 		return boxPart;
+			// 	}
+			// 	return boxPart.slice(8);
+			// }
+			// if (boxType === "sidx") return Buffer.alloc(0);
+			// if (boxType === "moof") return Buffer.alloc(0);
+			// return boxPart;
+		};
+
+		const update = (chunk: Buffer): [Buffer, Buffer] => {
+			let local = 0;
+			const result = [];
+
+			if (state == TransformState.StartBox) {
+				// global = 0;
+				boxSize = chunk.readUInt32BE(local);
+				boxType = chunk.slice(local + 4, local + 8).toString();
+				state = TransformState.ReadBox;
+			}
+			if (state == TransformState.ReadBox) {
+				const length = Math.min(chunk.length - local, boxSize);
+				const final = boxSize <= chunk.length - local;
+
+				result.push(
+					transform(chunk.slice(local, local + length), final)
+				);
+
+				if (final) state = TransformState.StartBox;
+				local += length;
+				boxSize -= length;
+			}
+
+			// global += local;
+			return [Buffer.concat(result), chunk.slice(local)];
+		};
 
 		const stream = new Transform({
 			transform: async (
@@ -174,55 +231,14 @@ export default class Restream {
 				encoding: string,
 				callback: TransformCallback
 			) => {
-				switch (state) {
-					case TransformState.SearchingMoov: {
-						const index = chunk.indexOf(moov);
-						if (index >= 4) {
-							size = chunk.readUInt32BE(index - 4);
-							const start = index - 4;
-							const length = chunk.length - start;
-
-							box = Buffer.alloc(Math.max(length, size));
-							chunk.copy(box, offset, start, chunk.length);
-
-							size -= Math.min(size, length);
-							offset = length;
-							state++;
-
-							callback(null, chunk.slice(0, index - 4));
-						} else {
-							callback(null, chunk);
-						}
-
-						break;
-					}
-					case TransformState.FillingBox: {
-						const length = Math.min(chunk.length, size);
-						if (length > 0) chunk.copy(box, offset, 0, length);
-						if (chunk.length >= size) {
-							callback(
-								null,
-								Buffer.concat([
-									this.mp4Process(box),
-									chunk.slice(size)
-								])
-							);
-							box = Buffer.alloc(0);
-							state++;
-						} else {
-							callback(null, Buffer.from([]));
-						}
-
-						size -= length;
-						offset += length;
-
-						break;
-					}
-					case TransformState.PassingThrough: {
-						callback(null, chunk);
-						break;
-					}
+				const parts = [];
+				let [part, left] = update(chunk);
+				parts.push(part);
+				while (left.length) {
+					[part, left] = update(left);
+					parts.push(part);
 				}
+				callback(null, Buffer.concat(parts));
 			}
 		});
 
@@ -291,7 +307,7 @@ export default class Restream {
 		buffers.push(dataBuffer);
 
 		buffers.push(Buffer.from("data"));
-		buffers.push(Buffer.from([0, 0, 0, 0xe, 0, 0, 0, 0]));
+		buffers.push(Buffer.from([0, 0, 0, 0x0d, 0, 0, 0, 0]));
 		buffers.push(this.image);
 
 		const result = Buffer.concat(buffers);
@@ -398,9 +414,8 @@ interface IInput {
 }
 
 enum TransformState {
-	SearchingMoov,
-	FillingBox,
-	PassingThrough
+	StartBox,
+	ReadBox
 }
 
 enum ID3 {
