@@ -49,7 +49,8 @@ export default class Restream {
 	}
 
 	public get filename(): string {
-		const type = this.audio.mime === "audio/mpeg" ? "mp3" : "m4a";
+		// const type = this.audio.mime === "audio/mpeg" ? "mp3" : "m4a";
+		const type = "mp3";
 		let name = !this.meta.artists
 			? `${this.meta.title}.${type}`
 			: `${this.meta.artists.join(", ")} - ${this.meta.title}.${type}`;
