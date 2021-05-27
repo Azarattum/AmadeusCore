@@ -98,23 +98,25 @@ describe("Yandex", () => {
 	});
 
 	it("desource", async () => {
-		await check(provider.desource("aggr://yandex:7"));
+		await check(provider.get("aggr://yandex:7", "source"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		await check(provider.desource("music.yandex.ru/album/0/track/1"));
+		await check(provider.get("music.yandex.ru/album/0/track/1", "source"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		await check(provider.desource("music.yandex.ru/album/0/"));
+		await check(provider.get("music.yandex.ru/album/0/", "source"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		await check(provider.desource("music.yandex.ru/artist/0"));
+		await check(provider.get("music.yandex.ru/artist/0", "source"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		await check(provider.desource("music.yandex.ru/users/a/playlists/0"));
+		await check(
+			provider.get("music.yandex.ru/users/a/playlists/0", "source")
+		);
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 	});

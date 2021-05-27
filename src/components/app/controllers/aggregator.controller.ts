@@ -1,5 +1,5 @@
 import Controller from "../../common/controller.abstract";
-import Provider from "../models/providers/provider.abstract";
+import Provider, { TrackSource } from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
 import { IPreview, purify, stringify } from "../models/track.interface";
 import { shuffle } from "../../common/utils.class";
@@ -25,7 +25,10 @@ export default class Aggregator extends Controller() {
 		this.recommenders = recommenders;
 	}
 
-	public async *get(query: string): AsyncGenerator<IPreview> {
+	public async *get(
+		query: string,
+		from: TrackSource = "search"
+	): AsyncGenerator<IPreview> {
 		//Return from desource
 		const source = this.desource([query]);
 		let fromSource = false;
@@ -36,10 +39,11 @@ export default class Aggregator extends Controller() {
 		if (fromSource) return;
 
 		//Fetch and sort items (3 from every provider)
-		const generators = this.providers.map(x => x.get(query));
+		const generators = this.providers.map(x => x.get(query, from));
 		const promises = generators.map(x => first(x, 4));
 		const items = (await Promise.all(promises)).flat();
-		items.sort((a, b) => this.compare(a, b, query));
+		//Sort relevant results higher when searching
+		if (from == "search") items.sort((a, b) => this.compare(a, b, query));
 
 		const seen = new Set();
 		//Return best sorted
@@ -87,7 +91,7 @@ export default class Aggregator extends Controller() {
 				continue;
 			}
 
-			const generators = this.providers.map(x => x.desource(source));
+			const generators = this.providers.map(x => x.get(source, "source"));
 			const generator = mergeGenerators(generators);
 
 			let found = false;
@@ -127,8 +131,16 @@ export default class Aggregator extends Controller() {
 		const nonspace = target.replace(/\s+/g, "");
 		if (
 			!target.includes("-") &&
-			nonspace === a.artists.join().replace(/\s+/g, "").toLowerCase() &&
-			nonspace === b.artists.join().replace(/\s+/g, "").toLowerCase()
+			nonspace ===
+				a.artists
+					.join()
+					.replace(/\s+/g, "")
+					.toLowerCase() &&
+			nonspace ===
+				b.artists
+					.join()
+					.replace(/\s+/g, "")
+					.toLowerCase()
 		) {
 			return 0;
 		}

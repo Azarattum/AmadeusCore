@@ -81,6 +81,10 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 		} while (page);
 	}
 
+	protected async *artist(query: string): AsyncGenerator<ITrackSoundCloud> {
+		///IMPLEMENT!
+	}
+
 	protected convert(track: ITrackSoundCloud): IPreview | null {
 		const { title, album, artists, year } = parse(track.title);
 

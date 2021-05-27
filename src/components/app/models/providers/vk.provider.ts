@@ -42,20 +42,8 @@ export default class VKProvider extends Provider<ITrackVK> {
 		//From artist
 		match = source.match(/(https?:\/\/)?vk\.com\/artist\/([a-z0-9_]+)/i);
 		if (match) {
-			let tracks;
-			let offset = 0;
-			do {
-				const audios = await this.call("audio.getAudiosByArtist", {
-					artist_id: match[2],
-					count: 100,
-					offset: offset
-				});
-
-				tracks = assertType<IResponseVK>(audios).response.items;
-				for await (const track of tracks) yield track;
-				offset += 100;
-			} while (tracks.length);
-
+			const tracks = this.artist(match[2]);
+			for await (const track of tracks) yield track;
 			return;
 		}
 
@@ -124,11 +112,38 @@ export default class VKProvider extends Provider<ITrackVK> {
 		} while (tracks.length);
 	}
 
+	protected async *artist(query: string): AsyncGenerator<ITrackVK> {
+		//Search for an artist
+		if (query.match(/[^a-z0-9_]/)) {
+			const artists = await this.call("audio.searchArtists", {
+				q: query,
+				count: 1
+			});
+			query = assertType<IArtistVK>(artists).response.items[0]?.id || "";
+			if (!query) return;
+		}
+
+		//Fetch tracks
+		let tracks;
+		let offset = 0;
+		do {
+			const audios = await this.call("audio.getAudiosByArtist", {
+				artist_id: query,
+				count: 100,
+				offset: offset
+			});
+
+			tracks = assertType<IResponseVK>(audios).response.items;
+			for await (const track of tracks) yield track;
+			offset += 100;
+		} while (tracks.length);
+	}
+
 	protected convert(track: ITrackVK): IPreview {
 		const converted = {
 			title: track.title
 				.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, "")
-				.replace(/\s+\(Album\s+Version\)\s*/i, ""),
+				.replace(/\s+\([a-z]+\s+Version\)\s*/i, ""),
 			artists: parseArtists(track.artist),
 			album: track.album?.title || track.title,
 			length: track.duration,
@@ -153,6 +168,10 @@ export default class VKProvider extends Provider<ITrackVK> {
 		if (track.duration > 1200) return false;
 		return true;
 	}
+}
+
+interface IArtistVK {
+	response: { items: [{ id: string }] | [] };
 }
 
 interface IUserVK {

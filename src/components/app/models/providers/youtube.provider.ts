@@ -71,6 +71,10 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		}
 	}
 
+	protected async *artist(query: string): AsyncGenerator<ITrackYouTube> {
+		///IMPLEMENT!
+	}
+
 	protected convert(track: ITrackYouTube): IPreview {
 		const author = parseArtists(track.author?.name);
 		const { title, artists, year, album } = parse(track.title);

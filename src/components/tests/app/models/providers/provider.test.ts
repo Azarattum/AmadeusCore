@@ -13,10 +13,14 @@ class TestProvider extends Provider<any> {
 		throw 2;
 		yield 3;
 	}
+	protected async *artist(query: string): AsyncGenerator<any> {
+		yield 42;
+	}
 
 	protected async *identify(source: string): AsyncGenerator<any> {
 		yield await this.call("*");
 	}
+
 	protected convert(track: any): IPreview {
 		return track;
 	}
@@ -33,7 +37,7 @@ describe("Provider", () => {
 			return 408;
 		});
 
-		expect((await provider.desource("").next()).value).toEqual({
+		expect((await provider.get("", "source").next()).value).toEqual({
 			url: "1"
 		});
 		expect(fetchMock).toHaveFetchedTimes(2);
@@ -51,7 +55,7 @@ describe("Provider", () => {
 			return 200;
 		});
 
-		expect((await provider.desource("").next()).value).toEqual({
+		expect((await provider.get("", "source").next()).value).toEqual({
 			url: "1"
 		});
 		expect(fetchMock).toHaveFetchedTimes(2);
@@ -68,5 +72,10 @@ describe("Provider", () => {
 		expect((await result.next()).value).toBe(1);
 		expect((await result.next()).value).toBe(undefined);
 		expect(console.warn).toHaveBeenCalled();
+	});
+
+	it("artist", async () => {
+		const result = provider.get("", "artist");
+		expect((await result.next()).value).toBe(42);
 	});
 });

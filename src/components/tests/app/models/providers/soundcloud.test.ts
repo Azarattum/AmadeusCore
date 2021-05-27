@@ -81,19 +81,19 @@ describe("SoundCloud", () => {
 	});
 
 	it("desource", async () => {
-		await check(provider.desource("aggr://soundcloud:0"));
+		await check(provider.get("aggr://soundcloud:0", "source"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		await check(provider.desource("soundcloud.com/tracks"));
+		await check(provider.get("soundcloud.com/tracks", "source"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		await check(provider.desource("soundcloud.com/aPlaylist"));
+		await check(provider.get("soundcloud.com/aPlaylist", "source"));
 		expect(fetchMock).toHaveFetchedTimes(3);
 		fetchMock.mockClear();
 
-		await check(provider.desource("soundcloud.com/aUser"));
+		await check(provider.get("soundcloud.com/aUser", "source"));
 		expect(fetchMock).toHaveFetchedTimes(5);
 		fetchMock.mockClear();
 	});
@@ -114,7 +114,7 @@ describe("SoundCloud", () => {
 		fetchMock.get(/tracks/, { ...track, artwork_url: "notlarge.jpg" });
 
 		await check(
-			provider.desource("aggr://soundcloud:0"),
+			provider.get("aggr://soundcloud:0", "source"),
 			"nott500x500.jpg"
 		);
 		expect(fetchMock).toHaveFetchedTimes(3, /notoriginal.jpg/);

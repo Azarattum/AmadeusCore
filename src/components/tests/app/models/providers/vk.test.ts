@@ -68,19 +68,19 @@ describe("VK", () => {
 	});
 
 	it("desource", async () => {
-		await check(provider.desource("aggr://vk:6_77777"));
-		await check(provider.desource("http://vk.com/audio-6_7"));
-		await check(provider.desource("https://vk.com/audio7_4"));
-		await check(provider.desource("vk.com/audio-1_1"));
+		await check(provider.get("aggr://vk:6_77777", "source"));
+		await check(provider.get("http://vk.com/audio-6_7", "source"));
+		await check(provider.get("https://vk.com/audio7_4", "source"));
+		await check(provider.get("vk.com/audio-1_1", "source"));
 		expect(
-			(await provider.desource("lol.com/audio-1_1").next()).value
+			(await provider.get("lol.com/audio-1_1", "source").next()).value
 		).toBe(undefined);
 		expect(fetchMock).toHaveFetchedTimes(4);
 		fetchMock.mockClear();
 
-		await check(provider.desource("vk.com/artist/smb_1"));
-		await check(provider.desource("vk.com/audio_playlist1_2_f"));
-		await check(provider.desource("vk.com/username"));
+		await check(provider.get("vk.com/artist/smb_1", "source"));
+		await check(provider.get("vk.com/audio_playlist1_2_f", "source"));
+		await check(provider.get("vk.com/username", "source"));
 		expect(fetchMock).toHaveFetchedTimes(4);
 		fetchMock.mockClear();
 	});
