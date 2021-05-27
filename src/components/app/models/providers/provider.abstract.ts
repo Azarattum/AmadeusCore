@@ -13,7 +13,8 @@ export default abstract class Provider<T = any> extends Fetcher {
 		> = {
 			search: this.search,
 			artist: this.artist,
-			source: this.identify
+			source: this.identify,
+			album: this.album
 		};
 
 		const source = sources[from].bind(this);
@@ -43,6 +44,7 @@ export default abstract class Provider<T = any> extends Fetcher {
 	protected abstract identify(source: string): AsyncGenerator<T>;
 	protected abstract search(query: string): AsyncGenerator<T>;
 	protected abstract artist(query: string): AsyncGenerator<T>;
+	protected abstract album(query: string): AsyncGenerator<T>;
 }
 
-export type TrackSource = "search" | "source" | "artist";
+export type TrackSource = "search" | "source" | "artist" | "album";

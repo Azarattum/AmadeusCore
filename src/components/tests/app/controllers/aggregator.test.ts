@@ -35,6 +35,12 @@ class TestProvider extends Provider {
 	protected async *search(query: string): AsyncGenerator<any, any, unknown> {
 		yield query;
 	}
+	protected async *artist(query: string): AsyncGenerator<any, any, unknown> {
+		yield query;
+	}
+	protected async *album(query: string): AsyncGenerator<any, any, unknown> {
+		yield query;
+	}
 }
 
 class TestRecommender extends Recommender {

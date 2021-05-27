@@ -1,6 +1,7 @@
 import { Playlist } from "@prisma/client";
 import { IComponentOptions } from "../../../common/component.interface";
 import Controller from "../../../common/controller.abstract";
+import { TrackSource } from "../../models/providers/provider.abstract";
 import { ITrackInfo } from "../../models/recommenders/recommender.abstract";
 import Tenant from "../../models/tenant";
 import { IPreview, Tracks } from "../../models/track.interface";
@@ -12,9 +13,7 @@ export default abstract class Endpoint extends Controller<
 	| ["triggered", (playlist: string) => void]
 	| ["relisted", (playlist: string, update: IPlaylistUpdate) => void],
 	//Whishes
-	| ["query", (query: string) => Tracks]
-	| ["artist", (name: string) => Tracks]
-	| ["album", (title: string) => Tracks]
+	| ["query", (query: string, from: TrackSource) => Tracks]
 	| ["similar", (track: ITrackInfo) => Tracks]
 	| ["tracks", (playlist?: string) => Tracks]
 >() {

@@ -107,6 +107,10 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		///IMPLEMENT!
 	}
 
+	protected async *album(query: string): AsyncGenerator<ITrackYandex> {
+		///IMPLEMENT!
+	}
+
 	protected convert(track: ITrackYandex): IPreview {
 		const converted = {
 			title: track.title,

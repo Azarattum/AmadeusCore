@@ -139,6 +139,10 @@ export default class VKProvider extends Provider<ITrackVK> {
 		} while (tracks.length);
 	}
 
+	protected async *album(query: string): AsyncGenerator<ITrackVK> {
+		///IMPLEMENT!
+	}
+
 	protected convert(track: ITrackVK): IPreview {
 		const converted = {
 			title: track.title

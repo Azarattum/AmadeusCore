@@ -36,7 +36,7 @@ export default class Aggregator extends Controller() {
 			fromSource = true;
 			yield track;
 		}
-		if (fromSource) return;
+		if (fromSource || from == "source") return;
 
 		//Fetch and sort items (3 from every provider)
 		const generators = this.providers.map(x => x.get(query, from));
@@ -131,16 +131,8 @@ export default class Aggregator extends Controller() {
 		const nonspace = target.replace(/\s+/g, "");
 		if (
 			!target.includes("-") &&
-			nonspace ===
-				a.artists
-					.join()
-					.replace(/\s+/g, "")
-					.toLowerCase() &&
-			nonspace ===
-				b.artists
-					.join()
-					.replace(/\s+/g, "")
-					.toLowerCase()
+			nonspace === a.artists.join().replace(/\s+/g, "").toLowerCase() &&
+			nonspace === b.artists.join().replace(/\s+/g, "").toLowerCase()
 		) {
 			return 0;
 		}

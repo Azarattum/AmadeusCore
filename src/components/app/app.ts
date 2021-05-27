@@ -13,6 +13,7 @@ import SoundCloudProvider from "./models/providers/soundcloud.provider";
 import YouTubeProvider from "./models/providers/youtube.provider";
 import LastFMRecommender from "./models/recommenders/lastfm.recommender";
 import { clonable, generate } from "./models/generator";
+import { TrackSource } from "./models/providers/provider.abstract";
 
 /**
  * Application class
@@ -55,9 +56,9 @@ export default class App extends Application {
 		const preserver = this.getComponent(Preserver, endpoint.tenant);
 		const scheduler = this.getComponent(Scheduler, endpoint.tenant);
 
-		endpoint.wants("query", (query: string) => {
-			log(`${name} queried "${query}" from ${endpoint.name}.`);
-			return aggregator.get(query);
+		endpoint.wants("query", (query: string, from: TrackSource) => {
+			log(`${name} queried ${from} "${query}" from ${endpoint.name}.`);
+			return aggregator.get(query, from);
 		});
 
 		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {

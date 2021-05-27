@@ -7,6 +7,7 @@ import { first } from "../../models/generator";
 import { err, generateID, shuffle } from "../../../common/utils.class";
 import AbortController from "abort-controller";
 import { Readable } from "stream";
+import { TrackSource } from "../../models/providers/provider.abstract";
 
 const UNTRACKED_TAG = "#untracked";
 const DISCOVER_TAG = "#discover";
@@ -31,7 +32,10 @@ export default class Telegram extends TelegramBase {
 		super(args);
 		this.client = this.tenant.telegram;
 		this.cache = {
-			query: {}
+			search: {},
+			artist: {},
+			album: {},
+			source: {}
 		};
 	}
 
@@ -69,7 +73,7 @@ export default class Telegram extends TelegramBase {
 	}
 
 	protected async onMessage(message: string): Promise<void> {
-		const tracks = await this.requestTracks(message, "query", 0, 1);
+		const tracks = await this.requestTracks(message, "search", 0, 1);
 
 		if (tracks[0]) {
 			await this.upload(tracks[0], message).catch(e =>
@@ -86,9 +90,13 @@ export default class Telegram extends TelegramBase {
 		const ctx = this.messages[chat]?.[message];
 		if (!ctx) return;
 
-		const update = async (): Promise<boolean> => {
-			const list = await this.createList(ctx);
-			const buttons = [this.createButtons(ctx.query), ...list];
+		const update = async (
+			list?: Record<string, any>[]
+		): Promise<boolean> => {
+			list ||= await this.createList(ctx);
+			if (!list.length && ctx.type) return false;
+
+			const buttons = [this.createButtons(!!ctx.search), ...list];
 
 			Telegram.call("editMessageReplyMarkup", {
 				chat_id: chat,
@@ -99,10 +107,44 @@ export default class Telegram extends TelegramBase {
 		};
 
 		switch (data.type) {
+			case "artists": {
+				if (!ctx.artists || !ctx.artists.length) return;
+				if (ctx.artists.length > 1) {
+					await update(
+						ctx.artists.map(x => [
+							{
+								text: x,
+								callback_data: JSON.stringify({
+									type: "artist",
+									arg: x
+								})
+							}
+						])
+					);
+				} else {
+					ctx.page = 0;
+					ctx.query = ctx.artists[0];
+					ctx.type = "artist";
+					await update();
+				}
+				break;
+			}
+
 			case "more": {
 				if (!ctx.query) return;
 				ctx.page = 0;
-				ctx.type = "query";
+				ctx.query = ctx.search;
+				ctx.type = "search";
+				await update();
+				break;
+			}
+
+			case "artist": {
+				const source = data.arg;
+				if (source == null) return;
+				ctx.page = 0;
+				ctx.query = source;
+				ctx.type = "artist";
 				await update();
 				break;
 			}
@@ -134,7 +176,7 @@ export default class Telegram extends TelegramBase {
 
 				const abort = new AbortController();
 				const task = await this.startTask(TaskType.Searching, abort);
-				const track = await first(this.want("query", source));
+				const track = await first(this.want("query", source, "source"));
 				if (abort.signal.aborted) return;
 
 				this.endTask(task);
@@ -227,7 +269,7 @@ export default class Telegram extends TelegramBase {
 	): Promise<void> {
 		const abort = new AbortController();
 		const task = await this.startTask(TaskType.Searching, abort, id);
-		const track = await first(this.want("query", text));
+		const track = await first(this.want("query", text, "search"));
 		if (abort.signal.aborted) return;
 
 		this.endTask(task);
@@ -277,7 +319,7 @@ export default class Telegram extends TelegramBase {
 
 	private async requestTracks(
 		query: string,
-		from: TrackSource = "query",
+		from: TrackSource = "search",
 		offset = 0,
 		count = 10
 	): Promise<IPreview[]> {
@@ -286,7 +328,7 @@ export default class Telegram extends TelegramBase {
 			const cached = this.cache[from]?.[query];
 			const source = cached || {
 				history: [],
-				iterator: this.want(from, query)
+				iterator: this.want("query", query, from)
 			};
 			if (!cached) {
 				this.cache[from] ??= {};
@@ -383,13 +425,13 @@ export default class Telegram extends TelegramBase {
 		return list;
 	}
 
-	private createButtons(query?: string): Record<string, any>[] {
+	private createButtons(moreButton: boolean = false): Record<string, any>[] {
 		const options = {
-			"👤": "artist",
+			"👤": "artists",
 			"📻": "similar",
 			"💿": "album"
 		} as Record<string, string>;
-		if (query) options["🔎"] = "more";
+		if (moreButton) options["🔎"] = "more";
 
 		return Object.entries(options).map(x => ({
 			text: x[0],
@@ -478,7 +520,7 @@ export default class Telegram extends TelegramBase {
 			if (abort.signal.aborted) return;
 			const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
 
-			const buttons = query !== null ? this.createButtons(query) : null;
+			const buttons = query !== null ? this.createButtons(!!query) : null;
 
 			let message;
 			if (tg) {
@@ -522,7 +564,7 @@ export default class Telegram extends TelegramBase {
 				artists: track.artists,
 				album: track.album
 			};
-			if (query) this.messages[chat][id].query = query;
+			if (query) this.messages[chat][id].search = query;
 
 			const file = message.audio?.file_id || message.document?.file_id;
 			if (file) track.sources.push(`tg://${file}`);
@@ -537,15 +579,21 @@ export default class Telegram extends TelegramBase {
 	}
 }
 
-type TrackSource = "query";
-
 interface IMessage {
+	/**Paging type */
 	type?: TrackSource;
+	/**Paging request */
 	query?: string;
+	/**Paging state */
 	page?: number;
 
+	/**Initial search request */
+	search?: string;
+	/**Track artists */
 	artists: string[];
+	/**Track title */
 	title: string;
+	/**Track album */
 	album: string;
 }
 

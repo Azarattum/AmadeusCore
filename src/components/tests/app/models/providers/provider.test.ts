@@ -17,6 +17,10 @@ class TestProvider extends Provider<any> {
 		yield 42;
 	}
 
+	protected async *album(query: string): AsyncGenerator<any> {
+		yield 1337;
+	}
+
 	protected async *identify(source: string): AsyncGenerator<any> {
 		yield await this.call("*");
 	}
@@ -77,5 +81,10 @@ describe("Provider", () => {
 	it("artist", async () => {
 		const result = provider.get("", "artist");
 		expect((await result.next()).value).toBe(42);
+	});
+
+	it("album", async () => {
+		const result = provider.get("", "album");
+		expect((await result.next()).value).toBe(1337);
 	});
 });
