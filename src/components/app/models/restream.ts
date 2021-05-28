@@ -1,6 +1,7 @@
 import Ffmpeg from "fluent-ffmpeg";
 import { PassThrough, Readable, Transform, TransformCallback } from "stream";
 import { promisify } from "util";
+import { wrn } from "../../common/utils.class";
 import { ITrack } from "./track.interface";
 
 export default class Restream {
@@ -23,7 +24,9 @@ export default class Restream {
 			: (Ffmpeg(this.cover.stream)
 					.addOption(["-vf", "crop=ih:ih"])
 					.format("mjpeg")
-					.on("error", () => {})
+					.on("error", e => {
+						wrn(`FFMpeg failed on image convertion!\n${e}`);
+					})
 					.pipe(undefined, { end: true }) as PassThrough);
 
 		const buffers: Buffer[] = [];
@@ -41,7 +44,9 @@ export default class Restream {
 		//Covert to mp3
 		this.audio.stream = Ffmpeg(this.audio.stream)
 			.format("mp3")
-			.on("error", () => {})
+			.on("error", e => {
+				wrn(`FFMpeg failed on audio convertion!\n${e}`);
+			})
 			.pipe() as Readable;
 
 		return this.useID3();
