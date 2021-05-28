@@ -131,7 +131,7 @@ export default class Telegram extends TelegramBase {
 			}
 
 			case "more": {
-				if (!ctx.query) return;
+				if (!ctx.search) return;
 				ctx.page = 0;
 				ctx.query = ctx.search;
 				ctx.type = "search";
@@ -145,6 +145,18 @@ export default class Telegram extends TelegramBase {
 				ctx.page = 0;
 				ctx.query = source;
 				ctx.type = "artist";
+				await update();
+				break;
+			}
+
+			case "album": {
+				if (!ctx.album) return;
+				ctx.page = 0;
+				ctx.query = [ctx.artists.join(", "), ctx.album]
+					.filter(x => x)
+					.join(" - ");
+
+				ctx.type = "album";
 				await update();
 				break;
 			}
@@ -376,7 +388,7 @@ export default class Telegram extends TelegramBase {
 		const tracks = await this.requestTracks(
 			ctx.query,
 			ctx.type,
-			ctx.page * PER_PAGE + 1,
+			ctx.page * PER_PAGE + (ctx.type == "search" ? 1 : 0),
 			PER_PAGE
 		);
 
