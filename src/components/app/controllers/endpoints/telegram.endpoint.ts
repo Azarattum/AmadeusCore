@@ -303,6 +303,12 @@ export default class Telegram extends TelegramBase {
 				this.clear();
 				break;
 			}
+			case "cancel": {
+				this.tasks.forEach(
+					(x, i) => x.playlist === this.client && this.endTask(i)
+				);
+				break;
+			}
 		}
 	}
 
