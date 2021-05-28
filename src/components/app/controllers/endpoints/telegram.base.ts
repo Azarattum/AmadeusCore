@@ -246,7 +246,11 @@ export default abstract class TelegramBase extends Endpoint {
 					chat_id: id,
 					message_id: post.message_id
 				});
+				const { description } = await this.call("getChat", {
+					chat_id: id
+				});
 
+				await client.onChat(id, title, description);
 				await client.onTagged(title);
 			} else if (audio) {
 				const file = post.audio?.file_id || post.document?.file_id;
