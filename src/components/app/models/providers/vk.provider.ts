@@ -140,7 +140,30 @@ export default class VKProvider extends Provider<ITrackVK> {
 	}
 
 	protected async *album(query: string): AsyncGenerator<ITrackVK> {
-		///IMPLEMENT!
+		//Search for the album
+		const artists = await this.call("audio.searchAlbums", {
+			q: query,
+			count: 1
+		});
+		const album = assertType<IPlaylistVK>(artists).response.items[0];
+		if (!album) return;
+		const { id, owner_id } = album;
+
+		//Fetch tracks
+		let tracks;
+		let offset = 0;
+		do {
+			const audios = await this.call("audio.get", {
+				owner_id,
+				album_id: id,
+				count: 100,
+				offset: offset
+			});
+
+			tracks = assertType<IResponseVK>(audios).response.items;
+			for await (const track of tracks) yield track;
+			offset += 100;
+		} while (tracks.length);
 	}
 
 	protected convert(track: ITrackVK): IPreview {
@@ -176,6 +199,12 @@ export default class VKProvider extends Provider<ITrackVK> {
 
 interface IArtistVK {
 	response: { items: [{ id: string }] | [] };
+}
+
+interface IPlaylistVK {
+	response: {
+		items: [{ id: number; owner_id: number }] | [];
+	};
 }
 
 interface IUserVK {
