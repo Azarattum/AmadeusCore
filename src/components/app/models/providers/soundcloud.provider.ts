@@ -27,7 +27,7 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 		}
 
 		//From url
-		const match = source.match(/(https?:\/\/)?soundcloud\.com\/.+/i);
+		const match = source.match(/(https?:\/\/)?(m\.)?soundcloud\.com\/.+/i);
 		if (!match) return;
 		source = source.replace(/\/$/, "");
 
