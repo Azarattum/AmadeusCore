@@ -25,7 +25,10 @@ export default class Restream {
 					.addOption(["-vf", "crop=ih:ih"])
 					.format("mjpeg")
 					.on("error", e => {
-						wrn(`FFMpeg failed on image convertion!\n${e}`);
+						e = e.toString().trim();
+						if (e != "Error: Output stream closed") {
+							wrn(`FFMpeg failed on image convertion!\n${e}`);
+						}
 					})
 					.pipe(undefined, { end: true }) as PassThrough);
 
@@ -45,7 +48,10 @@ export default class Restream {
 		this.audio.stream = Ffmpeg(this.audio.stream)
 			.format("mp3")
 			.on("error", e => {
-				wrn(`FFMpeg failed on audio convertion!\n${e}`);
+				e = e.toString().trim();
+				if (e != "Error: Output stream closed") {
+					wrn(`FFMpeg failed on audio convertion!\n${e}`);
+				}
 			})
 			.pipe() as Readable;
 
