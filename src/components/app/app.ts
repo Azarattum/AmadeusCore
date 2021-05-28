@@ -14,6 +14,7 @@ import YouTubeProvider from "./models/providers/youtube.provider";
 import LastFMRecommender from "./models/recommenders/lastfm.recommender";
 import { clonable, generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
+import { ITrackInfo } from "./models/recommenders/recommender.abstract";
 
 /**
  * Application class
@@ -59,6 +60,15 @@ export default class App extends Application {
 		endpoint.wants("query", (query: string, from: TrackSource) => {
 			log(`${name} queried ${from} "${query}" from ${endpoint.name}.`);
 			return aggregator.get(query, from);
+		});
+
+		endpoint.wants("similar", (track: ITrackInfo) => {
+			const title = [track.artists.join(", "), track.title]
+				.filter(x => x)
+				.join(" - ");
+
+			log(`${name} queried similar to "${title}" from ${endpoint.name}.`);
+			return aggregator.recommend([track]);
 		});
 
 		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {

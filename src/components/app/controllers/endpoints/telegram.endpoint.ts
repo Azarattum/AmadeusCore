@@ -8,6 +8,7 @@ import { err, generateID, shuffle } from "../../../common/utils.class";
 import AbortController from "abort-controller";
 import { Readable } from "stream";
 import { TrackSource } from "../../models/providers/provider.abstract";
+import { ITrackInfo } from "../../models/recommenders/recommender.abstract";
 
 const UNTRACKED_TAG = "#untracked";
 const DISCOVER_TAG = "#discover";
@@ -35,7 +36,8 @@ export default class Telegram extends TelegramBase {
 			search: {},
 			artist: {},
 			album: {},
-			source: {}
+			source: {},
+			similar: {}
 		};
 	}
 
@@ -161,6 +163,15 @@ export default class Telegram extends TelegramBase {
 				break;
 			}
 
+			case "similar": {
+				if (!ctx.album) return;
+				ctx.page = 0;
+				ctx.query = "similar";
+				ctx.type = "similar";
+				await update();
+				break;
+			}
+
 			case "close": {
 				ctx.type = undefined;
 				ctx.page = undefined;
@@ -201,12 +212,7 @@ export default class Telegram extends TelegramBase {
 
 			case "page": {
 				if (!ctx.query || !ctx.type || ctx.page == null) return;
-				const tracks = await this.requestTracks(
-					ctx.query,
-					ctx.type,
-					ctx.page * PER_PAGE + 1,
-					PER_PAGE
-				);
+				const tracks = await this.requestFromContext(ctx);
 
 				tracks.forEach(x =>
 					this.upload(x, "").catch(e =>
@@ -219,12 +225,7 @@ export default class Telegram extends TelegramBase {
 
 			case "shuffle": {
 				if (!ctx.query || !ctx.type || ctx.page == null) return;
-				let tracks = await this.requestTracks(
-					ctx.query,
-					ctx.type,
-					0,
-					200
-				);
+				let tracks = await this.requestFromContext(ctx, 200);
 				tracks = shuffle(tracks).slice(0, 10);
 
 				tracks.forEach(x =>
@@ -244,12 +245,10 @@ export default class Telegram extends TelegramBase {
 				let page = 0;
 
 				while (!abort.signal.aborted) {
-					const tracks = await this.requestTracks(
-						ctx.query,
-						ctx.type,
-						PER_PAGE * page + 1,
-						PER_PAGE
-					);
+					const tracks = await this.requestFromContext({
+						...ctx,
+						page
+					});
 					if (!tracks.length) break;
 					if (abort.signal.aborted) break;
 
@@ -330,21 +329,34 @@ export default class Telegram extends TelegramBase {
 	}
 
 	private async requestTracks(
-		query: string,
-		from: TrackSource = "search",
+		query: string | ITrackInfo,
+		from: ExtendedSource = "search",
 		offset = 0,
 		count = 10
 	): Promise<IPreview[]> {
+		if (from === "similar" && typeof query === "string") return [];
+
 		let task;
 		try {
-			const cached = this.cache[from]?.[query];
+			const hash =
+				typeof query == "string"
+					? query
+					: [query.artists.join(", "), query.title]
+							.filter(x => x)
+							.join(" - ");
+
+			const cached = this.cache[from]?.[hash];
 			const source = cached || {
 				history: [],
-				iterator: this.want("query", query, from)
+				iterator:
+					typeof query == "string" && from != "similar"
+						? this.want("query", query, from)
+						: this.want("similar", query as ITrackInfo)
 			};
+
 			if (!cached) {
 				this.cache[from] ??= {};
-				this.cache[from][query] = source;
+				this.cache[from][hash] = source;
 				//Cache control
 				const keys = Object.keys(this.cache[from]);
 				if (keys.length > CACHE_LIMIT) {
@@ -380,17 +392,28 @@ export default class Telegram extends TelegramBase {
 		}
 	}
 
+	private async requestFromContext(
+		ctx: IMessage,
+		max?: number
+	): Promise<IPreview[]> {
+		if (ctx.query == null || ctx.type == null || ctx.page == null) {
+			return [];
+		}
+
+		return await this.requestTracks(
+			ctx.type == "similar" ? ctx : ctx.query,
+			ctx.type,
+			max ? 0 : ctx.page * PER_PAGE + (ctx.type == "search" ? 1 : 0),
+			max || PER_PAGE
+		);
+	}
+
 	private async createList(ctx: IMessage): Promise<Record<string, any>[]> {
 		if (ctx.query == null || ctx.type == null || ctx.page == null) {
 			return [];
 		}
 
-		const tracks = await this.requestTracks(
-			ctx.query,
-			ctx.type,
-			ctx.page * PER_PAGE + (ctx.type == "search" ? 1 : 0),
-			PER_PAGE
-		);
+		const tracks = await this.requestFromContext(ctx);
 
 		const list = tracks.map((x, i) => [
 			{
@@ -591,9 +614,11 @@ export default class Telegram extends TelegramBase {
 	}
 }
 
+type ExtendedSource = TrackSource | "similar";
+
 interface IMessage {
 	/**Paging type */
-	type?: TrackSource;
+	type?: ExtendedSource;
 	/**Paging request */
 	query?: string;
 	/**Paging state */
@@ -623,6 +648,6 @@ enum TaskType {
 }
 
 type TrackCache = Record<
-	TrackSource,
+	ExtendedSource,
 	Record<string, { history: IPreview[]; iterator: Tracks }>
 >;
