@@ -72,11 +72,11 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 	}
 
 	protected async *artist(query: string): AsyncGenerator<ITrackYouTube> {
-		///IMPLEMENT!
+		//Not aplicable
 	}
 
 	protected async *album(query: string): AsyncGenerator<ITrackYouTube> {
-		///IMPLEMENT!
+		//Not aplicable
 	}
 
 	protected convert(track: ITrackYouTube): IPreview {

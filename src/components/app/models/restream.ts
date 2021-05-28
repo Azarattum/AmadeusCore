@@ -40,7 +40,6 @@ export default class Restream {
 
 		//Covert to mp3
 		this.audio.stream = Ffmpeg(this.audio.stream)
-			.noVideo()
 			.format("mp3")
 			.on("error", () => {})
 			.pipe() as Readable;

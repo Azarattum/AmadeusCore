@@ -82,11 +82,11 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 	}
 
 	protected async *artist(query: string): AsyncGenerator<ITrackSoundCloud> {
-		///IMPLEMENT!
+		//Not aplicable
 	}
 
 	protected async *album(query: string): AsyncGenerator<ITrackSoundCloud> {
-		///IMPLEMENT!
+		//Not aplicable
 	}
 
 	protected convert(track: ITrackSoundCloud): IPreview | null {

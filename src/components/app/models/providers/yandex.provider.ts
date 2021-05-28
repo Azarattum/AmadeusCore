@@ -94,7 +94,7 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		if (query.match(/[^0-9]/)) {
 			const artists = await this.call("search", {
 				type: "artist",
-				text: query,
+				text: `"${query}"`,
 				nococrrect: true,
 				"page-size": 1,
 				page: 0
@@ -123,7 +123,7 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 		if (query.match(/[^0-9]/)) {
 			const artists = await this.call("search", {
 				type: "album",
-				text: query,
+				text: `"${query}"`,
 				nococrrect: true,
 				"page-size": 1,
 				page: 0
