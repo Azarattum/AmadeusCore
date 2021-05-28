@@ -104,7 +104,33 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 	}
 
 	protected async *artist(query: string): AsyncGenerator<ITrackYandex> {
-		///IMPLEMENT!
+		//Search for the artist
+		if (query.match(/[^0-9]/)) {
+			const artists = await this.call("search", {
+				type: "artist",
+				text: query,
+				nococrrect: true,
+				"page-size": 1,
+				page: 0
+			});
+			const id = assertType<IArtistResponseYandex>(artists).result.artists
+				?.results[0]?.id;
+			if (!id) return;
+			query = id.toString();
+		}
+
+		//Fetch tracks
+		let tracks;
+		let page = 0;
+		do {
+			const audios = await this.call(`artists/${query}/tracks`, {
+				"page-size": 100,
+				page: page++
+			});
+			tracks = assertType<IArtistTracksYandex>(audios).result.tracks;
+			if (!tracks) return;
+			for await (const track of tracks) yield track;
+		} while (tracks);
 	}
 
 	protected async *album(query: string): AsyncGenerator<ITrackYandex> {
@@ -214,4 +240,8 @@ interface IAlbumYandex {
 
 interface IArtistYandex {
 	name: string;
+}
+
+interface IArtistResponseYandex {
+	result: { artists: { results: [{ id: number }] | [] } };
 }

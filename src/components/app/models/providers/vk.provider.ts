@@ -113,7 +113,7 @@ export default class VKProvider extends Provider<ITrackVK> {
 	}
 
 	protected async *artist(query: string): AsyncGenerator<ITrackVK> {
-		//Search for an artist
+		//Search for the artist
 		if (query.match(/[^a-z0-9_]/)) {
 			const artists = await this.call("audio.searchArtists", {
 				q: query,
