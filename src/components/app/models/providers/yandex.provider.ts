@@ -41,12 +41,8 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 			/(https?:\/\/)?music\.yandex\.ru\/album\/([0-9]+)/i
 		);
 		if (match) {
-			const audios = await this.call(`albums/${match[2]}/with-tracks`);
-			const tracks = assertType<IAlbumTracksYandex>(
-				audios
-			).result.volumes.flat();
-			for (const track of tracks) yield track;
-
+			const tracks = this.album(match[2]);
+			for await (const track of tracks) yield track;
 			return;
 		}
 
@@ -55,18 +51,8 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 			/(https?:\/\/)?music\.yandex\.ru\/artist\/([0-9]+)/i
 		);
 		if (match) {
-			let tracks;
-			let page = 0;
-			do {
-				const audios = await this.call(`artists/${match[2]}/tracks`, {
-					"page-size": 100,
-					page: page++
-				});
-				tracks = assertType<IArtistTracksYandex>(audios).result.tracks;
-				if (!tracks) return;
-				for await (const track of tracks) yield track;
-			} while (tracks);
-
+			const tracks = this.artist(match[2]);
+			for await (const track of tracks) yield track;
 			return;
 		}
 
@@ -134,7 +120,25 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 	}
 
 	protected async *album(query: string): AsyncGenerator<ITrackYandex> {
-		///IMPLEMENT!
+		if (query.match(/[^0-9]/)) {
+			const artists = await this.call("search", {
+				type: "album",
+				text: query,
+				nococrrect: true,
+				"page-size": 1,
+				page: 0
+			});
+			const id = assertType<IAlbumResponseYandex>(artists).result.albums
+				?.results[0]?.id;
+			if (!id) return;
+			query = id.toString();
+		}
+
+		const audios = await this.call(`albums/${query}/with-tracks`);
+		const tracks = assertType<IAlbumTracksYandex>(
+			audios
+		).result.volumes.flat();
+		for (const track of tracks) yield track;
 	}
 
 	protected convert(track: ITrackYandex): IPreview {
@@ -243,5 +247,9 @@ interface IArtistYandex {
 }
 
 interface IArtistResponseYandex {
-	result: { artists: { results: [{ id: number }] | [] } };
+	result: { artists?: { results: [{ id: number }] | [] } };
+}
+
+interface IAlbumResponseYandex {
+	result: { albums?: { results: [{ id: number }] | [] } };
 }
