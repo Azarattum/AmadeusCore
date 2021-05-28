@@ -26,6 +26,7 @@ export function stringify(track: IPreview, reverse = false): string {
 	const title = track.title.toLowerCase().trim();
 	const artists = track.artists.sort().join().toLowerCase().trim();
 
+	if (!artists) return purify(title);
 	if (reverse) return purify(`${title} - ${artists}`);
 	return purify(`${artists} - ${title}`);
 }
