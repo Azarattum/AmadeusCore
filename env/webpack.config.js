@@ -18,7 +18,8 @@ module.exports = {
 						"package.json",
 						"package-lock.json",
 						".env",
-						{ from: "prisma/schema.prisma", to: "prisma" },
+						{ from: "prisma/tenant.prisma", to: "prisma" },
+						{ from: "prisma/cache.prisma", to: "prisma" },
 						{ from: "data/dummy.db", to: "data" },
 						{ from: "data/tenants.json", to: "data" }
 					]

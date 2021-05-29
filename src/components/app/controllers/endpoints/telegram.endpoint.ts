@@ -599,16 +599,17 @@ export default class Telegram extends TelegramBase {
 			}
 
 			const id = message.message_id;
+			const file = message.audio?.file_id || message.document?.file_id;
+			if (!file) return;
 			this.messages[chat] ??= {};
 			this.messages[chat][id] = {
 				title: track.title,
 				artists: track.artists,
-				album: track.album
+				album: track.album,
+				file
 			};
 			if (query) this.messages[chat][id].search = query;
-
-			const file = message.audio?.file_id || message.document?.file_id;
-			if (file) track.sources.push(`tg://${file}`);
+			track.sources.push(`tg://${file}`);
 		} catch (e) {
 			if (!e.toString().includes('"type":"aborted"')) {
 				throw e;
@@ -638,6 +639,8 @@ interface IMessage {
 	title: string;
 	/**Track album */
 	album: string;
+	/**Telegram audio file id */
+	file: string;
 }
 
 interface ITask {

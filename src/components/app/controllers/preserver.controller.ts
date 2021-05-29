@@ -1,4 +1,4 @@
-import { Playlist, PrismaClient, Track } from "@prisma/client";
+import { Playlist, PrismaClient, Track } from "prisma/client/tenant";
 import { copyFileSync } from "fs";
 import { existsSync } from "fs";
 import { IComponentOptions } from "../../common/component.interface";

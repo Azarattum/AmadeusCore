@@ -7,7 +7,7 @@
 		"watch": "webpack-cli -w --config env/webpack.config.js",
 		"test": "jest --config env/jest.config.js",
 		"coverage": "jest --coverage --config env/jest.config.js",
-		"postinstall": "prisma generate"
+		"postinstall": "prisma generate --schema prisma/tenant.prisma && prisma generate --schema prisma/cache.prisma"
 	},
 	"dependencies": {
 		"@prisma/client": "^2.23.0",
