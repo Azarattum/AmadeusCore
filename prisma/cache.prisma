@@ -7,3 +7,27 @@ generator client {
   provider = "prisma-client-js"
   output   = "../node_modules/prisma/client/cache"
 }
+
+model Message {
+  chat Int
+  id   Int
+
+  type  String?
+  query String?
+  page  Int?
+
+  search  String?
+  artists String //JSON Array
+  title   String
+  album   String
+
+  @@unique([chat, id])
+  @@index([chat, id])
+}
+
+model File {
+  hash String @id
+  file String
+
+  @@index([hash])
+}

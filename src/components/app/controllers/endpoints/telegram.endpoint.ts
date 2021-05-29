@@ -7,8 +7,8 @@ import { first } from "../../models/generator";
 import { err, generateID, shuffle } from "../../../common/utils.class";
 import AbortController from "abort-controller";
 import { Readable } from "stream";
-import { TrackSource } from "../../models/providers/provider.abstract";
 import { ITrackInfo } from "../../models/recommenders/recommender.abstract";
+import Cache, { ExtendedSource, IMessage } from "../../models/cache";
 
 const UNTRACKED_TAG = "#untracked";
 const DISCOVER_TAG = "#discover";
@@ -24,7 +24,6 @@ const LIMITS = {
 export default class Telegram extends TelegramBase {
 	protected client: number;
 	private loader?: NodeJS.Timeout;
-	private messages: Record<number, Record<number, IMessage>> = {};
 	private cache: TrackCache;
 	private issued: Set<string> = new Set();
 	private tasks: Map<string, ITask> = new Map();
@@ -53,14 +52,16 @@ export default class Telegram extends TelegramBase {
 
 	public async clear(playlist?: Playlist): Promise<void> {
 		const id = playlist?.telegram || this.client;
-		const messages = this.messages[id] || [];
+		const messages = await Cache.popMessages(id);
 
 		this.tasks.forEach((x, i) => x.playlist === id && this.endTask(i));
 		const promises = Object.keys(messages).map(x =>
-			Telegram.call("deleteMessage", { chat_id: id, message_id: +x })
+			Telegram.call("deleteMessage", {
+				chat_id: id,
+				message_id: +x
+			}).catch(() => {})
 		);
 
-		this.messages[id] = [];
 		await Promise.all(promises);
 	}
 
@@ -89,13 +90,15 @@ export default class Telegram extends TelegramBase {
 		message: number,
 		chat: number
 	): Promise<void> {
-		const ctx = this.messages[chat]?.[message];
+		const ctx = await Cache.getMessage(chat, message);
 		if (!ctx) return;
 
 		const update = async (
 			list?: Record<string, any>[]
 		): Promise<boolean> => {
 			list ||= await this.createList(ctx);
+			//Update cached value
+			Cache.addMessage(chat, message, ctx);
 			if (!list.length && ctx.type) return false;
 
 			const buttons = [this.createButtons(!!ctx.search), ...list];
@@ -175,6 +178,7 @@ export default class Telegram extends TelegramBase {
 			case "close": {
 				ctx.type = undefined;
 				ctx.page = undefined;
+				ctx.query = undefined;
 				await update();
 				break;
 			}
@@ -182,7 +186,10 @@ export default class Telegram extends TelegramBase {
 			case "next": {
 				if (ctx.page == null) return;
 				ctx.page++;
-				if (!(await update())) ctx.page--;
+				if (!(await update())) {
+					ctx.page--;
+					Cache.addMessage(chat, message, ctx);
+				}
 				break;
 			}
 
@@ -559,7 +566,8 @@ export default class Telegram extends TelegramBase {
 		try {
 			const track = await preview.track();
 			if (abort.signal.aborted) return;
-			const tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
+			let tg = track.sources.find(x => x.startsWith("tg://"))?.slice(5);
+			tg ||= await Cache.getFile(preview);
 
 			const buttons = query !== null ? this.createButtons(!!query) : null;
 
@@ -600,15 +608,15 @@ export default class Telegram extends TelegramBase {
 
 			const id = message.message_id;
 			const file = message.audio?.file_id || message.document?.file_id;
-			if (!file) return;
-			this.messages[chat] ??= {};
-			this.messages[chat][id] = {
+
+			Cache.addMessage(chat, id, {
 				title: track.title,
 				artists: track.artists,
 				album: track.album,
-				file
-			};
-			if (query) this.messages[chat][id].search = query;
+				search: query || undefined
+			});
+			if (!file) return;
+			Cache.addFile(preview, file);
 			track.sources.push(`tg://${file}`);
 		} catch (e) {
 			if (!e.toString().includes('"type":"aborted"')) {
@@ -619,28 +627,6 @@ export default class Telegram extends TelegramBase {
 			this.endTask(task);
 		}
 	}
-}
-
-type ExtendedSource = TrackSource | "similar";
-
-interface IMessage {
-	/**Paging type */
-	type?: ExtendedSource;
-	/**Paging request */
-	query?: string;
-	/**Paging state */
-	page?: number;
-
-	/**Initial search request */
-	search?: string;
-	/**Track artists */
-	artists: string[];
-	/**Track title */
-	title: string;
-	/**Track album */
-	album: string;
-	/**Telegram audio file id */
-	file: string;
 }
 
 interface ITask {

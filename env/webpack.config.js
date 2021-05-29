@@ -21,6 +21,7 @@ module.exports = {
 						{ from: "prisma/tenant.prisma", to: "prisma" },
 						{ from: "prisma/cache.prisma", to: "prisma" },
 						{ from: "data/dummy.db", to: "data" },
+						{ from: "data/cache.db", to: "data" },
 						{ from: "data/tenants.json", to: "data" }
 					]
 				})
