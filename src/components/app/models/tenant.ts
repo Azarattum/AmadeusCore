@@ -1,5 +1,6 @@
 import { createHash } from "crypto";
 import { readFileSync } from "fs";
+import { err } from "../../common/utils.class";
 
 export default class Tenant {
 	private static cache: Tenant[] | null;
@@ -17,9 +18,7 @@ export default class Tenant {
 	}
 
 	public authenticate(password: string): boolean {
-		const hash = createHash("sha1")
-			.update(password)
-			.digest("base64");
+		const hash = createHash("sha1").update(password).digest("base64");
 
 		return hash === this.token ? true : false;
 	}
@@ -27,8 +26,18 @@ export default class Tenant {
 	public static get tenants(): Tenant[] {
 		if (this.cache) return this.cache;
 		try {
+			const reserved = ["cache", "dummy"];
+
 			const text = readFileSync("data/tenants.json").toString();
-			const data = JSON.parse(text).map((x: ITenant) => new Tenant(x));
+			const data = (JSON.parse(text) as ITenant[])
+				.map(x => {
+					if (!reserved.includes(x.identifier.toLowerCase())) {
+						return new Tenant(x);
+					}
+					err(`Tenant identifier "${x.identifier}" is not allowed!`);
+				})
+				.filter(x => x) as Tenant[];
+
 			this.cache = data;
 			return data;
 		} catch {
