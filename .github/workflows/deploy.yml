@@ -32,6 +32,7 @@ jobs:
               run: |
                   eval $(ssh-agent -s)
                   ssh-add <(echo "$REMOTE_SSH_KEY")
-                  ssh -o "StrictHostKeyChecking no" "$REMOTE_IP" touch git_test
+                  scp -r -o "StrictHostKeyChecking no" dist/* "$REMOTE_IP":~/amadeus
+                  ssh -o "StrictHostKeyChecking no" "$REMOTE_IP" "(cd amadeus && npm i --only=prod)"
                   ssh-agent -k
                   ls
