@@ -32,6 +32,6 @@ jobs:
               run: |
                   eval $(ssh-agent -s)
                   ssh-add <(echo "$REMOTE_SSH_KEY")
-                  ssh "$REMOTE_IP" touch git_test
+                  ssh -o "StrictHostKeyChecking no" "$REMOTE_IP" touch git_test
                   ssh-agent -k
                   ls
