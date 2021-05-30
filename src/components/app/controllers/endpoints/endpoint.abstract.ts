@@ -1,4 +1,4 @@
-import { Playlist } from "@prisma/client";
+import { Playlist } from "prisma/client/tenant";
 import { IComponentOptions } from "../../../common/component.interface";
 import Controller from "../../../common/controller.abstract";
 import { TrackSource } from "../../models/providers/provider.abstract";

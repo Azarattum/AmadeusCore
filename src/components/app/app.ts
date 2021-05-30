@@ -3,7 +3,7 @@ import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
 import { IPreview } from "./models/track.interface";
 import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
-import { Playlist } from "@prisma/client";
+import { Playlist } from "prisma/client/tenant";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
 import Endpoint from "./controllers/endpoints/endpoint.abstract";
 import Scheduler from "./controllers/scheduler.controller";
