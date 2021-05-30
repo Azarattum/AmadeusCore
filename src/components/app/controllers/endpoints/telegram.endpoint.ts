@@ -1,4 +1,4 @@
-import { Playlist } from ".prisma/client";
+import { Playlist } from "prisma/client/tenant";
 import { IComponentOptions } from "../../../common/component.interface";
 import Restream from "../../models/restream";
 import { IPreview, stringify, Tracks } from "../../models/track.interface";
