@@ -26,6 +26,9 @@ jobs:
               run: npm run-script release
 
             - name: Deploy
+              env:
+                  REMOTE_SSH_KEY: ${{ secrets.REMOTE_SSH_KEY }}
+                  REMOTE_IP: ${{ secrets.REMOTE_IP }}
               run: |
                   eval $(ssh-agent -s)
                   ssh-add <(echo "$REMOTE_SSH_KEY")
