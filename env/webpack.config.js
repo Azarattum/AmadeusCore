@@ -17,12 +17,12 @@ module.exports = {
 					patterns: [
 						"package.json",
 						"package-lock.json",
-						".env",
+						"example.env",
 						{ from: "prisma/tenant.prisma", to: "prisma" },
 						{ from: "prisma/cache.prisma", to: "prisma" },
-						{ from: "data/dummy.db", to: "data" },
-						{ from: "data/cache.db", to: "data" },
-						{ from: "data/tenants.json", to: "data" }
+						{ from: "data/tenant.dummy", to: "data" },
+						{ from: "data/cache.dummy", to: "data" },
+						{ from: "data/tenants.example.json", to: "data" }
 					]
 				})
 		  ]

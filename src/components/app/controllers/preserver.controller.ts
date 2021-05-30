@@ -29,7 +29,7 @@ export default class Preserver extends Controller<
 
 		const db = `data/${this.tenant.identifier.toLowerCase()}.db`;
 		if (!existsSync(db)) {
-			copyFileSync("data/dummy.db", db);
+			copyFileSync("data/tenant.dummy", db);
 		}
 
 		this.prisma = new PrismaClient({

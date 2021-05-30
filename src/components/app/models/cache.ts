@@ -1,3 +1,4 @@
+import { copyFileSync, existsSync } from "fs";
 import { PrismaClient } from "prisma/client/cache";
 import { TrackSource } from "./providers/provider.abstract";
 import { hash, IPreview } from "./track.interface";
@@ -6,8 +7,19 @@ export default class Cache {
 	private static prisma: PrismaClient;
 
 	public static initialize(): void {
+		const db = "data/cache.db";
+		if (!existsSync(db)) {
+			copyFileSync("data/cache.dummy", db);
+		}
+
 		if (!this.prisma) {
-			this.prisma = new PrismaClient();
+			this.prisma = new PrismaClient({
+				datasources: {
+					db: {
+						url: `file:../${db}`
+					}
+				}
+			});
 		}
 	}
 

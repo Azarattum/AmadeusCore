@@ -1,6 +1,6 @@
 datasource db {
   provider = "sqlite"
-  url      = "file:../data/dummy.db"
+  url      = "file:../data/tenant.dummy"
 }
 
 generator client {

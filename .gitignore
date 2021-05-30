@@ -5,4 +5,4 @@ dist
 prisma/migrations
 data/*
 !data/tenants.example.json
-!data/dummy.db
+!data/*.dummy
