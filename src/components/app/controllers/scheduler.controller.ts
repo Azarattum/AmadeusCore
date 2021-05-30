@@ -41,7 +41,7 @@ export default class Scheduler extends Controller<
 		const now = Date.now();
 
 		let target = now - (now % day) + (this.hour + offset) * hour;
-		if (target <= now) target += day;
+		while (target <= now) target += day;
 
 		this.timeout = setTimeout(this.trigger.bind(this), target - now);
 	}

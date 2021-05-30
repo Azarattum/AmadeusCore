@@ -67,12 +67,23 @@ export default class Telegram extends TelegramBase {
 
 	public async add(tracks: Tracks, playlist: Playlist): Promise<void> {
 		if (!playlist.telegram) return;
+
+		const abort = new AbortController();
+		const task = await this.startTask(
+			TaskType.Queueing,
+			abort,
+			playlist.telegram
+		);
+
 		for await (const track of tracks) {
 			if (this.issued.delete(stringify(track))) continue;
+			if (abort.signal.aborted) break;
 			await this.upload(track, null, playlist.telegram).catch(e =>
 				err(`Failed to add audio!\n${e?.stack || e}`)
 			);
 		}
+
+		this.endTask(task);
 	}
 
 	protected async onMessage(message: string): Promise<void> {
@@ -98,7 +109,7 @@ export default class Telegram extends TelegramBase {
 		): Promise<boolean> => {
 			list ||= await this.createList(ctx);
 			//Update cached value
-			Cache.addMessage(chat, message, ctx);
+			await Cache.addMessage(chat, message, ctx);
 			if (!list.length && ctx.type) return false;
 
 			const buttons = [this.createButtons(!!ctx.search), ...list];
@@ -188,7 +199,7 @@ export default class Telegram extends TelegramBase {
 				ctx.page++;
 				if (!(await update())) {
 					ctx.page--;
-					Cache.addMessage(chat, message, ctx);
+					await Cache.addMessage(chat, message, ctx);
 				}
 				break;
 			}
@@ -275,7 +286,8 @@ export default class Telegram extends TelegramBase {
 		}
 	}
 
-	protected onTagged(channel: string): void {
+	protected onTagged(id: number, channel: string): void {
+		this.tasks.forEach((x, i) => x.playlist === id && this.endTask(i));
 		this.emit("triggered", channel);
 	}
 
@@ -609,14 +621,14 @@ export default class Telegram extends TelegramBase {
 			const id = message.message_id;
 			const file = message.audio?.file_id || message.document?.file_id;
 
-			Cache.addMessage(chat, id, {
+			await Cache.addMessage(chat, id, {
 				title: track.title,
 				artists: track.artists,
 				album: track.album,
 				search: query || undefined
 			});
 			if (!file) return;
-			Cache.addFile(preview, file);
+			await Cache.addFile(preview, file);
 			track.sources.push(`tg://${file}`);
 		} catch (e) {
 			if (!e.toString().includes('"type":"aborted"')) {

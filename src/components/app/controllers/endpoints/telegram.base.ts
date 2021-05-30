@@ -11,7 +11,7 @@ export default abstract class TelegramBase extends Endpoint {
 
 	protected abstract onMessage(message: string): void;
 	protected abstract onCommand(command: string): void;
-	protected abstract onTagged(channel: string): void;
+	protected abstract onTagged(id: number, channel: string): void;
 	protected abstract onPost(
 		text: string,
 		channel: string,
@@ -251,7 +251,7 @@ export default abstract class TelegramBase extends Endpoint {
 				});
 
 				await client.onChat(id, title, description);
-				await client.onTagged(title);
+				await client.onTagged(id, title);
 			} else if (audio) {
 				const file = post.audio?.file_id || post.document?.file_id;
 				await client.onPost(audio, title, id, file);
