@@ -112,7 +112,8 @@ export default class App extends Application {
 			);
 
 			playlists.forEach(async playlist => {
-				endpoints.forEach(x => x.clear(playlist));
+				//Wait until all the playlists are cleared
+				await Promise.all(endpoints.map(x => x.clear(playlist)));
 				//Get a sample of the last 100 user's tracks
 				const sample = await preserver.getTracks(100);
 				//Recommendations are based on this sample
