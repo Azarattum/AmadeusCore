@@ -142,6 +142,60 @@ export default class Cache {
 
 		return file?.file;
 	}
+
+	/**
+	 * Returns last queries from tenant's history
+	 * @param identifier Tenant's identifier
+	 * @param limit Count of history items to return
+	 */
+	public static async getQueries(
+		identifier: string,
+		limit = 5
+	): Promise<string[]> {
+		const items = await this.prisma.history.findMany({
+			select: { query: true },
+			where: { owner: identifier },
+			take: limit,
+			orderBy: { time: "desc" }
+		});
+
+		return items.map(x => x.query);
+	}
+
+	/**
+	 * Saves tenant's query to its search history cache
+	 * @param identifier Tenant's identifier
+	 * @param query Search query to save
+	 */
+	public static async addQuery(
+		identifier: string,
+		query: string
+	): Promise<void> {
+		const item = {
+			time: new Date(),
+			owner: identifier,
+			query
+		};
+
+		//Insert a new item
+		await this.prisma.history.upsert({
+			where: { query },
+			create: item,
+			update: item
+		});
+
+		//Remove items which are more than 10 old for the tenant
+		await this.prisma.$executeRaw`
+			DELETE FROM History
+			WHERE
+				(time <
+					(SELECT time FROM History
+					WHERE owner=${identifier}
+					ORDER BY time DESC LIMIT 9, 1)
+				)
+			AND
+				owner=${identifier};`;
+	}
 }
 Cache.initialize();
 

@@ -31,3 +31,11 @@ model File {
 
   @@index([hash])
 }
+
+model History {
+  time  DateTime @id @default(now())
+  owner String
+  query String   @unique
+
+  @@index([time])
+}

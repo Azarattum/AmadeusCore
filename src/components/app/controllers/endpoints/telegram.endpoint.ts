@@ -23,9 +23,10 @@ const LIMITS = {
 
 export default class Telegram extends TelegramBase {
 	protected client: number;
+	private tempMessages: number[] = [];
 	private loader?: NodeJS.Timeout;
-	private cache: TrackCache;
 	private issued: Set<string> = new Set();
+	private cache: TrackCache;
 	private tasks: Map<string, ITask> = new Map();
 
 	public constructor(args: IComponentOptions) {
@@ -55,6 +56,8 @@ export default class Telegram extends TelegramBase {
 		const messages = await Cache.popMessages(id);
 
 		this.tasks.forEach((x, i) => x.playlist === id && this.endTask(i));
+		await this.clearTemp();
+
 		const promises = Object.keys(messages).map(x =>
 			Telegram.call("deleteMessage", {
 				chat_id: id,
@@ -87,6 +90,11 @@ export default class Telegram extends TelegramBase {
 	}
 
 	protected async onMessage(message: string): Promise<void> {
+		this.clearTemp();
+		Cache.addQuery(this.tenant.identifier, message).catch(x => {
+			err(`Failed to save history entry!\n${x}`);
+		});
+
 		const tracks = await this.requestTracks(message, "search", 0, 1);
 
 		if (tracks[0]) {
@@ -316,7 +324,9 @@ export default class Telegram extends TelegramBase {
 		this.emit("playlisted", track, channel);
 	}
 
-	protected onCommand(command: string): void {
+	protected async onCommand(command: string): Promise<void> {
+		this.clearTemp();
+
 		switch (command) {
 			case "clear": {
 				this.clear();
@@ -327,6 +337,21 @@ export default class Telegram extends TelegramBase {
 					(x, i) => x.playlist === this.client && this.endTask(i)
 				);
 				break;
+			}
+			case "history": {
+				const history = await Cache.getQueries(this.tenant.identifier);
+				const { message_id: id } = await Telegram.call("sendMessage", {
+					disable_notification: true,
+					chat_id: this.client,
+					text: "...",
+					reply_markup: {
+						keyboard: history.map(x => [{ text: x }]),
+						one_time_keyboard: true
+					}
+				});
+
+				if (!Number.isInteger(+id)) return;
+				this.tempMessages.push(+id);
 			}
 		}
 	}
@@ -351,6 +376,20 @@ export default class Telegram extends TelegramBase {
 		}
 
 		this.emit("relisted", title, update);
+	}
+
+	private async clearTemp(): Promise<any> {
+		//Clear temporary messages
+		await Promise.all(
+			this.tempMessages.map(x =>
+				Telegram.call("deleteMessage", {
+					chat_id: this.client,
+					message_id: +x
+				}).catch(() => {})
+			)
+		);
+
+		this.tempMessages = [];
 	}
 
 	private async requestTracks(
