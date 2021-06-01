@@ -46,7 +46,11 @@ export default abstract class Recommender extends Fetcher {
 		return shuffle<any>(results.slice(0, count));
 	}
 
-	protected normalRand(max: number): number {
+	protected normalPick<T>(collection: T[], count = 1): T[] {
+		return Recommender.normalPick(collection, count);
+	}
+
+	public static normalRand(max: number): number {
 		const deviation = max / 2.5;
 		const scalar = 2 / (deviation * Math.sqrt(2 * Math.PI));
 
@@ -65,7 +69,7 @@ export default abstract class Recommender extends Fetcher {
 		return max - 1;
 	}
 
-	protected normalPick<T>(collection: T[], count = 1): T[] {
+	public static normalPick<T>(collection: T[], count = 1): T[] {
 		collection = [...collection];
 		const picked: T[] = [];
 		for (let i = 0; i < count; i++) {

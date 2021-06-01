@@ -119,7 +119,9 @@ export default class App extends Application {
 				//Get a sample of the last 100 user's tracks
 				const sample = await preserver.getTracks(100);
 				//Recommendations are based on this sample
-				const tracks = clonable(aggregator.recommend(sample, batch));
+				const tracks = clonable(
+					aggregator.recommend(sample, batch, playlist.type === 2)
+				);
 
 				//Send new tracks to every endpoint
 				for (const endpoint of endpoints) {
