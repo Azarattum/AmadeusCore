@@ -9,12 +9,14 @@ export default class Tenant {
 	public identifier: string;
 	public telegram: number;
 	public hour: number;
+	public batch: number;
 
 	public constructor(tenant: ITenant) {
 		this.identifier = tenant.identifier;
 		this.telegram = +tenant.telegram;
 		this.token = tenant.token;
 		this.hour = +(tenant?.hour || 6);
+		this.batch = +(tenant?.batch || 100);
 	}
 
 	public authenticate(password: string): boolean {
@@ -74,5 +76,6 @@ interface ITenant {
 	identifier: string;
 	telegram: string;
 	token: string;
+	batch?: string;
 	hour?: string;
 }

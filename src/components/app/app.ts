@@ -113,12 +113,13 @@ export default class App extends Application {
 			);
 
 			playlists.forEach(async playlist => {
+				const batch = scheduler.tenant.batch;
 				//Wait until all the playlists are cleared
 				await Promise.all(endpoints.map(x => x.clear(playlist)));
 				//Get a sample of the last 100 user's tracks
 				const sample = await preserver.getTracks(100);
 				//Recommendations are based on this sample
-				const tracks = clonable(aggregator.recommend(sample));
+				const tracks = clonable(aggregator.recommend(sample, batch));
 
 				//Send new tracks to every endpoint
 				for (const endpoint of endpoints) {
