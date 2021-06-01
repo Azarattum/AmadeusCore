@@ -23,16 +23,14 @@ export default class VKRecommender extends Recommender {
 		source: ITrackInfo,
 		count: number
 	): Promise<IPreview[]> {
+		//Throttle to avoid captcha
+		await sleep(500 * Math.random() + 1000);
 		const audios = this.provider.search(stringify(source));
 		const target = (await audios.next()).value as ITrackVK;
 		if (!target) return [];
 		const id = `${target.owner_id}_${target.id}`;
-		//Throttle to avoid captcha
-		await sleep(1000 * Math.random() + 200);
 
 		const tracks = await this.getSimilarTracks(id, count);
-		//Second throttle
-		await sleep(1000 * Math.random() + 200);
 		return tracks.map(x => this.provider.convert(x));
 	}
 
