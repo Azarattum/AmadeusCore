@@ -1,18 +1,19 @@
 import { shuffle, wrn } from "../../../common/utils.class";
 import Fetcher from "../fetcher.abstract";
+import { IPreview, ITrackInfo } from "../track.interface";
 
 export default abstract class Recommender extends Fetcher {
 	protected abstract assemble(
 		source: ITrackInfo,
 		count: number
-	): Promise<string[]>;
+	): Promise<string[] | IPreview[]>;
 
 	public async recommend(
 		source: ITrackInfo[],
 		count = 100
-	): Promise<string[]> {
+	): Promise<string[] | IPreview[]> {
 		const tracks = this.normalPick(source, source.length);
-		const results: string[] = [];
+		const results: string[] | IPreview[] = [];
 
 		let used = 0;
 		for (const track of tracks) {
@@ -33,7 +34,7 @@ export default abstract class Recommender extends Fetcher {
 
 			try {
 				const similars = await this.assemble(track, sim);
-				results.push(...this.normalPick(similars, pick));
+				results.push(...this.normalPick<any>(similars, pick));
 			} catch (e) {
 				const msg =
 					typeof e === "object" ? JSON.stringify(e) : e.toString();
@@ -45,7 +46,7 @@ export default abstract class Recommender extends Fetcher {
 			if (results.length >= count) break;
 		}
 
-		return shuffle(results.slice(0, count));
+		return shuffle<any>(results.slice(0, count));
 	}
 
 	protected normalRand(max: number): number {
@@ -81,9 +82,4 @@ export default abstract class Recommender extends Fetcher {
 
 		return picked;
 	}
-}
-
-export interface ITrackInfo {
-	title: string;
-	artists: string[];
 }

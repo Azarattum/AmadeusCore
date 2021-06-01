@@ -1,9 +1,7 @@
 import Aggregator from "../../../app/controllers/aggregator.controller";
 import Provider from "../../../app/models/providers/provider.abstract";
-import Recommender, {
-	ITrackInfo
-} from "../../../app/models/recommenders/recommender.abstract";
-import { IPreview } from "../../../app/models/track.interface";
+import Recommender from "../../../app/models/recommenders/recommender.abstract";
+import { IPreview, ITrackInfo } from "../../../app/models/track.interface";
 
 class TestProvider extends Provider {
 	protected baseURL: string = "";

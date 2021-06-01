@@ -1,13 +1,17 @@
 import { Playlist } from "prisma/client/tenant";
 import { IComponentOptions } from "../../../common/component.interface";
 import Restream from "../../models/restream";
-import { IPreview, stringify, Tracks } from "../../models/track.interface";
+import {
+	IPreview,
+	ITrackInfo,
+	stringify,
+	Tracks
+} from "../../models/track.interface";
 import TelegramBase, { ICallbackData } from "./telegram.base";
 import { first } from "../../models/generator";
 import { err, generateID, shuffle } from "../../../common/utils.class";
 import AbortController from "abort-controller";
 import { Readable } from "stream";
-import { ITrackInfo } from "../../models/recommenders/recommender.abstract";
 import Cache, { ExtendedSource, IMessage } from "../../models/cache";
 
 const UNTRACKED_TAG = "#untracked";

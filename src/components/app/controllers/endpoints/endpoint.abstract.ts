@@ -2,9 +2,8 @@ import { Playlist } from "prisma/client/tenant";
 import { IComponentOptions } from "../../../common/component.interface";
 import Controller from "../../../common/controller.abstract";
 import { TrackSource } from "../../models/providers/provider.abstract";
-import { ITrackInfo } from "../../models/recommenders/recommender.abstract";
 import Tenant from "../../models/tenant";
-import { IPreview, Tracks } from "../../models/track.interface";
+import { IPreview, ITrackInfo, Tracks } from "../../models/track.interface";
 import { IPlaylistUpdate } from "../preserver.controller";
 
 export default abstract class Endpoint extends Controller<

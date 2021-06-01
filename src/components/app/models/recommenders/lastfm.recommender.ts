@@ -1,5 +1,6 @@
 import { is } from "typescript-is";
-import Recommender, { ITrackInfo } from "./recommender.abstract";
+import { ITrackInfo } from "../track.interface";
+import Recommender from "./recommender.abstract";
 
 /**
  * Last FM track recommender
@@ -12,7 +13,7 @@ export default class LastFMRecommender extends Recommender {
 		autocorrect: "1"
 	};
 
-	public async assemble(
+	protected async assemble(
 		source: ITrackInfo,
 		count: number
 	): Promise<string[]> {

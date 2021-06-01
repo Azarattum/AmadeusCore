@@ -20,6 +20,11 @@ export interface ITrack {
 	sources: string[];
 }
 
+export interface ITrackInfo {
+	title: string;
+	artists: string[];
+}
+
 export type Tracks = AsyncGenerator<IPreview>;
 
 export function hash(track: IPreview): string {
@@ -28,7 +33,10 @@ export function hash(track: IPreview): string {
 	return buff.toString("base64");
 }
 
-export function stringify(track: IPreview, reverse = false): string {
+export function stringify(
+	track: IPreview | ITrackInfo | ITrack,
+	reverse = false
+): string {
 	const title = track.title.toLowerCase().trim();
 	const artists = track.artists.sort().join().toLowerCase().trim();
 

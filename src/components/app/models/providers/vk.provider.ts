@@ -197,6 +197,17 @@ export default class VKProvider extends Provider<ITrackVK> {
 	}
 }
 
+export interface ITrackVK {
+	artist: string;
+	id: number;
+	owner_id: number;
+	title: string;
+	duration: number;
+	url: string;
+	date: number;
+	album?: IAlbumVK;
+}
+
 interface IArtistVK {
 	response: { items: [{ id: string }] | [] };
 }
@@ -217,17 +228,6 @@ interface ISourceVK {
 
 interface IResponseVK {
 	response: { items: ITrackVK[] };
-}
-
-interface ITrackVK {
-	artist: string;
-	id: number;
-	owner_id: number;
-	title: string;
-	duration: number;
-	url: string;
-	date: number;
-	album?: IAlbumVK;
 }
 
 interface IAlbumVK {

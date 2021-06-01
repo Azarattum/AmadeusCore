@@ -1,11 +1,14 @@
 import Controller from "../../common/controller.abstract";
 import Provider, { TrackSource } from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
-import { IPreview, purify, stringify } from "../models/track.interface";
+import {
+	IPreview,
+	ITrackInfo,
+	purify,
+	stringify
+} from "../models/track.interface";
 import { shuffle } from "../../common/utils.class";
-import Recommender, {
-	ITrackInfo
-} from "../models/recommenders/recommender.abstract";
+import Recommender from "../models/recommenders/recommender.abstract";
 import { first, mergeGenerators } from "../models/generator";
 import { is } from "typescript-is";
 import parse from "../models/parser";
@@ -112,6 +115,11 @@ export default class Aggregator extends Controller() {
 		recommendations = shuffle(recommendations).slice(0, count);
 
 		for (const recommendation of recommendations) {
+			if (typeof recommendation === "object") {
+				yield recommendation;
+				continue;
+			}
+
 			const track = (await this.get(recommendation).next()).value;
 			if (track) yield track;
 		}

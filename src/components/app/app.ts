@@ -1,7 +1,7 @@
 import Application, { handle } from "../common/application.abstract";
 import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
-import { IPreview } from "./models/track.interface";
+import { IPreview, ITrackInfo } from "./models/track.interface";
 import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
 import { Playlist } from "prisma/client/tenant";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
@@ -12,9 +12,9 @@ import VKProvider from "./models/providers/vk.provider";
 import SoundCloudProvider from "./models/providers/soundcloud.provider";
 import YouTubeProvider from "./models/providers/youtube.provider";
 import LastFMRecommender from "./models/recommenders/lastfm.recommender";
+import VKRecommender from "./models/recommenders/vk.recommender";
 import { clonable, generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
-import { ITrackInfo } from "./models/recommenders/recommender.abstract";
 
 /**
  * Application class
@@ -41,6 +41,7 @@ export default class App extends Application {
 		providers = providers.filter(x => (x as any).token);
 
 		let recommenders = [];
+		recommenders.push(new VKRecommender(token("VK")));
 		recommenders.push(new LastFMRecommender(token("LASTFM")));
 		recommenders = recommenders.filter(x => (x as any).token);
 
