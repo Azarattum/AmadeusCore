@@ -36,11 +36,8 @@ export default abstract class Recommender extends Fetcher {
 				const similars = await this.assemble(track, sim);
 				results.push(...this.normalPick<any>(similars, pick));
 			} catch (e) {
-				const msg =
-					typeof e === "object" ? JSON.stringify(e) : e.toString();
-
 				wrn(
-					`${this.constructor.name} failed to assemble recommendations from "${track.title}"!\n${msg}`
+					`${this.constructor.name} failed to assemble recommendations from "${track.title}"!\n${e}`
 				);
 			}
 			if (results.length >= count) break;

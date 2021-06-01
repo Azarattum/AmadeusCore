@@ -1,4 +1,5 @@
 import { is } from "typescript-is";
+import { sleep } from "../../../common/utils.class";
 import VKProvider, { ITrackVK } from "../providers/vk.provider";
 import { IPreview, ITrackInfo, stringify } from "../track.interface";
 import Recommender from "./recommender.abstract";
@@ -26,8 +27,12 @@ export default class VKRecommender extends Recommender {
 		const target = (await audios.next()).value as ITrackVK;
 		if (!target) return [];
 		const id = `${target.owner_id}_${target.id}`;
+		//Throttle to avoid captcha
+		await sleep(1000 * Math.random() + 200);
 
 		const tracks = await this.getSimilarTracks(id, count);
+		//Second throttle
+		await sleep(1000 * Math.random() + 200);
 		return tracks.map(x => this.provider.convert(x));
 	}
 
