@@ -34,7 +34,7 @@ describe("Parser", () => {
 			"Lau - Game of Thrones Theme - Karliene Version Cover (Audio Only)"
 		);
 		expect(val.title).toBe("Game of Thrones Theme");
-		expect(val.artists).toEqual(["Karliene", "Lau"]);
+		expect(val.artists).toEqual(["Lau", "Karliene"]);
 
 		val = parse(
 			"Karliene & Celtic Borders - You Win or You Die - Game of Thrones"
@@ -83,7 +83,7 @@ describe("Parser", () => {
 
 		val = parse("Pig&Dan -The Saint Job San (Lee Van Dowski Remix)");
 		expect(val.title).toBe("The Saint Job San");
-		expect(val.artists).toEqual(["Lee Van Dowski", "Pig", "Dan"]);
+		expect(val.artists).toEqual(["Pig", "Dan", "Lee Van Dowski"]);
 
 		val = parse(
 			"Ambi Sessions 12/11 {Ambient Techno-Tribal-Dub Techno-Meditative}"
@@ -105,15 +105,15 @@ describe("Parser", () => {
 
 		val = parse("The Prodigy - Voodoo People ( Parasense Rmx )");
 		expect(val.title).toBe("Voodoo People");
-		expect(val.artists).toEqual(["Parasense", "The Prodigy"]);
+		expect(val.artists).toEqual(["The Prodigy", "Parasense"]);
 
 		val = parse('Giselle "Silk" Favored Nations Remix');
 		expect(val.title).toBe("Silk");
-		expect(val.artists).toEqual(["Favored Nations", "Giselle"]);
+		expect(val.artists).toEqual(["Giselle", "Favored Nations"]);
 
 		val = parse("WITCHER 3 SONG- Wake The White Wolf By Miracle Of Sound");
 		expect(val.title).toBe("Wake The White Wolf");
-		expect(val.artists).toEqual(["Miracle Of Sound", "WITCHER 3 SONG"]);
+		expect(val.artists).toEqual(["WITCHER 3 SONG", "Miracle Of Sound"]);
 
 		val = parse(
 			"Miracle Of Sound - The Call - Elder Scrolls Online Song [pleer.com]"
@@ -134,7 +134,7 @@ describe("Parser", () => {
 			"Abandoned - Out Of The Grave (Feat. ENROSA) [NCS Release]"
 		);
 		expect(val.title).toBe("Out Of The Grave");
-		expect(val.artists).toEqual(["ENROSA", "NCS", "Abandoned"]);
+		expect(val.artists).toEqual(["Abandoned", "ENROSA", "NCS"]);
 
 		val = parse("Ali Sethi | Rung (Official Music Video)");
 		expect(val.title).toBe("Rung");
@@ -188,7 +188,7 @@ describe("Parser", () => {
 
 		val = parse("ECHO【Gumi English】Crusher-P: MiatriSs Remix");
 		expect(val.title).toBe("Crusher-P (Gumi English)");
-		expect(val.artists).toEqual(["MiatriSs", "ECHO"]);
+		expect(val.artists).toEqual(["ECHO", "MiatriSs"]);
 
 		val = parse(
 			"Endless Mistakes Cover - check out the original at https://soundcloud.com/"
@@ -206,11 +206,18 @@ describe("Parser", () => {
 		);
 		expect(val.title).toBe("Ross Bugden");
 		expect(val.album).toBe("Ross Bugden");
-		expect(val.artists).toEqual(["AnubisMusic", "Fall"]);
+		expect(val.artists).toEqual(["Fall", "AnubisMusic"]);
 
 		val = parse("Karliene. - Elizabeth");
 		expect(val.title).toBe("Elizabeth");
 		expect(val.artists).toEqual(["Karliene"]);
+
+		val = parse(
+			"My Darkest Days - Porn Star Dancing (Rock Version) ft. Zakk Wylde (Official Video)"
+		);
+		expect(val.title).toBe("Porn Star Dancing");
+		expect(val.album).toBe("Porn Star Dancing");
+		expect(val.artists).toEqual(["My Darkest Days", "Zakk Wylde"]);
 	});
 
 	it("parseArtists", () => {

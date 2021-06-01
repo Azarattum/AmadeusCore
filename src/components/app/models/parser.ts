@@ -120,7 +120,7 @@ export function toYear(text: string): [string, number] | null {
 	return [trim(text.replace(match[0], "")), year];
 }
 
-export function toArtist(text: string): [string, string] | null {
+export function toArtist(text: string): [string, string[]] {
 	const postfixes = [
 		"edit(ed)?",
 		"rmx",
@@ -137,6 +137,7 @@ export function toArtist(text: string): [string, string] | null {
 		"remix(ed)?",
 		"cover(ed)?",
 		"performed",
+		"ft\\.",
 		"feat\\.?",
 		"featuring",
 		"med",
@@ -154,14 +155,16 @@ export function toArtist(text: string): [string, string] | null {
 		)
 	);
 
+	const artists = [];
 	for (const regex of regexes) {
 		const match = text.match(regex);
 		const artist = match?.groups?.artist;
 		if (!match || !artist) continue;
-		return [trim(text.replace(match[0], "")), artist];
+		artists.unshift(artist);
+		text = trim(text.replace(match[0], ""));
 	}
 
-	return null;
+	return [text, artists];
 }
 
 export function split(text: string): string[] {
@@ -175,11 +178,14 @@ export function trim(text: string): string {
 	return text.replace(trim, "");
 }
 
-export function isGenere(text: string): boolean {
+export function isGenere(text: string, strict: boolean = false): boolean {
+	text = text.toLowerCase();
 	const MusicGenres = require("musicgenres-json");
 	const genres = new MusicGenres().get() as string[];
+
+	if (strict) return genres.some(x => x.toLowerCase() === text);
 	return genres.some(x =>
-		text.toLowerCase().match(new RegExp(r`(\s|^)${x.toLowerCase()}(\s|$)`))
+		text.match(new RegExp(r`(\s|^)${x.toLowerCase()}(\s|$)`))
 	);
 }
 
@@ -204,11 +210,10 @@ export default function parse(text: string): IParsed {
 			if (!x) return "";
 		}
 
-		const tryArtist = toArtist(x);
-		if (tryArtist) {
-			x = tryArtist[0];
-			artists.push(...parseArtists(tryArtist[1]));
-			if (!x) return "";
+		const parsedArtists = toArtist(x);
+		x = parsedArtists[0];
+		for (const artist of parsedArtists[1]) {
+			artists.push(...parseArtists(artist));
 		}
 
 		if (isJunk(x)) {
@@ -235,11 +240,11 @@ export default function parse(text: string): IParsed {
 			title = atoms[0];
 			break;
 		case 2:
-			artists.push(...parseArtists(atoms[0]));
+			artists.unshift(...parseArtists(atoms[0]));
 			title = atoms[1];
 			break;
 		default:
-			artists.push(...parseArtists(atoms[0]));
+			artists.unshift(...parseArtists(atoms[0]));
 			title = atoms[1];
 			meta.push(...atoms.slice(2, atoms.length - 1));
 			album = atoms[atoms.length - 1];
@@ -247,7 +252,10 @@ export default function parse(text: string): IParsed {
 	}
 
 	meta = meta.filter(x => !isGenere(x));
-	artists = artists.map(x => trim(x)).filter(x => !isJunk(x));
+	artists = artists
+		.map(x => trim(x))
+		.filter(x => !isJunk(x) && !isGenere(x, true));
+
 	album = album || title;
 	if (meta.length) title += ` (${meta.join(", ")})`;
 
