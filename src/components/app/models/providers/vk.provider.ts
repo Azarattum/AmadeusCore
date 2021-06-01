@@ -1,4 +1,5 @@
-import { assertType } from "typescript-is";
+import { assertType, is } from "typescript-is";
+import { sleep, wrn } from "../../../common/utils.class";
 import { parseArtists } from "../parser";
 import { IPreview } from "../track.interface";
 import Provider from "./provider.abstract";
@@ -97,19 +98,26 @@ export default class VKProvider extends Provider<ITrackVK> {
 	}
 
 	protected async *search(query: string): AsyncGenerator<ITrackVK> {
-		let tracks;
+		let tracks = [];
+		let retries = 0;
 		let offset = 0;
 		do {
+			await sleep(3000 * retries);
 			const audios = await this.call("audio.search", {
 				q: query,
 				count: 100,
 				offset: offset
 			});
 
+			if (this.capchaed(audios)) {
+				retries++;
+				continue;
+			}
+
 			tracks = assertType<IResponseVK>(audios).response.items;
 			for await (const track of tracks) yield track;
 			offset += 100;
-		} while (tracks.length);
+		} while (tracks.length || (retries > 0 && retries < 3));
 	}
 
 	protected async *artist(query: string): AsyncGenerator<ITrackVK> {
@@ -195,6 +203,22 @@ export default class VKProvider extends Provider<ITrackVK> {
 		if (track.duration > 1200) return false;
 		return true;
 	}
+
+	private capchaed(res: any): boolean {
+		if (!is<ICapchaVK>(res)) return false;
+		const { error } = res as ICapchaVK;
+		let cmd = 'curl -H "User-Agent: VKAndroidApp/5.52" ';
+		cmd += "https://api.vk.com/method/audio.search?access_token=";
+		cmd += this.token;
+		cmd += `&v=5.71&q=&captcha_sid=${error.captcha_sid}&captcha_key=<KEY>"`;
+
+		wrn(
+			`VK Provider triggered a capcha!\nURL: ${error.captcha_img}\n` +
+				`Use to mitigate:\n${cmd}`
+		);
+
+		return true;
+	}
 }
 
 export interface ITrackVK {
@@ -233,4 +257,12 @@ interface IResponseVK {
 interface IAlbumVK {
 	title: string;
 	thumb?: { photo_1200?: string };
+}
+
+interface ICapchaVK {
+	error: {
+		error_code: number;
+		captcha_sid: string;
+		captcha_img: string;
+	};
 }
