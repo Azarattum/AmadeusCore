@@ -24,7 +24,7 @@ export default class VKRecommender extends Recommender {
 		count: number
 	): Promise<IPreview[]> {
 		//Throttle to avoid captcha
-		await sleep(500 * Math.random() + 1000);
+		await sleep(100 * Math.random() + 1500);
 		const audios = this.provider.search(stringify(source));
 		const target = (await audios.next()).value as ITrackVK;
 		if (!target) return [];
