@@ -1,20 +1,51 @@
-import { wrn } from "../../../common/utils.class";
+import { shuffle, wrn } from "../../../common/utils.class";
 import Fetcher from "../fetcher.abstract";
 
 export default abstract class Recommender extends Fetcher {
-	protected abstract assemble(source: ITrackInfo[]): Promise<string[]>;
+	protected abstract assemble(
+		source: ITrackInfo,
+		count: number
+	): Promise<string[]>;
 
-	public recommend(source: ITrackInfo[]): Promise<string[]> {
-		return this.assemble(source).catch(e => {
-			wrn(
-				`${this.constructor.name} failed to recommend "${source
-					.map(x => x.title)
-					.join(", ")
-					.slice(0, 20)}..."!\n${e?.stack || e}`
+	public async recommend(
+		source: ITrackInfo[],
+		count = 100
+	): Promise<string[]> {
+		const tracks = this.normalPick(source, source.length);
+		const results: string[] = [];
+
+		let used = 0;
+		for (const track of tracks) {
+			//Dynamic adaptive limit amounts
+			/**How differnt tracks are allowed to be */
+			const deviation = 5;
+			/**Gives advantage to the most recent tracks */
+			const bias = 3 * Math.exp(-1 * ((1 / Math.sqrt(count)) * used)) + 3;
+			/**Keeps track of the amount of tracks left to choose from */
+			const left = tracks.length - used++;
+			/**An amount to pick from similars */
+			const pick = Math.min(
+				Math.ceil(((count - results.length) / left) * bias),
+				100
 			);
+			/**Requested amount of similar songs */
+			const sim = pick * deviation;
 
-			return [];
-		});
+			try {
+				const similars = await this.assemble(track, sim);
+				results.push(...this.normalPick(similars, pick));
+			} catch (e) {
+				const msg =
+					typeof e === "object" ? JSON.stringify(e) : e.toString();
+
+				wrn(
+					`${this.constructor.name} failed to assemble recommendations from "${track.title}"!\n${msg}`
+				);
+			}
+			if (results.length >= count) break;
+		}
+
+		return shuffle(results.slice(0, count));
 	}
 
 	protected normalRand(max: number): number {

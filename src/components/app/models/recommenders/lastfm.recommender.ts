@@ -1,5 +1,4 @@
 import { is } from "typescript-is";
-import { shuffle } from "../../../common/utils.class";
 import Recommender, { ITrackInfo } from "./recommender.abstract";
 
 /**
@@ -13,17 +12,27 @@ export default class LastFMRecommender extends Recommender {
 		autocorrect: "1"
 	};
 
-	public async assemble(source: ITrackInfo[]): Promise<string[]> {
-		const tracks = this.normalPick(source, source.length);
-		const results: string[] = [];
+	public async assemble(
+		source: ITrackInfo,
+		count: number
+	): Promise<string[]> {
+		const similars = await this.getSimilarTracks(source, count);
 
-		for (const track of tracks) {
-			const similars = await this.getSimilarTracks(track, 200);
-			results.push(...this.normalPick(similars, 15));
-			if (results.length > 100) break;
+		//Fallback to the artist similarity
+		if (!similars.length && source.artists.length) {
+			const artist = this.normalPick(source.artists)[0];
+			const artists = await this.getSimilarArtists(artist, count);
+			const chosen = this.normalPick(
+				artists,
+				Math.min(Math.ceil(count / 2), 20)
+			);
+
+			const perArtist = Math.ceil(count / chosen.length);
+			const tracks = chosen.map(x => this.getTopTracks(x, perArtist));
+			similars.push(...(await Promise.all(tracks)).flat());
 		}
 
-		return shuffle(results.slice(0, 100));
+		return similars;
 	}
 
 	private async getSimilarTracks(

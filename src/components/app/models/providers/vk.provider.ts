@@ -170,7 +170,7 @@ export default class VKProvider extends Provider<ITrackVK> {
 		const converted = {
 			title: track.title
 				.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, "")
-				.replace(/\s+\([a-z]+\s+Version\)\s*/i, ""),
+				.replace(/\s+\([a-z]+\s+Version\s*(\(.*\))?\s*\)\s*/i, ""),
 			artists: parseArtists(track.artist),
 			album: track.album?.title || track.title,
 			length: track.duration,

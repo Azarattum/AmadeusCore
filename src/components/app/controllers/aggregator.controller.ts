@@ -103,10 +103,13 @@ export default class Aggregator extends Controller() {
 		}
 	}
 
-	public async *recommend(source: ITrackInfo[]): AsyncGenerator<IPreview> {
-		const promises = this.recommenders.map(x => x.recommend(source));
+	public async *recommend(
+		source: ITrackInfo[],
+		count = 100
+	): AsyncGenerator<IPreview> {
+		const promises = this.recommenders.map(x => x.recommend(source, count));
 		let recommendations = (await Promise.all(promises)).flat();
-		recommendations = shuffle(recommendations).slice(0, 100);
+		recommendations = shuffle(recommendations).slice(0, count);
 
 		for (const recommendation of recommendations) {
 			const track = (await this.get(recommendation).next()).value;
@@ -116,7 +119,8 @@ export default class Aggregator extends Controller() {
 
 	private compare(a: IPreview, b: IPreview, query: string) {
 		const target = purify(query.toLowerCase().trim());
-		const parsed = stringify(parse(query) as IPreview);
+		const preview = parse(query) as IPreview;
+		const parsed = stringify(preview);
 
 		//Exact title match
 		if (
@@ -135,6 +139,29 @@ export default class Aggregator extends Controller() {
 			nonspace === b.artists.join().replace(/\s+/g, "").toLowerCase()
 		) {
 			return 0;
+		}
+
+		//Elaborate title matching
+		if (target.includes("-")) {
+			if (stringify(a, true) === parsed) return 1;
+			else if (stringify(b, true) === parsed) return -1;
+
+			if (
+				a.title === preview.title &&
+				b.title !== preview.title &&
+				b.artists.sort().join().toLowerCase() !==
+					preview.artists.sort().join().toLowerCase()
+			) {
+				return -1;
+			}
+			if (
+				b.title === preview.title &&
+				a.title !== preview.title &&
+				a.artists.sort().join().toLowerCase() !==
+					preview.artists.sort().join().toLowerCase()
+			) {
+				return 1;
+			}
 		}
 
 		let trackA = compareTwoStrings(target, stringify(a));

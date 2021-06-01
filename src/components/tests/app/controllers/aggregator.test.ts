@@ -44,7 +44,7 @@ class TestProvider extends Provider {
 }
 
 class TestRecommender extends Recommender {
-	protected async assemble(source: ITrackInfo[]): Promise<string[]> {
+	protected async assemble(source: ITrackInfo): Promise<string[]> {
 		return ["recommended"];
 	}
 }
@@ -120,7 +120,7 @@ describe("Aggregator", () => {
 	});
 
 	it("recommend", async () => {
-		const tracks = aggr.recommend([]);
+		const tracks = aggr.recommend([{ title: "", artists: [] }]);
 		const any = jest.fn();
 		for await (const track of tracks) {
 			expect(await track.track()).toEqual({
