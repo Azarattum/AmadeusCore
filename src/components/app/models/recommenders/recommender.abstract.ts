@@ -1,21 +1,21 @@
-import { shuffle, wrn } from "../../../common/utils.class";
+import { wrn } from "../../../common/utils.class";
 import Fetcher from "../fetcher.abstract";
-import { IPreview, ITrackInfo } from "../track.interface";
+import { ITrackInfo } from "../track.interface";
 
 export default abstract class Recommender extends Fetcher {
 	protected abstract assemble(
 		source: ITrackInfo,
 		count: number
-	): Promise<string[] | IPreview[]>;
+	): Promise<string[]>;
 
-	public async recommend(
+	public async *recommend(
 		source: ITrackInfo[],
 		count = 100
-	): Promise<string[] | IPreview[]> {
+	): AsyncGenerator<string> {
 		const tracks = this.normalPick(source, source.length);
-		const results: string[] | IPreview[] = [];
-
+		let processed = 0;
 		let used = 0;
+
 		for (const track of tracks) {
 			//Dynamic adaptive limit amounts
 			/**How differnt tracks are allowed to be */
@@ -26,24 +26,29 @@ export default abstract class Recommender extends Fetcher {
 			const left = tracks.length - used++;
 			/**An amount to pick from similars */
 			const pick = Math.min(
-				Math.ceil(((count - results.length) / left) * bias),
+				Math.ceil(((count - processed) / left) * bias),
 				100
 			);
 			/**Requested amount of similar songs */
 			const sim = pick * deviation;
 
 			try {
-				const similars = await this.assemble(track, sim);
-				results.push(...this.normalPick<any>(similars, pick));
+				const similars = this.normalPick(
+					await this.assemble(track, sim),
+					pick
+				);
+
+				for (const similar of similars) {
+					yield similar;
+					processed++;
+					if (processed >= count) return;
+				}
 			} catch (e) {
 				wrn(
 					`${this.constructor.name} failed to assemble recommendations from "${track.title}"!\n${e}`
 				);
 			}
-			if (results.length >= count) break;
 		}
-
-		return shuffle<any>(results.slice(0, count));
 	}
 
 	protected normalPick<T>(collection: T[], count = 1): T[] {

@@ -1,3 +1,5 @@
+import { shuffle } from "../../common/utils.class";
+
 /**
  * Returns first n items from the given async generator
  * @param generator Generator function of items
@@ -29,18 +31,24 @@ export async function first<T>(
 /**
  * Merges an array of async generators into a single one
  * @param generators Generators to merge
+ * @param randomly Whether to merge in random order
  */
 export async function* mergeGenerators<T>(
-	generators: AsyncGenerator<T>[]
+	generators: AsyncGenerator<T>[],
+	randomly = false
 ): AsyncGenerator<T> {
 	let available;
 	do {
 		available = 0;
+		if (randomly) generators = shuffle(generators);
+
 		for (const generator of generators) {
 			const item = await generator.next();
 			if (item.done) continue;
 			yield item.value;
 			available++;
+
+			if (randomly) break;
 		}
 	} while (available);
 }

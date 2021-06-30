@@ -21,7 +21,7 @@
 		"node-fetch": "^2.6.1",
 		"string-similarity": "^4.0.4",
 		"typescript-is": "^0.18.2",
-		"ytdl-core": "^4.8.2",
+		"ytdl-core": "^4.8.3",
 		"ytpl": "^2.2.0",
 		"ytsr": "^3.5.0"
 	},

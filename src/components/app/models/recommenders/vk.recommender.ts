@@ -1,14 +1,12 @@
 import { is } from "typescript-is";
-import { sleep } from "../../../common/utils.class";
-import VKProvider, { ITrackVK } from "../providers/vk.provider";
-import { IPreview, ITrackInfo, stringify } from "../track.interface";
+import { ITrackVK } from "../providers/vk.provider";
+import { ITrackInfo, stringify } from "../track.interface";
 import Recommender from "./recommender.abstract";
 
 /**
  * VK track recommender
  */
 export default class VKRecommender extends Recommender {
-	private provider = (new VKProvider(this.token) as any) as IProvider;
 	protected baseURL = "https://api.vk.com/method/";
 	protected headers = {
 		"User-Agent":
@@ -22,36 +20,36 @@ export default class VKRecommender extends Recommender {
 	protected async assemble(
 		source: ITrackInfo,
 		count: number
-	): Promise<IPreview[]> {
-		//Throttle to avoid captcha
-		await sleep(100 * Math.random() + 1500);
-		const audios = this.provider.search(stringify(source));
-		const target = (await audios.next()).value as ITrackVK;
-		if (!target) return [];
-		const id = `${target.owner_id}_${target.id}`;
-
-		const tracks = await this.getSimilarTracks(id, count);
-		return tracks.map(x => this.provider.convert(x));
+	): Promise<string[]> {
+		const track = stringify(source);
+		const tracks = await this.getSimilarTracks(track, count);
+		return tracks.map(x => `aggr://vk:${x.owner_id}_${x.id}`);
 	}
 
 	private async getSimilarTracks(
-		id: string,
-		limit?: number
+		track: string,
+		limit: number
 	): Promise<ITrackVK[]> {
-		const result = await this.call("audio.getRecommendations", {
-			target_audio: id,
-			count: limit,
-			shuffle: 1
-		});
+		const escape = (str: string) => str.replace(/["\\]/g, "\\$&");
 
+		const code = `
+			var audio = API.audio.search({
+				"q":"${escape(track)}","count":1
+			}).items[0];
+			
+			var id = audio.owner_id + "_" + audio.id;
+			
+			return API.audio.getRecommendations({
+				target_audio: id,
+				count: ${+limit},
+				shuffle: 1
+			});
+		`;
+
+		const result = await this.call("execute", { code });
 		if (!is<ISimilarTracks>(result)) return [];
 		return result.response.items;
 	}
-}
-
-interface IProvider {
-	search(query: string): AsyncGenerator<ITrackVK>;
-	convert(track: ITrackVK): IPreview;
 }
 
 interface ISimilarTracks {

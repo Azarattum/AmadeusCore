@@ -112,29 +112,24 @@ export default class Aggregator extends Controller() {
 		listen = false
 	): AsyncGenerator<IPreview> {
 		const promises = this.recommenders.map(x => x.recommend(source, count));
-		let recommendations = (await Promise.all(promises)).flat();
-		recommendations = shuffle(recommendations).slice(0, count);
+		const generators = (await Promise.all(promises)).flat();
+		const generator = mergeGenerators(generators, true);
 
 		//Biased source shuffle
-		if (listen) source = Recommender.normalPick(source, source.length);
 		const listenRate = 0.25;
+		if (listen) source = Recommender.normalPick(source, source.length);
 
-		for (const recommendation of recommendations) {
+		for await (let recommendation of generator) {
 			if (listen && Math.random() < listenRate) {
 				const item = source.shift();
-				if (item) {
-					yield (await this.get(stringify(item)).next()).value;
-					continue;
-				}
+				if (item) recommendation = stringify(item);
 			}
 
-			if (typeof recommendation === "object") {
-				yield recommendation;
-				continue;
+			const track = await first(this.get(recommendation));
+			if (track) {
+				yield track;
+				if (!--count) return;
 			}
-
-			const track = (await this.get(recommendation).next()).value;
-			if (track) yield track;
 		}
 	}
 
