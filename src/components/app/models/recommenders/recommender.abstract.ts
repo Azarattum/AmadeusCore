@@ -44,6 +44,11 @@ export default abstract class Recommender extends Fetcher {
 					if (processed >= count) return;
 				}
 			} catch (e) {
+				if (e.toString() === "[object Object]") {
+					// eslint-disable-next-line no-ex-assign
+					e = JSON.stringify(e);
+				}
+
 				wrn(
 					`${this.constructor.name} failed to assemble recommendations from "${track.title}"!\n${e}`
 				);

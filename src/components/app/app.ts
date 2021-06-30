@@ -13,6 +13,7 @@ import SoundCloudProvider from "./models/providers/soundcloud.provider";
 import YouTubeProvider from "./models/providers/youtube.provider";
 import LastFMRecommender from "./models/recommenders/lastfm.recommender";
 import VKRecommender from "./models/recommenders/vk.recommender";
+import YandexRecommender from "./models/recommenders/yandex.recommender";
 import { clonable, generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
 
@@ -43,6 +44,7 @@ export default class App extends Application {
 		let recommenders = [];
 		recommenders.push(new VKRecommender(token("VK")));
 		recommenders.push(new LastFMRecommender(token("LASTFM")));
+		recommenders.push(new YandexRecommender(token("YANDEX")));
 		recommenders = recommenders.filter(x => (x as any).token);
 
 		await super.initialize(
