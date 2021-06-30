@@ -3,7 +3,7 @@ import { ITrackInfo, stringify } from "../track.interface";
 import Recommender from "./recommender.abstract";
 
 /**
- * VK track recommender
+ * Yandex track recommender
  */
 export default class YandexRecommender extends Recommender {
 	protected baseURL = "https://api.music.yandex.net/";
