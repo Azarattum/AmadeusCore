@@ -7,7 +7,6 @@ import {
 	purify,
 	stringify
 } from "../models/track.interface";
-import { shuffle } from "../../common/utils.class";
 import Recommender from "../models/recommenders/recommender.abstract";
 import { first, mergeGenerators } from "../models/generator";
 import { is } from "typescript-is";

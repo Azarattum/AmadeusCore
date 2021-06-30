@@ -87,9 +87,11 @@ export default function Controller<
 		 * @param type Event type
 		 * @param args Arguments to pass to the callbacks
 		 */
-		protected emit(...[type, ...args]: EventCall<T>): boolean {
+		protected async emit(
+			...[type, ...args]: EventCall<T>
+		): Promise<boolean> {
 			const callbacks = this.callbacks[type];
-			callbacks?.forEach(x => x(...args));
+			await Promise.all(callbacks?.map(x => x(...args)));
 
 			return callbacks && callbacks.length > 0;
 		}

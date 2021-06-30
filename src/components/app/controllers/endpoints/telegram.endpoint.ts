@@ -360,13 +360,19 @@ export default class Telegram extends TelegramBase {
 		}
 	}
 
-	protected onChat(chat: number, title: string, description?: string): void {
+	protected async onChat(
+		chat: number,
+		title: string,
+		description?: string
+	): Promise<void> {
 		const update = {
 			telegram: chat,
 			type: 0
 		};
 
-		if (!description) return this.emit("relisted", title, update) as any;
+		if (!description) {
+			return (await this.emit("relisted", title, update)) as any;
+		}
 		description = description.toLowerCase();
 
 		if (description.includes(UNTRACKED_TAG)) {
@@ -379,7 +385,7 @@ export default class Telegram extends TelegramBase {
 			update.type = 2;
 		}
 
-		this.emit("relisted", title, update);
+		await this.emit("relisted", title, update);
 	}
 
 	private async clearTemp(): Promise<any> {
