@@ -328,7 +328,10 @@ export default class Telegram extends TelegramBase {
 		this.emit("playlisted", track, channel);
 	}
 
-	protected async onCommand(command: string): Promise<void> {
+	protected async onCommand(
+		command: string,
+		selected?: number
+	): Promise<void> {
 		this.clearTemp();
 
 		switch (command) {
@@ -356,6 +359,27 @@ export default class Telegram extends TelegramBase {
 
 				if (!Number.isInteger(+id)) return;
 				this.tempMessages.push(+id);
+				break;
+			}
+			case "lyrics": {
+				const message = selected
+					? await Cache.getMessage(this.client, selected)
+					: await Cache.lastMessage(this.client);
+				if (!message) return;
+
+				const task = await this.startTask(TaskType.Searching);
+				const lyrics = await this.want("lyrics", message);
+				const { message_id: id } = await Telegram.call("sendMessage", {
+					disable_notification: true,
+					chat_id: this.client,
+					text: lyrics,
+					reply_to_message_id: selected
+				});
+
+				this.endTask(task);
+				if (!Number.isInteger(+id)) return;
+				this.tempMessages.push(+id);
+				break;
 			}
 		}
 	}

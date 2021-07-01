@@ -79,6 +79,30 @@ export default class Cache {
 	}
 
 	/**
+	 * Returns the last message from chat
+	 * @param chat Chat id where the message is from
+	 */
+	public static async lastMessage(chat: number): Promise<IMessage | null> {
+		const x = await this.prisma.message.findFirst({
+			where: { chat },
+			orderBy: { id: "desc" }
+		});
+
+		return x
+			? {
+					type: (x.type as ExtendedSource) || undefined,
+					query: x.query || undefined,
+					page: x.page ?? undefined,
+
+					search: x.search || undefined,
+					artists: JSON.parse(x.artists),
+					title: x.title,
+					album: x.album
+			  }
+			: null;
+	}
+
+	/**
 	 * Saves a message to the cache
 	 * @param chat Chat of the message
 	 * @param id Id of the message

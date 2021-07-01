@@ -11,6 +11,7 @@ import Recommender from "../models/recommenders/recommender.abstract";
 import { first, mergeGenerators } from "../models/generator";
 import { is } from "typescript-is";
 import parse from "../models/parser";
+import Transcriber from "../models/transcribers/transcriber.abstract";
 
 /**
  * Aggregates track data from all Amadeus' providers
@@ -18,13 +19,16 @@ import parse from "../models/parser";
 export default class Aggregator extends Controller() {
 	private providers: Provider[] = [];
 	private recommenders: Recommender[] = [];
+	private transcribers: Transcriber[] = [];
 
 	public initialize(
 		providers: Provider[] = [],
-		recommenders: Recommender[] = []
+		recommenders: Recommender[] = [],
+		transcribers: Transcriber[] = []
 	): void {
 		this.providers = providers;
 		this.recommenders = recommenders;
+		this.transcribers = transcribers;
 	}
 
 	public async *get(
@@ -130,6 +134,18 @@ export default class Aggregator extends Controller() {
 				if (!--count) return;
 			}
 		}
+	}
+
+	public async transcribe(source: ITrackInfo): Promise<string> {
+		const promises = this.transcribers.map(x => x.transcribe(source));
+
+		for (const promise of promises) {
+			const text = await promise;
+			if (text) return text;
+		}
+
+		const request = `${stringify(source)} lyrics`;
+		return `https://duckduckgo.com/?q=${encodeURIComponent(request)}`;
 	}
 
 	private compare(a: IPreview, b: IPreview, query: string) {

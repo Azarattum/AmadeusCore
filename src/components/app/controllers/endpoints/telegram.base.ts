@@ -10,7 +10,7 @@ export default abstract class TelegramBase extends Endpoint {
 	protected abstract client: number;
 
 	protected abstract onMessage(message: string): void;
-	protected abstract onCommand(command: string): void;
+	protected abstract onCommand(command: string, selected?: number): void;
 	protected abstract onTagged(id: number, channel: string): void;
 	protected abstract onPost(
 		text: string,
@@ -197,6 +197,7 @@ export default abstract class TelegramBase extends Endpoint {
 				[message.audio?.performer, message.audio?.title]
 					.filter(x => x)
 					.join(" - ");
+			const reply = message.reply_to_message?.message_id;
 
 			if (!text) return;
 
@@ -205,7 +206,7 @@ export default abstract class TelegramBase extends Endpoint {
 				message_id: message.message_id
 			});
 
-			if (text[0] == "/") await client.onCommand(text.slice(1));
+			if (text[0] == "/") await client.onCommand(text.slice(1), reply);
 			else await client.onMessage(text);
 		} else if (data["my_chat_member"]) {
 			const member = data["my_chat_member"];
@@ -297,6 +298,9 @@ interface IMessage {
 	from: { id: number; username?: string; first_name: string };
 	message_id: number;
 	text?: string;
+	reply_to_message?: {
+		message_id: number;
+	};
 	audio?: { performer?: string; title: string };
 }
 

@@ -16,6 +16,7 @@ import VKRecommender from "./models/recommenders/vk.recommender";
 import YandexRecommender from "./models/recommenders/yandex.recommender";
 import { clonable, generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
+import GeniusTranscriber from "./models/transcribers/genius.transcriber";
 
 /**
  * Application class
@@ -47,9 +48,13 @@ export default class App extends Application {
 		recommenders.push(new YandexRecommender(token("YANDEX")));
 		recommenders = recommenders.filter(x => (x as any).token);
 
+		let transcribers = [];
+		transcribers.push(new GeniusTranscriber());
+		transcribers = transcribers.filter(x => (x as any).token);
+
 		await super.initialize(
 			[Telegram, token("BOT")],
-			[Aggregator, providers, recommenders]
+			[Aggregator, providers, recommenders, transcribers]
 		);
 	}
 
@@ -72,6 +77,15 @@ export default class App extends Application {
 
 			log(`${name} queried similar to "${title}" from ${endpoint.name}.`);
 			return aggregator.recommend([track]);
+		});
+
+		endpoint.wants("lyrics", (track: ITrackInfo) => {
+			const title = [track.artists.join(", "), track.title]
+				.filter(x => x)
+				.join(" - ");
+
+			log(`${name} queried lyrics for "${title}" from ${endpoint.name}.`);
+			return aggregator.transcribe(track);
 		});
 
 		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {

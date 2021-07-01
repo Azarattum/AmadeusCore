@@ -12,6 +12,7 @@
 	"dependencies": {
 		"@prisma/client": "^2.23.0",
 		"abort-controller": "^3.0.0",
+		"cheerio": "*",
 		"dotenv": "^8.2.0",
 		"es6-promise-pool": "^2.5.0",
 		"express": "^4.17.1",
