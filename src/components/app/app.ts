@@ -14,9 +14,10 @@ import YouTubeProvider from "./models/providers/youtube.provider";
 import LastFMRecommender from "./models/recommenders/lastfm.recommender";
 import VKRecommender from "./models/recommenders/vk.recommender";
 import YandexRecommender from "./models/recommenders/yandex.recommender";
+import GeniusTranscriber from "./models/transcribers/genius.transcriber";
+import YandexTranscriber from "./models/transcribers/yandex.transcriber";
 import { clonable, generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
-import GeniusTranscriber from "./models/transcribers/genius.transcriber";
 
 /**
  * Application class
@@ -50,6 +51,7 @@ export default class App extends Application {
 
 		let transcribers = [];
 		transcribers.push(new GeniusTranscriber());
+		transcribers.push(new YandexTranscriber(token("YANDEX")));
 		transcribers = transcribers.filter(x => (x as any).token);
 
 		await super.initialize(
