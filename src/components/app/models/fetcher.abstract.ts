@@ -12,6 +12,11 @@ export default abstract class Fetcher {
 	protected baseURL: string = "";
 
 	public constructor(token: string = "TOKEN") {
+		if (token.includes("/")) {
+			const parts = token.split("/");
+			this.params[parts[0]] = parts[1];
+			token = "TOKEN";
+		}
 		this.token = token;
 	}
 

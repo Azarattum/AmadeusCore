@@ -3,9 +3,13 @@ import Recognizer from "./recognizer.abstract";
 
 export default class AudDRecognizer extends Recognizer {
 	protected baseURL = "https://api.audd.io/";
-	protected params = {
-		api_token: this.token
-	};
+
+	public constructor(token: string = "TOKEN") {
+		super(token);
+		if (this.token !== "TOKEN") {
+			this.params["api_token"] = this.token;
+		}
+	}
 
 	public async detect(url: string): Promise<string | null> {
 		const data = await this.call("", { url });
