@@ -12,6 +12,7 @@ export default abstract class TelegramBase extends Endpoint {
 	protected abstract onMessage(message: string): void;
 	protected abstract onCommand(command: string, selected?: number): void;
 	protected abstract onTagged(id: number, channel: string): void;
+	protected abstract onVoice(file: string): void;
 	protected abstract onPost(
 		text: string,
 		channel: string,
@@ -29,6 +30,7 @@ export default abstract class TelegramBase extends Endpoint {
 		chat: number
 	): void;
 
+	protected static token: string;
 	private static url: string;
 	private static inited = false;
 	private static username: string;
@@ -46,6 +48,7 @@ export default abstract class TelegramBase extends Endpoint {
 		this.clients.set(instance.client, instance);
 
 		if (this.inited) return;
+		this.token = token;
 		this.url = "https://api.telegram.org/bot" + token + "/";
 		this.globalAbort = new AbortController();
 		this.inited = true;
@@ -198,13 +201,15 @@ export default abstract class TelegramBase extends Endpoint {
 					.filter(x => x)
 					.join(" - ");
 			const reply = message.reply_to_message?.message_id;
-
-			if (!text) return;
+			const voice = message.voice?.file_id;
 
 			this.call("deleteMessage", {
 				chat_id: id,
 				message_id: message.message_id
 			});
+
+			if (voice) return await client.onVoice(voice);
+			if (!text) return;
 
 			if (text[0] == "/") await client.onCommand(text.slice(1), reply);
 			else await client.onMessage(text);
@@ -300,6 +305,9 @@ interface IMessage {
 	text?: string;
 	reply_to_message?: {
 		message_id: number;
+	};
+	voice?: {
+		file_id: string;
 	};
 	audio?: { performer?: string; title: string };
 }

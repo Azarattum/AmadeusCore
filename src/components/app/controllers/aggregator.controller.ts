@@ -5,13 +5,15 @@ import {
 	IPreview,
 	ITrackInfo,
 	purify,
-	stringify
+	stringify,
+	Tracks
 } from "../models/track.interface";
 import Recommender from "../models/recommenders/recommender.abstract";
 import { first, mergeGenerators } from "../models/generator";
 import { is } from "typescript-is";
 import parse from "../models/parser";
 import Transcriber from "../models/transcribers/transcriber.abstract";
+import Recognizer from "../models/recognizer/recognizer.abstract";
 
 /**
  * Aggregates track data from all Amadeus' providers
@@ -20,21 +22,16 @@ export default class Aggregator extends Controller() {
 	private providers: Provider[] = [];
 	private recommenders: Recommender[] = [];
 	private transcribers: Transcriber[] = [];
+	private recognizers: Recognizer[] = [];
 
-	public initialize(
-		providers: Provider[] = [],
-		recommenders: Recommender[] = [],
-		transcribers: Transcriber[] = []
-	): void {
-		this.providers = providers;
-		this.recommenders = recommenders;
-		this.transcribers = transcribers;
+	public initialize(sources: IAggregatorSources = {}): void {
+		this.providers = sources.providers || [];
+		this.recommenders = sources.recommenders || [];
+		this.transcribers = sources.transcribers || [];
+		this.recognizers = sources.recognizers || [];
 	}
 
-	public async *get(
-		query: string,
-		from: TrackSource = "search"
-	): AsyncGenerator<IPreview> {
+	public async *get(query: string, from: TrackSource = "search"): Tracks {
 		//Return from desource
 		const source = this.desource([query]);
 		let fromSource = false;
@@ -76,7 +73,7 @@ export default class Aggregator extends Controller() {
 
 	public async *desource(
 		sources: ({ sources: string[] | string } | string)[]
-	): AsyncGenerator<IPreview> {
+	): Tracks {
 		for (const source of sources) {
 			if (typeof source === "object") {
 				let data = source.sources;
@@ -113,7 +110,7 @@ export default class Aggregator extends Controller() {
 		source: ITrackInfo[],
 		count = 100,
 		listen = false
-	): AsyncGenerator<IPreview> {
+	): Tracks {
 		const promises = this.recommenders.map(x => x.recommend(source, count));
 		const generators = (await Promise.all(promises)).flat();
 		const generator = mergeGenerators(generators, true);
@@ -134,6 +131,16 @@ export default class Aggregator extends Controller() {
 				if (!--count) return;
 			}
 		}
+	}
+
+	public async recognise(url: string): Promise<string | null> {
+		const promises = this.recognizers.map(x => x.recognise(url));
+
+		for (const promise of promises) {
+			const name = await promise;
+			if (name) return name;
+		}
+		return null;
 	}
 
 	public async transcribe(source: ITrackInfo): Promise<string> {
@@ -206,4 +213,11 @@ export default class Aggregator extends Controller() {
 
 		return trackB - trackA;
 	}
+}
+
+interface IAggregatorSources {
+	providers?: Provider[];
+	recommenders?: Recommender[];
+	transcribers?: Transcriber[];
+	recognizers?: Recognizer[];
 }

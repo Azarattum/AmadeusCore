@@ -4,6 +4,8 @@ import Aggregator from "./controllers/aggregator.controller";
 import { IPreview, ITrackInfo } from "./models/track.interface";
 import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
 import { Playlist } from "prisma/client/tenant";
+import { clonable, generate } from "./models/generator";
+import { TrackSource } from "./models/providers/provider.abstract";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
 import Endpoint from "./controllers/endpoints/endpoint.abstract";
 import Scheduler from "./controllers/scheduler.controller";
@@ -16,8 +18,7 @@ import VKRecommender from "./models/recommenders/vk.recommender";
 import YandexRecommender from "./models/recommenders/yandex.recommender";
 import GeniusTranscriber from "./models/transcribers/genius.transcriber";
 import YandexTranscriber from "./models/transcribers/yandex.transcriber";
-import { clonable, generate } from "./models/generator";
-import { TrackSource } from "./models/providers/provider.abstract";
+import AudDRecognizer from "./models/recognizer/audd.recognizer";
 
 /**
  * Application class
@@ -36,27 +37,31 @@ export default class App extends Application {
 	public async initialize(): Promise<void> {
 		const token = (name: string) => process.env[`${name}_TOKEN`] || "";
 
-		let providers = [];
-		providers.push(new VKProvider(token("VK")));
-		providers.push(new YandexProvider(token("YANDEX")));
-		providers.push(new YouTubeProvider());
-		providers.push(new SoundCloudProvider(token("SOUNDCLOUD")));
-		providers = providers.filter(x => (x as any).token);
+		const providers = [
+			new VKProvider(token("VK")),
+			new YandexProvider(token("YANDEX")),
+			new YouTubeProvider(),
+			new SoundCloudProvider(token("SOUNDCLOUD"))
+		].filter(x => (x as any).token);
 
-		let recommenders = [];
-		recommenders.push(new VKRecommender(token("VK")));
-		recommenders.push(new LastFMRecommender(token("LASTFM")));
-		recommenders.push(new YandexRecommender(token("YANDEX")));
-		recommenders = recommenders.filter(x => (x as any).token);
+		const recommenders = [
+			new VKRecommender(token("VK")),
+			new LastFMRecommender(token("LASTFM")),
+			new YandexRecommender(token("YANDEX"))
+		].filter(x => (x as any).token);
 
-		let transcribers = [];
-		transcribers.push(new GeniusTranscriber());
-		transcribers.push(new YandexTranscriber(token("YANDEX")));
-		transcribers = transcribers.filter(x => (x as any).token);
+		const transcribers = [
+			new GeniusTranscriber(),
+			new YandexTranscriber(token("YANDEX"))
+		].filter(x => (x as any).token);
+
+		const recognizers = [
+			new AudDRecognizer(token("AUDD")) //Comment to keep foramting
+		].filter(x => (x as any).token);
 
 		await super.initialize(
 			[Telegram, token("BOT")],
-			[Aggregator, providers, recommenders, transcribers]
+			[Aggregator, { providers, recommenders, transcribers, recognizers }]
 		);
 	}
 
@@ -88,6 +93,11 @@ export default class App extends Application {
 
 			log(`${name} queried lyrics for "${title}" from ${endpoint.name}.`);
 			return aggregator.transcribe(track);
+		});
+
+		endpoint.wants("recognise", (sample: string) => {
+			log(`${name} queried audio recoginition from ${endpoint.name}.`);
+			return aggregator.recognise(sample);
 		});
 
 		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {

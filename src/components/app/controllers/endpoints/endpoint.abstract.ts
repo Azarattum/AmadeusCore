@@ -15,6 +15,7 @@ export default abstract class Endpoint extends Controller<
 	| ["query", (query: string, from: TrackSource) => Tracks]
 	| ["similar", (track: ITrackInfo) => Tracks]
 	| ["tracks", (playlist?: string) => Tracks]
+	| ["recognise", (audio: string) => Promise<string | null>]
 	| ["lyrics", (track: ITrackInfo) => Promise<string>]
 >() {
 	public tenant: Tenant;

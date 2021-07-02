@@ -108,6 +108,22 @@ export default class Telegram extends TelegramBase {
 		}
 	}
 
+	protected async onVoice(file: string): Promise<void> {
+		const task = await this.startTask(TaskType.Searching);
+
+		const data = await Telegram.call("getFile", {
+			file_id: file
+		});
+		const path = data?.file_path as string | undefined;
+		if (!path) return this.endTask(task);
+		const url = `https://api.telegram.org/file/bot${Telegram.token}/${path}`;
+
+		const track = await this.want("recognise", url);
+		this.endTask(task);
+		if (!track) return;
+		await this.onMessage(track);
+	}
+
 	protected async onCallback(
 		data: ICallbackData,
 		message: number,

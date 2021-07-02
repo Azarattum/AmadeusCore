@@ -48,7 +48,10 @@ class TestRecommender extends Recommender {
 }
 
 const aggr = new Aggregator();
-aggr.initialize([new TestProvider()], [new TestRecommender()]);
+aggr.initialize({
+	providers: [new TestProvider()],
+	recommenders: [new TestRecommender()]
+});
 
 describe("Aggregator", () => {
 	it("get", async () => {
