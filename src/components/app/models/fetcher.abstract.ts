@@ -54,7 +54,8 @@ export default abstract class Fetcher {
 
 	protected async connect(): Promise<void> {
 		this.socket = new WebSocket(this.baseURL, {
-			servername: ""
+			servername: "",
+			rejectUnauthorized: false
 		} as any);
 		await promisify(this.socket.on.bind(this.socket))("open");
 	}
@@ -80,13 +81,7 @@ export default abstract class Fetcher {
 		this.socket?.send(data);
 
 		if (!wait) return;
-		const once = this.socket.once.bind(this.socket);
-		const msg = await promisify(once)("message");
-		try {
-			return JSON.parse(msg);
-		} catch {
-			return msg;
-		}
+		return this.wait();
 	}
 
 	protected async wait(): Promise<unknown> {

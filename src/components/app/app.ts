@@ -20,6 +20,7 @@ import GeniusTranscriber from "./models/transcribers/genius.transcriber";
 import YandexTranscriber from "./models/transcribers/yandex.transcriber";
 import AudDRecognizer from "./models/recognizer/audd.recognizer";
 import YandexRecognizer from "./models/recognizer/yandex.recognizer";
+import MidomiRecognizer from "./models/recognizer/midomi.recognizer";
 
 /**
  * Application class
@@ -57,6 +58,7 @@ export default class App extends Application {
 		].filter(x => (x as any).token);
 
 		const recognizers = [
+			new MidomiRecognizer(),
 			new AudDRecognizer(token("AUDD")),
 			new YandexRecognizer()
 		].filter(x => (x as any).token);
