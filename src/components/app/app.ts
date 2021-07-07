@@ -18,9 +18,9 @@ import VKRecommender from "./models/recommenders/vk.recommender";
 import YandexRecommender from "./models/recommenders/yandex.recommender";
 import GeniusTranscriber from "./models/transcribers/genius.transcriber";
 import YandexTranscriber from "./models/transcribers/yandex.transcriber";
-import AudDRecognizer from "./models/recognizer/audd.recognizer";
-import YandexRecognizer from "./models/recognizer/yandex.recognizer";
-import MidomiRecognizer from "./models/recognizer/midomi.recognizer";
+import AudDRecognizer from "./models/recognizers/audd.recognizer";
+import YandexRecognizer from "./models/recognizers/yandex.recognizer";
+import MidomiRecognizer from "./models/recognizers/midomi.recognizer";
 
 /**
  * Application class

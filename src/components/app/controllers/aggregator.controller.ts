@@ -13,7 +13,7 @@ import { first, mergeGenerators } from "../models/generator";
 import { is } from "typescript-is";
 import parse from "../models/parser";
 import Transcriber from "../models/transcribers/transcriber.abstract";
-import Recognizer from "../models/recognizer/recognizer.abstract";
+import Recognizer from "../models/recognizers/recognizer.abstract";
 
 /**
  * Aggregates track data from all Amadeus' providers
