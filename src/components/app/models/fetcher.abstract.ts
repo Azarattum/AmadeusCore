@@ -1,5 +1,8 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { gretch } from "gretchen";
 import { URL, URLSearchParams } from "url";
+import { promisify } from "util";
+import WebSocket from "ws";
 import { sleep } from "../../common/utils.class";
 
 /**
@@ -10,6 +13,8 @@ export default abstract class Fetcher {
 	protected headers: Record<string, string> = {};
 	protected params: Record<string, string> = {};
 	protected baseURL: string = "";
+
+	protected socket: WebSocket | null = null;
 
 	public constructor(token: string = "TOKEN") {
 		if (token.includes("/")) {
@@ -45,5 +50,54 @@ export default abstract class Fetcher {
 
 		if (res.error) throw { status: res.status, eroor: res.error };
 		return res.data;
+	}
+
+	protected async connect(): Promise<void> {
+		this.socket = new WebSocket(this.baseURL, {
+			servername: ""
+		} as any);
+		await promisify(this.socket.on.bind(this.socket))("open");
+	}
+
+	protected async close(): Promise<void> {
+		if (!this.socket) return;
+		this.socket.close();
+
+		await promisify(this.socket.on.bind(this.socket))(
+			"close"
+		).catch(() => {});
+	}
+
+	protected async send(
+		data: obj | string | Buffer,
+		wait = false
+	): Promise<unknown> {
+		if (!this.socket) return;
+		if (typeof data === "object" && !(data instanceof Buffer)) {
+			data = JSON.stringify(data);
+		}
+
+		this.socket?.send(data);
+
+		if (!wait) return;
+		const once = this.socket.once.bind(this.socket);
+		const msg = await promisify(once)("message");
+		try {
+			return JSON.parse(msg);
+		} catch {
+			return msg;
+		}
+	}
+
+	protected async wait(): Promise<unknown> {
+		return new Promise(resolve => {
+			this.socket?.once("message", data => {
+				try {
+					resolve(JSON.parse(data.toString()));
+				} catch {
+					resolve(data);
+				}
+			});
+		});
 	}
 }

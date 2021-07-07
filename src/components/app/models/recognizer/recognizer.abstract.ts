@@ -6,7 +6,7 @@ export default abstract class Recognizer extends Fetcher {
 
 	public async recognise(url: string): Promise<string | null> {
 		try {
-			return this.detect(url);
+			return await this.detect(url);
 		} catch (e) {
 			if (e.toString() === "[object Object]") {
 				// eslint-disable-next-line no-ex-assign
