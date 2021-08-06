@@ -8,6 +8,8 @@ import ytpl from "ytpl";
 
 export default class YouTubeProvider extends Provider<ITrackYouTube> {
 	public async *identify(source: string): AsyncGenerator<ITrackYouTube> {
+		//Source check
+		if (source.match(/aggr:\/\/(?!youtube:)/)) return;
 		//From aggregator
 		if (source.startsWith("aggr://youtube:")) source = source.slice(15);
 
