@@ -9,7 +9,7 @@ import {
 } from "../../models/track.interface";
 import TelegramBase, { ICallbackData } from "./telegram.base";
 import { first } from "../../models/generator";
-import { err, generateID, shuffle } from "../../../common/utils.class";
+import { err, generateID, shuffle, sleep } from "../../../common/utils.class";
 import AbortController from "abort-controller";
 import { Readable } from "stream";
 import Cache, { ExtendedSource, IMessage } from "../../models/cache";
@@ -85,6 +85,7 @@ export default class Telegram extends TelegramBase {
 		for await (const track of tracks) {
 			if (this.issued.delete(stringify(track))) continue;
 			if (abort.signal.aborted) break;
+
 			await this.upload(track, null, playlist.telegram).catch(e =>
 				err(`Failed to add audio!\n${e?.stack || e}`)
 			);
@@ -720,6 +721,13 @@ export default class Telegram extends TelegramBase {
 			await Cache.addFile(preview, file);
 			track.sources.push(`tg://${file}`);
 		} catch (e) {
+			//Check retry after timeout
+			const timeout = +e.toString()?.match(/Retry after ([0-9]+)/)?.[1];
+			if (timeout) {
+				await sleep(timeout * 1000);
+				return await this.upload(preview, query, chat);
+			}
+
 			if (!e.toString().includes('"type":"aborted"')) {
 				throw e;
 			}

@@ -88,6 +88,11 @@ export default abstract class TelegramBase extends Endpoint {
 			throw new Error(`Failed to execute "${method}"!\n${text}`);
 		});
 
+		if (response.headers.has("retry-after")) {
+			const timeout = response.headers.get("retry-after");
+			throw new Error(`Method "${method}": Retry after ${timeout}`);
+		}
+
 		if (Math.floor(response.status / 100) !== 2) {
 			throw new Error(
 				`Failed to execute "${method}"!\n${response.status}: ${response.statusText}`

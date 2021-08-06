@@ -207,7 +207,7 @@ export default class VKProvider extends Provider<ITrackVK> {
 	private capchaed(res: any): boolean {
 		if (!is<ICapchaVK>(res)) return false;
 		const { error } = res as ICapchaVK;
-		let cmd = 'curl -H "User-Agent: VKAndroidApp/5.52" ';
+		let cmd = 'curl -H "User-Agent: VKAndroidApp/5.52" "';
 		cmd += "https://api.vk.com/method/audio.search?access_token=";
 		cmd += this.token;
 		cmd += `&v=5.71&q=&captcha_sid=${error.captcha_sid}&captcha_key=<KEY>"`;
