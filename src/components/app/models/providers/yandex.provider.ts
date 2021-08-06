@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { gretch } from "gretchen";
-import { assertType } from "typescript-is";
+import { assertType, is } from "typescript-is";
 import { parseArtists } from "../parser";
 import { IPreview } from "../track.interface";
 import Provider from "./provider.abstract";
@@ -83,9 +83,12 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 				"page-size": 100,
 				page: page++
 			});
+
 			tracks = assertType<IResponseYandex>(audios).result.tracks?.results;
 			if (!tracks) return;
-			for await (const track of tracks) yield track;
+			for await (const track of tracks) {
+				if (is<ITrackYandex>(track)) yield track;
+			}
 		} while (tracks);
 	}
 
@@ -225,7 +228,7 @@ interface ISourceYandex {
 }
 
 interface IResponseYandex {
-	result: { tracks?: { results: ITrackYandex[] } };
+	result: { tracks?: { results: unknown[] } };
 }
 
 interface ITrackYandex {
