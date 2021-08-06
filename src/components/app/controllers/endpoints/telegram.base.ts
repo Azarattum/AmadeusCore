@@ -206,7 +206,7 @@ export default abstract class TelegramBase extends Endpoint {
 			this.call("deleteMessage", {
 				chat_id: id,
 				message_id: message.message_id
-			});
+			}).catch(() => {});
 
 			if (voice) return await client.onVoice(voice);
 			if (!text) return;
@@ -251,7 +251,7 @@ export default abstract class TelegramBase extends Endpoint {
 				this.call("deleteMessage", {
 					chat_id: id,
 					message_id: post.message_id
-				});
+				}).catch(() => {});
 				const { description } = await this.call("getChat", {
 					chat_id: id
 				});
