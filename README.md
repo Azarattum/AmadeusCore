@@ -1,4 +1,4 @@
-# Amadeus
+# Amadeus Core
 <span align="center">
 
 Self hosted **music** streaming service.
