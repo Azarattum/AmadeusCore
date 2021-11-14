@@ -19,9 +19,10 @@ export default class Restream {
 	public async load(): Promise<void> {
 		if (!this.cover) return;
 		const jpg = this.cover.mime === "image/jpeg";
+		if (!jpg) this.cover.stream.destroy();
 		const stream = jpg
 			? this.cover.stream
-			: (Ffmpeg(this.cover.stream)
+			: (Ffmpeg(this.cover.url)
 					.addOption(["-vf", "crop=ih:ih"])
 					.format("mjpeg")
 					.on("error", e => {
@@ -45,7 +46,8 @@ export default class Restream {
 		if (type === "audio/mpeg") return this.useID3();
 
 		//Covert to mp3
-		this.audio.stream = Ffmpeg(this.audio.stream)
+		this.audio.stream.destroy();
+		this.audio.stream = Ffmpeg(this.audio.url)
 			.format("mp3")
 			.on("error", e => {
 				e = e.toString().trim();
@@ -121,12 +123,14 @@ export default class Restream {
 
 		const coverData = cover
 			? {
+					url: coverUrl as string,
 					stream: (cover.body as unknown) as Readable,
 					mime: cover.headers.get("content-type") || undefined
 			  }
 			: undefined;
 
 		const audioData = {
+			url: audioUrl,
 			stream: (audio.body as unknown) as Readable,
 			mime: audio.headers.get("content-type") || undefined
 		};
@@ -420,6 +424,7 @@ interface IMeta {
 }
 
 interface IInput {
+	url: string;
 	stream: Readable;
 	mime?: string;
 }

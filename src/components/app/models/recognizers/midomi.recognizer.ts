@@ -26,6 +26,7 @@ export default class MidomiRecognizer extends Recognizer {
 	public async detect(url: string): Promise<string | null> {
 		const { response, status: code } = await gretch(url).flush();
 		if (code !== 200) return null;
+		if (!response.body) return null;
 		const stream = this.convert(response.body);
 
 		await this.connect();
