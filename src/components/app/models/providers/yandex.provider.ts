@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import { gretch } from "gretchen";
 import { assertType, is } from "typescript-is";
 import { parseArtists } from "../parser";
-import { IPreview } from "../track.interface";
+import { ITrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
 export default class YandexProvider extends Provider<ITrackYandex> {
@@ -102,8 +102,9 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 				"page-size": 1,
 				page: 0
 			});
-			const id = assertType<IArtistResponseYandex>(artists).result.artists
-				?.results[0]?.id;
+			const id =
+				assertType<IArtistResponseYandex>(artists).result.artists
+					?.results[0]?.id;
 			if (!id) return;
 			query = id.toString();
 		}
@@ -131,20 +132,20 @@ export default class YandexProvider extends Provider<ITrackYandex> {
 				"page-size": 1,
 				page: 0
 			});
-			const id = assertType<IAlbumResponseYandex>(artists).result.albums
-				?.results[0]?.id;
+			const id =
+				assertType<IAlbumResponseYandex>(artists).result.albums
+					?.results[0]?.id;
 			if (!id) return;
 			query = id.toString();
 		}
 
 		const audios = await this.call(`albums/${query}/with-tracks`);
-		const tracks = assertType<IAlbumTracksYandex>(
-			audios
-		).result.volumes.flat();
+		const tracks =
+			assertType<IAlbumTracksYandex>(audios).result.volumes.flat();
 		for (const track of tracks) yield track;
 	}
 
-	protected convert(track: ITrackYandex): IPreview {
+	protected convert(track: ITrackYandex): ITrackPreview {
 		const converted = {
 			title: track.title,
 			artists: parseArtists(track.artists.map(x => x.name).join(", ")),

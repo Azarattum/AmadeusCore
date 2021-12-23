@@ -1,4 +1,4 @@
-export interface IPreview {
+export interface ITrackPreview {
 	title: string;
 	artists: string[];
 	album: string;
@@ -8,7 +8,7 @@ export interface IPreview {
 	track: () => Promise<ITrack>;
 }
 
-export interface ITrack {
+export interface ITrackMeta {
 	title: string;
 	artists: string[];
 	album: string;
@@ -16,7 +16,6 @@ export interface ITrack {
 	length: number;
 	year?: number;
 	cover?: string;
-	url: string;
 	sources: string[];
 }
 
@@ -25,16 +24,20 @@ export interface ITrackInfo {
 	artists: string[];
 }
 
-export type Tracks = AsyncGenerator<IPreview>;
+export interface ITrack extends ITrackMeta {
+	url: string;
+}
 
-export function hash(track: IPreview): string {
+export type Tracks = AsyncGenerator<ITrackPreview>;
+
+export function hash(track: ITrackPreview): string {
 	const val = `${stringify(track)} - ${track.album.toLowerCase()}`;
 	const buff = Buffer.from(val, "utf-8");
 	return buff.toString("base64");
 }
 
 export function stringify(
-	track: IPreview | ITrackInfo | ITrack,
+	track: ITrackPreview | ITrackInfo | ITrack,
 	reverse = false
 ): string {
 	const title = track.title.toLowerCase().trim();

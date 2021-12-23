@@ -1,7 +1,7 @@
 import { gretch } from "gretchen";
 import { assertType, is } from "typescript-is";
 import parse, { parseArtists } from "../parser";
-import { IPreview } from "../track.interface";
+import { ITrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
 export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
@@ -89,7 +89,7 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
 		//Not aplicable
 	}
 
-	protected convert(track: ITrackSoundCloud): IPreview | null {
+	protected convert(track: ITrackSoundCloud): ITrackPreview | null {
 		const { title, album, artists, year } = parse(track.title);
 
 		//Check media

@@ -1,7 +1,7 @@
 import Application, { handle } from "../common/application.abstract";
 import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
-import { IPreview, ITrackInfo } from "./models/track.interface";
+import { ITrackPreview, ITrackInfo } from "./models/track.interface";
 import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
 import { Playlist } from "prisma/client/tenant";
 import { clonable, generate } from "./models/generator";
@@ -21,6 +21,7 @@ import YandexTranscriber from "./models/transcribers/yandex.transcriber";
 import AudDRecognizer from "./models/recognizers/audd.recognizer";
 import YandexRecognizer from "./models/recognizers/yandex.recognizer";
 import MidomiRecognizer from "./models/recognizers/midomi.recognizer";
+import parse from "./models/parser";
 
 /**
  * Application class
@@ -30,7 +31,7 @@ export default class App extends Application {
 	 * Application constructor
 	 */
 	public constructor() {
-		super([Aggregator, Preserver, Scheduler, Telegram]);
+		super([Aggregator, Preserver, Scheduler]);
 	}
 
 	/**
@@ -90,7 +91,8 @@ export default class App extends Application {
 			return aggregator.recommend([track]);
 		});
 
-		endpoint.wants("lyrics", (track: ITrackInfo) => {
+		endpoint.wants("lyrics", (track: ITrackInfo | string) => {
+			if (typeof track === "string") track = parse(track);
 			const title = [track.artists.join(", "), track.title]
 				.filter(x => x)
 				.join(" - ");
@@ -104,9 +106,23 @@ export default class App extends Application {
 			return aggregator.recognise(sample);
 		});
 
-		endpoint.on("playlisted", async (track: IPreview, playlist: string) => {
-			preserver.addTrack(track, playlist);
+		endpoint.wants("playlists", () => {
+			log(`${name} requested playlists from ${endpoint.name}.`);
+			return preserver.getPlaylists();
 		});
+
+		endpoint.wants("tracks", async (playlist?: number) => {
+			const id = playlist || "*";
+			log(`${name} listed playlist ${id} from ${endpoint.name}.`);
+			return await preserver.getPlaylist(playlist);
+		});
+
+		endpoint.on(
+			"playlisted",
+			async (track: ITrackPreview, playlist: string) => {
+				preserver.addTrack(track, playlist);
+			}
+		);
 
 		endpoint.on("relisted", (playlist: string, update: IPlaylistUpdate) => {
 			log(`${name} updated "${playlist}" playlist.`);
@@ -123,14 +139,22 @@ export default class App extends Application {
 	private onPreserver(preserver: Preserver): void {
 		const name = preserver.tenant.identifier;
 
-		preserver.on("playlisted", (track: IPreview, playlist: Playlist) => {
-			log(`${name} added track "${track.title}" to "${playlist.title}".`);
-			const endpoints = this.getComponents(Endpoint, preserver.tenant);
+		preserver.on(
+			"playlisted",
+			(track: ITrackPreview, playlist: Playlist) => {
+				log(
+					`${name} added track "${track.title}" to "${playlist.title}".`
+				);
+				const endpoints = this.getComponents(
+					Endpoint,
+					preserver.tenant
+				);
 
-			endpoints.forEach(x => {
-				x.add(generate(track), playlist);
-			});
-		});
+				endpoints.forEach(x => {
+					x.add(generate(track), playlist);
+				});
+			}
+		);
 	}
 
 	@handle(Scheduler)

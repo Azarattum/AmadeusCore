@@ -2,7 +2,7 @@ import Controller from "../../common/controller.abstract";
 import Provider, { TrackSource } from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
 import {
-	IPreview,
+	ITrackPreview,
 	ITrackInfo,
 	purify,
 	stringify,
@@ -155,9 +155,9 @@ export default class Aggregator extends Controller() {
 		return `https://duckduckgo.com/?q=${encodeURIComponent(request)}`;
 	}
 
-	private compare(a: IPreview, b: IPreview, query: string) {
+	private compare(a: ITrackPreview, b: ITrackPreview, query: string) {
 		const target = purify(query.toLowerCase().trim());
-		const preview = parse(query) as IPreview;
+		const preview = parse(query) as ITrackPreview;
 		const parsed = stringify(preview);
 
 		//Exact title match

@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync } from "fs";
 import { PrismaClient } from "prisma/client/cache";
 import { TrackSource } from "./providers/provider.abstract";
-import { hash, IPreview } from "./track.interface";
+import { hash, ITrackPreview } from "./track.interface";
 
 export default class Cache {
 	private static prisma: PrismaClient;
@@ -138,7 +138,7 @@ export default class Cache {
 	 * @param fileId File id to save
 	 */
 	public static async addFile(
-		track: IPreview | string,
+		track: ITrackPreview | string,
 		fileId: string
 	): Promise<void> {
 		if (typeof track != "string") track = hash(track);
@@ -156,7 +156,7 @@ export default class Cache {
 	 * @param track Track preview or track hash
 	 */
 	public static async getFile(
-		track: IPreview | string
+		track: ITrackPreview | string
 	): Promise<string | undefined> {
 		if (typeof track != "string") track = hash(track);
 

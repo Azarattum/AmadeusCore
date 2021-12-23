@@ -3,20 +3,25 @@ import { IComponentOptions } from "../../../common/component.interface";
 import Controller from "../../../common/controller.abstract";
 import { TrackSource } from "../../models/providers/provider.abstract";
 import Tenant from "../../models/tenant";
-import { IPreview, ITrackInfo, Tracks } from "../../models/track.interface";
+import {
+	ITrackPreview,
+	ITrackInfo,
+	Tracks
+} from "../../models/track.interface";
 import { IPlaylistUpdate } from "../preserver.controller";
 
 export default abstract class Endpoint extends Controller<
 	//Events
-	| ["playlisted", (track: IPreview, playlist: string) => void]
+	| ["playlisted", (track: ITrackPreview, playlist: string) => void]
 	| ["triggered", (playlist: string) => void]
 	| ["relisted", (playlist: string, update: IPlaylistUpdate) => void],
 	//Whishes
 	| ["query", (query: string, from: TrackSource) => Tracks]
 	| ["similar", (track: ITrackInfo) => Tracks]
-	| ["tracks", (playlist?: string) => Tracks]
+	| ["tracks", (playlist?: number) => Promise<ITrackInfo[]>]
 	| ["recognise", (audio: string) => Promise<string | null>]
-	| ["lyrics", (track: ITrackInfo) => Promise<string>]
+	| ["lyrics", (track: ITrackInfo | string) => Promise<string>]
+	| ["playlists", () => Promise<Playlist[]>]
 >() {
 	public tenant: Tenant;
 

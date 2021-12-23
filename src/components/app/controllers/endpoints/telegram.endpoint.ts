@@ -2,7 +2,7 @@ import { Playlist } from "prisma/client/tenant";
 import { IComponentOptions } from "../../../common/component.interface";
 import Restream from "../../models/restream";
 import {
-	IPreview,
+	ITrackPreview,
 	ITrackInfo,
 	stringify,
 	Tracks
@@ -448,7 +448,7 @@ export default class Telegram extends TelegramBase {
 		from: ExtendedSource = "search",
 		offset = 0,
 		count = 10
-	): Promise<IPreview[]> {
+	): Promise<ITrackPreview[]> {
 		if (from === "similar" && typeof query === "string") return [];
 
 		let task;
@@ -510,7 +510,7 @@ export default class Telegram extends TelegramBase {
 	private async requestFromContext(
 		ctx: IMessage,
 		max?: number
-	): Promise<IPreview[]> {
+	): Promise<ITrackPreview[]> {
 		if (ctx.query == null || ctx.type == null || ctx.page == null) {
 			return [];
 		}
@@ -657,7 +657,7 @@ export default class Telegram extends TelegramBase {
 	}
 
 	private async upload(
-		preview: IPreview,
+		preview: ITrackPreview,
 		query: string | null,
 		chat = this.client
 	): Promise<void> {
@@ -753,5 +753,5 @@ enum TaskType {
 
 type TrackCache = Record<
 	ExtendedSource,
-	Record<string, { history: IPreview[]; iterator: Tracks }>
+	Record<string, { history: ITrackPreview[]; iterator: Tracks }>
 >;

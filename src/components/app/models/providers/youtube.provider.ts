@@ -1,4 +1,4 @@
-import { IPreview } from "../track.interface";
+import { ITrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 import ytsr, { ContinueResult } from "ytsr";
 import ytdl from "ytdl-core";
@@ -81,7 +81,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
 		//Not aplicable
 	}
 
-	protected convert(track: ITrackYouTube): IPreview {
+	protected convert(track: ITrackYouTube): ITrackPreview {
 		const author = parseArtists(track.author?.name);
 		const { title, artists, year, album } = parse(track.title);
 

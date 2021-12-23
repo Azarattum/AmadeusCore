@@ -1,11 +1,11 @@
 import Aggregator from "../../../app/controllers/aggregator.controller";
 import Provider from "../../../app/models/providers/provider.abstract";
 import Recommender from "../../../app/models/recommenders/recommender.abstract";
-import { IPreview, ITrackInfo } from "../../../app/models/track.interface";
+import { ITrackPreview, ITrackInfo } from "../../../app/models/track.interface";
 
 class TestProvider extends Provider {
 	protected baseURL: string = "";
-	protected convert(track: any): IPreview {
+	protected convert(track: any): ITrackPreview {
 		const data = track + "";
 		const converted = {
 			title: data,

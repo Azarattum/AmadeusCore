@@ -1,7 +1,7 @@
 import { assertType, is } from "typescript-is";
 import { sleep, wrn } from "../../../common/utils.class";
 import { parseArtists } from "../parser";
-import { IPreview } from "../track.interface";
+import { ITrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
 export default class VKProvider extends Provider<ITrackVK> {
@@ -174,7 +174,7 @@ export default class VKProvider extends Provider<ITrackVK> {
 		} while (tracks.length);
 	}
 
-	protected convert(track: ITrackVK): IPreview {
+	protected convert(track: ITrackVK): ITrackPreview {
 		const converted = {
 			title: track.title
 				.replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, "")

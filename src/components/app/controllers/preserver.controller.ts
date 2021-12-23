@@ -4,13 +4,13 @@ import { existsSync } from "fs";
 import { IComponentOptions } from "../../common/component.interface";
 import Controller from "../../common/controller.abstract";
 import Tenant from "../models/tenant";
-import { IPreview, ITrack } from "../models/track.interface";
+import { ITrackPreview, ITrack, ITrackMeta } from "../models/track.interface";
 
 /**
  * Stores and manages Amadeus' user's data
  */
 export default class Preserver extends Controller<
-	["playlisted", (track: IPreview, updated: Playlist) => void]
+	["playlisted", (track: ITrackPreview, updated: Playlist) => void]
 >() {
 	public tenant: Tenant;
 	private prisma: PrismaClient;
@@ -71,7 +71,10 @@ export default class Preserver extends Controller<
 		});
 	}
 
-	public async addTrack(track: IPreview, playlist: string): Promise<void> {
+	public async addTrack(
+		track: ITrackPreview,
+		playlist: string
+	): Promise<void> {
 		const check = await this.prisma.playlist.findUnique({
 			where: {
 				title: playlist
@@ -136,6 +139,34 @@ export default class Preserver extends Controller<
 		});
 
 		return results;
+	}
+
+	public async getPlaylist(id?: number): Promise<ITrackMeta[]> {
+		const results = await this.prisma.track.findMany({
+			where: {
+				playlists: {
+					some: id != null ? { id } : { type: 0 }
+				}
+			},
+			include: {
+				artists: true,
+				album: true
+			},
+			orderBy: {
+				id: id != null ? "asc" : "desc"
+			},
+			take: id != null ? undefined : 30
+		});
+
+		return results.map(x => ({
+			title: x.title,
+			artists: x.artists.map(y => y.name),
+			album: x.album.title,
+			length: x.length,
+			year: x.year || undefined,
+			cover: x.cover || undefined,
+			sources: JSON.parse(x.sources)
+		}));
 	}
 
 	private async createTrack(track: ITrack, playlist: string): Promise<Track> {

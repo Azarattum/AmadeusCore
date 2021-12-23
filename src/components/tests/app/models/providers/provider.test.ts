@@ -1,7 +1,7 @@
 import * as fetch from "node-fetch";
 import fetchMock from "fetch-mock-jest";
 import Provider from "../../../../app/models/providers/provider.abstract";
-import { IPreview } from "../../../../app/models/track.interface";
+import { ITrackPreview } from "../../../../app/models/track.interface";
 
 Object.assign(globalThis, { ...fetch, fetch });
 fetchMock.config.overwriteRoutes = true;
@@ -25,7 +25,7 @@ class TestProvider extends Provider<any> {
 		yield await this.call("*");
 	}
 
-	protected convert(track: any): IPreview {
+	protected convert(track: any): ITrackPreview {
 		return track;
 	}
 }
