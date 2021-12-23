@@ -93,7 +93,7 @@ export default class API extends Endpoint {
 			router.get(path, asyncRoute(handler));
 
 		get(base + "/verify", async (req, res) => {
-			res.send(200);
+			res.sendStatus(200);
 		});
 
 		get(base + "/playlist", async (req, res) => {
@@ -103,7 +103,7 @@ export default class API extends Endpoint {
 
 		get(base + "/playlist/:id", async (req, res) => {
 			const id = +req.params.id;
-			if (!Number.isInteger(id)) return res.send(400);
+			if (!Number.isInteger(id)) return res.sendStatus(400);
 			const tracks = await this.want("tracks", id);
 			res.send(tracks);
 		});
@@ -117,14 +117,14 @@ export default class API extends Endpoint {
 			const query = req.params[0];
 			const tracks = await this.want("query", query, "source");
 			const track = await first(tracks);
-			if (!track) return res.send(404);
+			if (!track) return res.sendStatus(404);
 			res.send((await track.track()).url);
 		});
 
 		get(base + "/lyrics/*", async (req, res) => {
 			const query = req.params[0];
 			const lyrics = await this.want("lyrics", query);
-			if (!lyrics) return res.send(404);
+			if (!lyrics) return res.sendStatus(404);
 			res.send(lyrics);
 		});
 
