@@ -3,6 +3,7 @@ import { log } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
 import { ITrackPreview, ITrackInfo } from "./models/track.interface";
 import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
+import API from "./controllers/endpoints/api.endpoint";
 import { Playlist } from "prisma/client/tenant";
 import { clonable, generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
@@ -31,7 +32,7 @@ export default class App extends Application {
 	 * Application constructor
 	 */
 	public constructor() {
-		super([Aggregator, Preserver, Scheduler]);
+		super([Aggregator, Preserver, Scheduler, Telegram, API]);
 	}
 
 	/**

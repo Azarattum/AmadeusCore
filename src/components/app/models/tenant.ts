@@ -31,14 +31,19 @@ export default class Tenant {
 			const reserved = ["cache", "dummy"];
 
 			const text = readFileSync("data/tenants.json").toString();
-			const data = (JSON.parse(text) as ITenant[])
-				.map(x => {
-					if (!reserved.includes(x.identifier.toLowerCase())) {
-						return new Tenant(x);
-					}
+			const data = [] as Tenant[];
+			for (const x of JSON.parse(text) as ITenant[]) {
+				const name = x.identifier.toLowerCase();
+				if (data.some(y => y.identifier.toLowerCase() === name)) {
+					err(`Dublicate identifiers ("${name}") are not allowed!`);
+					continue;
+				}
+				if (reserved.includes(name)) {
 					err(`Tenant identifier "${x.identifier}" is not allowed!`);
-				})
-				.filter(x => x) as Tenant[];
+					continue;
+				}
+				data.push(new Tenant(x));
+			}
 
 			this.cache = data;
 			return data;
@@ -48,7 +53,9 @@ export default class Tenant {
 	}
 
 	public static fromIdentiefier(value: string): Tenant {
-		const tenant = this.tenants.find(x => x.identifier === value);
+		const tenant = this.tenants.find(
+			x => x.identifier.toLowerCase() === value.toLowerCase()
+		);
 		if (!tenant) throw new Error("Trying to access unknown tenant!");
 		return tenant;
 	}

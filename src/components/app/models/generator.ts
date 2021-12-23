@@ -28,6 +28,14 @@ export async function first<T>(
 	return resolved.filter(x => !x.done).map(x => x.value);
 }
 
+export async function all<T>(generator: AsyncGenerator<T>) {
+	const items = [];
+	for await (const item of generator) {
+		items.push(item);
+	}
+	return items;
+}
+
 /**
  * Merges an array of async generators into a single one
  * @param generators Generators to merge
@@ -57,8 +65,11 @@ export async function* mergeGenerators<T>(
  * Creates an async generator from any item or an array of items
  * @param from Source item or array
  */
-export function generate<T>(from: T | T[]): AsyncGenerator<T> {
+export function generate<T>(
+	from: T | T[] | Promise<T> | Promise<T[]>
+): AsyncGenerator<T> {
 	return (async function* () {
+		from = await from;
 		if (Array.isArray(from)) {
 			for (const item of from) {
 				yield item;
