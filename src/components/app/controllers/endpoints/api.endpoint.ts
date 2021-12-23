@@ -2,7 +2,10 @@ import { log, wrn, err } from "../../../common/utils.class";
 import { first } from "../../models/generator";
 import Endpoint from "./endpoint.abstract";
 import Tenant from "../../models/tenant";
+import compression from "compression";
+import { readFileSync, existsSync } from "fs";
 import { Server } from "http";
+import https from "https";
 import express, {
 	ErrorRequestHandler,
 	Express,
@@ -12,25 +15,42 @@ import express, {
 
 export default class API extends Endpoint {
 	private static app: Express = express();
+	private static https?: https.Server;
 	private static connection?: Server;
-	private static port = 8003;
+	private static httpPort = 8003;
+	private static httpsPort = 9003;
 	private static base = "/api/v1/";
 
 	public initialize() {
+		API.app.use(compression());
 		API.app.use(API.cors);
 		API.app.use(API.auth);
 		API.app.use(this.routes);
 		API.app.use(API.error);
 		if (!API.connection) {
-			API.connection = API.app.listen(API.port, () => {
-				log(`Listening on port ${API.port}`);
+			API.connection = API.app.listen(API.httpPort, () => {
+				log(`Listening on port ${API.httpPort}.`);
 			});
+
+			if (existsSync("privkey.pem") && existsSync("fullchain.pem")) {
+				const options = {
+					cert: readFileSync("./sslcert/fullchain.pem"),
+					key: readFileSync("./sslcert/privkey.pem")
+				};
+				API.https = https
+					.createServer(options, API.app)
+					.listen(API.httpsPort, () => {
+						log(`Enabled HTTPS on port ${API.httpsPort}.`);
+					});
+			}
 		}
 	}
 
 	public close(): void {
 		API.connection?.close();
 		API.connection = undefined;
+		API.https?.close();
+		API.https = undefined;
 	}
 
 	private static get error(): ErrorRequestHandler {
