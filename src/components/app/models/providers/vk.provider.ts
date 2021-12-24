@@ -109,7 +109,7 @@ export default class VKProvider extends Provider<ITrackVK> {
         offset: offset,
       });
 
-      if (this.capchaed(audios)) {
+      if (this.capchaed(audios, retries)) {
         retries++;
         continue;
       }
@@ -204,13 +204,14 @@ export default class VKProvider extends Provider<ITrackVK> {
     return true;
   }
 
-  private capchaed(res: any): boolean {
+  private capchaed(res: any, retries: number): boolean {
     if (!is<ICapchaVK>(res)) return false;
+    if (retries < 2) return true;
     const { error } = res as ICapchaVK;
     let cmd = 'curl -H "User-Agent: VKAndroidApp/5.52" "';
     cmd += "https://api.vk.com/method/audio.search?access_token=";
     cmd += this.token;
-    cmd += `&v=5.71&q=&captcha_sid=${error.captcha_sid}&captcha_key=<KEY>"`;
+    cmd += `&v=${this.params.v}&q=&captcha_sid=${error.captcha_sid}&captcha_key=<KEY>"`;
 
     wrn(
       `VK Provider triggered a capcha!\nURL: ${error.captcha_img}\n` +

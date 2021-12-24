@@ -5,7 +5,7 @@ import { ITrackPreview, ITrackInfo } from "./models/track.interface";
 import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
 import API from "./controllers/endpoints/api.endpoint";
 import { Playlist } from "prisma/client/tenant";
-import { clonable, generate } from "./models/generator";
+import { generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
 import Endpoint from "./controllers/endpoints/endpoint.abstract";
@@ -109,7 +109,7 @@ export default class App extends Application {
 
     endpoint.wants("playlists", () => {
       log(`${name} requested playlists from ${endpoint.name}.`);
-      return preserver.getPlaylists();
+      return preserver.getPlaylists("all");
     });
 
     endpoint.wants("tracks", async (playlist?: number) => {
@@ -138,16 +138,21 @@ export default class App extends Application {
 
   @handle(Preserver)
   private onPreserver(preserver: Preserver): void {
+    const endpoints = this.getComponents(Endpoint, preserver.tenant);
     const name = preserver.tenant.identifier;
 
-    preserver.on("playlisted", (track: ITrackPreview, playlist: Playlist) => {
-      log(`${name} added track "${track.title}" to "${playlist.title}".`);
-      const endpoints = this.getComponents(Endpoint, preserver.tenant);
+    preserver.on(
+      "playlisted",
+      (track: ITrackPreview, playlist: Playlist, manually: boolean) => {
+        if (manually) {
+          log(`${name} added track "${track.title}" to "${playlist.title}".`);
+        }
 
-      endpoints.forEach((x) => {
-        x.add(generate(track), playlist);
-      });
-    });
+        endpoints.forEach((x) => {
+          x.add(generate(track), playlist);
+        });
+      }
+    );
   }
 
   @handle(Scheduler)
@@ -157,24 +162,23 @@ export default class App extends Application {
     const endpoints = this.getComponents(Endpoint, scheduler.tenant);
 
     scheduler.on("triggered", async (selected?: string[]) => {
-      const playlists = (await preserver.getPlaylists(true)).filter(
+      const playlists = (await preserver.getPlaylists("dynamic")).filter(
         (x) => !selected || selected.includes(x.title)
       );
 
       playlists.forEach(async (playlist) => {
         const batch = scheduler.tenant.batch;
         //Wait until all the playlists are cleared
+        await preserver.clearPlaylist(playlist.title);
         await Promise.all(endpoints.map((x) => x.clear(playlist)));
         //Get a sample of the last 100 user's tracks
         const sample = await preserver.getTracks(100);
         //Recommendations are based on this sample
-        const tracks = clonable(
-          aggregator.recommend(sample, batch, playlist.type === 2)
-        );
+        const tracks = aggregator.recommend(sample, batch, playlist.type === 2);
 
-        //Send new tracks to every endpoint
-        for (const endpoint of endpoints) {
-          await endpoint.add(tracks.clone(), playlist);
+        //Save every track
+        for await (const track of tracks) {
+          preserver.addTrack(track, playlist.title, false);
         }
 
         log(`Playlist "${playlist.title}" updated with new tracks.`);

@@ -29,7 +29,7 @@ export default class API extends Endpoint {
     API.app.use(API.error);
     if (!API.connection) {
       API.connection = API.app.listen(API.httpPort, () => {
-        log(`Listening on port ${API.httpPort}.`);
+        log(`API is listening on port ${API.httpPort}.`);
       });
 
       if (existsSync("privkey.pem") && existsSync("fullchain.pem")) {

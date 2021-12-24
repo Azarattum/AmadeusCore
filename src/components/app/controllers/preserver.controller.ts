@@ -10,7 +10,10 @@ import { ITrackPreview, ITrack, ITrackMeta } from "../models/track.interface";
  * Stores and manages Amadeus' user's data
  */
 export default class Preserver extends Controller<
-  ["playlisted", (track: ITrackPreview, updated: Playlist) => void]
+  [
+    "playlisted",
+    (track: ITrackPreview, updated: Playlist, manually: boolean) => void
+  ]
 >() {
   public tenant: Tenant;
   private prisma: PrismaClient;
@@ -57,28 +60,38 @@ export default class Preserver extends Controller<
     });
   }
 
-  public getPlaylists(dynamic = false): Promise<Playlist[]> {
+  public getPlaylists(
+    type: "normal" | "dynamic" | "all" = "normal"
+  ): Promise<Playlist[]> {
     return this.prisma.playlist.findMany({
+      where:
+        type === "all"
+          ? {}
+          : { type: type === "normal" ? { lte: 0 } : { gte: 1 } },
+    });
+  }
+
+  public async clearPlaylist(playlist: string): Promise<void> {
+    await this.prisma.playlist.update({
+      where: { title: playlist },
+      data: {
+        tracks: { set: [] },
+      },
+    });
+    await this.prisma.track.deleteMany({
       where: {
-        type: !dynamic
-          ? {
-              lte: 0,
-            }
-          : {
-              gte: 1,
-            },
+        playlists: {
+          none: {},
+        },
       },
     });
   }
 
-  public async addTrack(track: ITrackPreview, playlist: string): Promise<void> {
-    const check = await this.prisma.playlist.findUnique({
-      where: {
-        title: playlist,
-      },
-    });
-    if (check && check.type > 0) return;
-
+  public async addTrack(
+    track: ITrackPreview,
+    playlist: string,
+    manually = true
+  ): Promise<void> {
     let found = await this.prisma.track.findFirst({
       where: {
         title: track.title,
@@ -110,7 +123,7 @@ export default class Preserver extends Controller<
       },
     });
 
-    if (updated) this.emit("playlisted", track, updated);
+    if (updated) this.emit("playlisted", track, updated, manually);
   }
 
   public async getTracks(
