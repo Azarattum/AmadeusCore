@@ -11,7 +11,7 @@ export default class VKProvider extends Provider<ITrackVK> {
       "VKAndroidApp/5.52-4543 (Android 5.1.1; SDK 22; x86_64; unknown Android SDK built for x86_64; en; 320x240)",
   };
   protected params = {
-    v: "5.71",
+    v: "5.131",
     access_token: this.token,
   };
 
