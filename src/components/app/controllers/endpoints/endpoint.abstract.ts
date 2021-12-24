@@ -7,6 +7,7 @@ import {
   ITrackPreview,
   ITrackInfo,
   Tracks,
+  ITrackMeta,
 } from "../../models/track.interface";
 import { IPlaylistUpdate } from "../preserver.controller";
 
@@ -18,7 +19,7 @@ export default abstract class Endpoint extends Controller<
   //Whishes
   | ["query", (query: string, from: TrackSource) => Tracks]
   | ["similar", (track: ITrackInfo) => Tracks]
-  | ["tracks", (playlist?: number) => Promise<ITrackInfo[]>]
+  | ["tracks", (playlist?: number) => Promise<ITrackMeta[]>]
   | ["recognise", (audio: string) => Promise<string | null>]
   | ["lyrics", (track: ITrackInfo | string) => Promise<string>]
   | ["playlists", () => Promise<Playlist[]>]

@@ -121,15 +121,19 @@ export default class API extends Endpoint {
       res.send(playlists);
     });
 
+    get(base + "/playlist/added", async (req, res) => {
+      const tracks = await this.want("tracks");
+      res.send(tracks);
+    });
+
+    get(base + "/playlist/listened", async (req, res) => {
+      res.send([]);
+    });
+
     get(base + "/playlist/:id", async (req, res) => {
       const id = +req.params.id;
       if (!Number.isInteger(id)) return res.sendStatus(400);
       const tracks = await this.want("tracks", id);
-      res.send(tracks);
-    });
-
-    get(base + "/added/", async (req, res) => {
-      const tracks = await this.want("tracks");
       res.send(tracks);
     });
 
