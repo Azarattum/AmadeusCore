@@ -1,5 +1,5 @@
 {
-    "name": "eslint-plugin-the-framework",
-    "version": "1.0.0",
-    "main": "eslint.rules.js"
+  "name": "eslint-plugin-the-framework",
+  "version": "1.0.0",
+  "main": "eslint.rules.js"
 }

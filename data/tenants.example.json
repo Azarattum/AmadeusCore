@@ -1,9 +1,9 @@
 [
-    {
-        "identifier": "Example User",
-        "token": "NDIgNDIgNDI=",
-        "telegram": "42421337",
-        "batch": "100",
-        "hour": "6"
-    }
+  {
+    "identifier": "Example User",
+    "token": "NDIgNDIgNDI=",
+    "telegram": "42421337",
+    "batch": "100",
+    "hour": "6"
+  }
 ]

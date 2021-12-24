@@ -1,9 +1,9 @@
 {
-	"deno.enable": false,
-	"jest.pathToConfig": "./env/jest.config.js",
-	"jest.autoEnable": false,
-	"cmake.configureOnOpen": false,
-	"code-runner.executorMap": {
-		"typescript": "ts-node -C ttypescript $fullFileName"
-	}
+  "deno.enable": false,
+  "jest.pathToConfig": "./env/jest.config.js",
+  "jest.autoEnable": false,
+  "cmake.configureOnOpen": false,
+  "code-runner.executorMap": {
+    "typescript": "ts-node -C ttypescript $fullFileName"
+  }
 }
