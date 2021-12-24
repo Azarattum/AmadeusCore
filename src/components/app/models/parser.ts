@@ -182,8 +182,7 @@ export function trim(text: string): string {
 
 export function isGenere(text: string, strict: boolean = false): boolean {
   text = text.toLowerCase();
-  const MusicGenres = require("musicgenres-json");
-  const genres = new MusicGenres().get() as string[];
+  const genres = require("../../../../assets/genres.json") as string[];
 
   if (strict) return genres.some((x) => x.toLowerCase() === text);
   return genres.some((x) =>
