@@ -90,7 +90,7 @@ export default class YandexRecognizer extends Recognizer {
     let stream;
     if (typeof input === "string") {
       const { response, status } = await gretch(input).flush();
-      if (status !== 200) return null;
+      if (status !== 200 || !response.body) return null;
       stream = response.body;
     } else {
       stream = Readable.from(input);

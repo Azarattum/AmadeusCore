@@ -90,7 +90,7 @@ export function clonable<T>(
 ): AsyncClonableGenerator<T> {
   const cache: any[] = [];
 
-  return (function make(n) {
+  return (function make(n): AsyncClonableGenerator<T> {
     return {
       next(arg: any) {
         const len = cache.length;

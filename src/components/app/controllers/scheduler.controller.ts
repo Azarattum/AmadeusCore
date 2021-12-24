@@ -20,6 +20,9 @@ export default class Scheduler extends Controller<
     super(args);
     this.tenant = args.relation as Tenant;
     this.hour = this.tenant.hour;
+  }
+
+  public initialize() {
     this.schedule();
   }
 
