@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync } from "fs";
 import { PrismaClient } from "prisma/client/cache";
 import { TrackSource } from "./providers/provider.abstract";
-import { hash, ITrackPreview } from "./track.interface";
+import { hash, Track } from "./track.interface";
 
 export default class Cache {
   private static prisma: PrismaClient;
@@ -29,12 +29,12 @@ export default class Cache {
    */
   public static async popMessages(
     chat: number
-  ): Promise<Record<number, IMessage>> {
+  ): Promise<Record<number, Message>> {
     const predicate = { where: { chat } };
     const data = await this.prisma.message.findMany(predicate);
     await this.prisma.message.deleteMany(predicate);
 
-    const messages = {} as Record<number, IMessage>;
+    const messages = {} as Record<number, Message>;
     for (const x of data) {
       messages[x.id] = {
         type: (x.type as ExtendedSource) || undefined,
@@ -59,7 +59,7 @@ export default class Cache {
   public static async getMessage(
     chat: number,
     id: number
-  ): Promise<IMessage | null> {
+  ): Promise<Message | null> {
     const x = await this.prisma.message.findUnique({
       where: { chat_id: { chat, id } },
     });
@@ -82,7 +82,7 @@ export default class Cache {
    * Returns the last message from chat
    * @param chat Chat id where the message is from
    */
-  public static async lastMessage(chat: number): Promise<IMessage | null> {
+  public static async lastMessage(chat: number): Promise<Message | null> {
     const x = await this.prisma.message.findFirst({
       where: { chat },
       orderBy: { id: "desc" },
@@ -111,7 +111,7 @@ export default class Cache {
   public static async addMessage(
     chat: number,
     id: number,
-    data: IMessage
+    data: Message
   ): Promise<void> {
     const message = {
       ...data,
@@ -138,7 +138,7 @@ export default class Cache {
    * @param fileId File id to save
    */
   public static async addFile(
-    track: ITrackPreview | string,
+    track: Track | string,
     fileId: string
   ): Promise<void> {
     if (typeof track != "string") track = hash(track);
@@ -156,7 +156,7 @@ export default class Cache {
    * @param track Track preview or track hash
    */
   public static async getFile(
-    track: ITrackPreview | string
+    track: Track | string
   ): Promise<string | undefined> {
     if (typeof track != "string") track = hash(track);
 
@@ -225,7 +225,7 @@ Cache.initialize();
 
 export type ExtendedSource = TrackSource | "similar";
 
-export interface IMessage {
+export interface Message {
   /**Paging type */
   type?: ExtendedSource;
   /**Paging request */

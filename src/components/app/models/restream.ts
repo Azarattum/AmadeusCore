@@ -2,15 +2,15 @@ import Ffmpeg from "fluent-ffmpeg";
 import { PassThrough, Readable, Transform, TransformCallback } from "stream";
 import { promisify } from "util";
 import { wrn } from "../../common/utils.class";
-import { ITrack } from "./track.interface";
+import { TrackLoaded } from "./track.interface";
 
 export default class Restream {
-  private meta: IMeta;
-  private cover?: IInput;
+  private meta: Meta;
+  private cover?: Input;
   private image?: Buffer;
-  private audio: IInput;
+  private audio: Input;
 
-  public constructor(meta: IMeta, audio: IInput, cover?: IInput) {
+  public constructor(meta: Meta, audio: Input, cover?: Input) {
     this.meta = meta;
     this.cover = cover;
     this.audio = audio;
@@ -112,7 +112,7 @@ export default class Restream {
   }
 
   public static async fromUrl(
-    meta: IMeta,
+    meta: Meta,
     audioUrl: string,
     coverUrl?: string
   ): Promise<Restream> {
@@ -140,7 +140,7 @@ export default class Restream {
     return restream;
   }
 
-  public static async fromTrack(track: ITrack): Promise<Restream> {
+  public static async fromTrack(track: TrackLoaded): Promise<Restream> {
     return this.fromUrl(track, track.url, track.cover);
   }
 
@@ -263,7 +263,7 @@ export default class Restream {
 
     for (const tag in this.meta) {
       if (!(tag in MP4)) continue;
-      let value = this.meta[tag as keyof IMeta];
+      let value = this.meta[tag as keyof Meta];
       if (!value) continue;
       if (Array.isArray(value)) value = value.join(", ");
       if (typeof value === "number") value = value.toString();
@@ -349,7 +349,7 @@ export default class Restream {
     let length = 0;
     for (const name in this.meta) {
       if (!(name in ID3)) continue;
-      let item = this.meta[name as keyof IMeta];
+      let item = this.meta[name as keyof Meta];
       if (!item) continue;
       if (Array.isArray(item)) item = item.join(", ");
       if (typeof item === "number") item = item.toString();
@@ -371,7 +371,7 @@ export default class Restream {
 
     for (const tag in this.meta) {
       if (!(tag in ID3)) continue;
-      let value = this.meta[tag as keyof IMeta];
+      let value = this.meta[tag as keyof Meta];
       if (!value) continue;
       if (Array.isArray(value)) value = value.join(", ");
       if (typeof value === "number") value = value.toString();
@@ -413,7 +413,7 @@ export default class Restream {
   }
 }
 
-interface IMeta {
+interface Meta {
   title?: string;
   artists?: string[];
   album?: string;
@@ -421,7 +421,7 @@ interface IMeta {
   year?: number;
 }
 
-interface IInput {
+interface Input {
   url: string;
   stream: Readable;
   mime?: string;

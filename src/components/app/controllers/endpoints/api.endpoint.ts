@@ -142,7 +142,7 @@ export default class API extends Endpoint {
       const tracks = await this.want("query", query, "source");
       const track = await first(tracks);
       if (!track) return res.sendStatus(404);
-      res.send((await track.track()).url);
+      res.send((await track.load()).url);
     });
 
     get(base + "/lyrics/*", async (req, res) => {

@@ -1,4 +1,4 @@
-import { ITrackPreview } from "../track.interface";
+import { TrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 import ytsr, { ContinueResult } from "ytsr";
 import ytdl from "ytdl-core";
@@ -6,8 +6,8 @@ import parse, { parseArtists } from "../parser";
 import { is } from "typescript-is";
 import ytpl from "ytpl";
 
-export default class YouTubeProvider extends Provider<ITrackYouTube> {
-  public async *identify(source: string): AsyncGenerator<ITrackYouTube> {
+export default class YouTubeProvider extends Provider<YouTubeTrack> {
+  public async *identify(source: string): AsyncGenerator<YouTubeTrack> {
     //Source check
     if (source.match(/aggr:\/\/(?!youtube:)/)) return;
     //From aggregator
@@ -21,7 +21,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
         return a.height > b.height ? a : b;
       });
 
-      const track: ITrackYouTube = {
+      const track: YouTubeTrack = {
         id: details.videoId,
         title: details.title,
         author: { name: details.author },
@@ -41,13 +41,13 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
       const tracks = playlist.items;
 
       for await (const track of tracks) {
-        if (is<ITrackYouTube>(track)) yield track;
+        if (is<YouTubeTrack>(track)) yield track;
       }
 
       while (playlist.continuation) {
         playlist = await ytpl.continueReq(playlist.continuation);
         for await (const track of playlist.items) {
-          if (is<ITrackYouTube>(track)) yield track;
+          if (is<YouTubeTrack>(track)) yield track;
         }
       }
     } catch {
@@ -55,33 +55,33 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
     }
   }
 
-  protected async *search(query: string): AsyncGenerator<ITrackYouTube> {
+  protected async *search(query: string): AsyncGenerator<YouTubeTrack> {
     let response = (await ytsr(query, { pages: 1 })) as ContinueResult;
     const tracks = response.items;
 
     for await (const track of tracks) {
       if (track.type !== "video") continue;
-      if (is<ITrackYouTube>(track)) yield track;
+      if (is<YouTubeTrack>(track)) yield track;
     }
 
     while (response.continuation) {
       response = await ytsr.continueReq(response.continuation);
       for await (const track of response.items) {
         if (track.type !== "video") continue;
-        if (is<ITrackYouTube>(track)) yield track;
+        if (is<YouTubeTrack>(track)) yield track;
       }
     }
   }
 
-  protected async *artist(query: string): AsyncGenerator<ITrackYouTube> {
+  protected async *artist(query: string): AsyncGenerator<YouTubeTrack> {
     //Not aplicable
   }
 
-  protected async *album(query: string): AsyncGenerator<ITrackYouTube> {
+  protected async *album(query: string): AsyncGenerator<YouTubeTrack> {
     //Not aplicable
   }
 
-  protected convert(track: ITrackYouTube): ITrackPreview {
+  protected convert(track: YouTubeTrack): TrackPreview {
     const author = parseArtists(track.author?.name);
     const { title, artists, year, album } = parse(track.title);
 
@@ -103,9 +103,10 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
       artists: converted.artists,
       album: converted.album,
       cover: converted.cover,
-      source: converted.sources[0],
+      sources: converted.sources,
+      length: converted.length,
 
-      track: async () => {
+      load: async () => {
         const [url, cover, date] = await this.load(track.id);
 
         converted.url = url;
@@ -117,7 +118,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
     };
   }
 
-  protected validate(track: ITrackYouTube): boolean {
+  protected validate(track: YouTubeTrack): boolean {
     const length = +track.duration
       .split(":")
       .reduce((acc, time) => 60 * +acc + +time + "");
@@ -157,7 +158,7 @@ export default class YouTubeProvider extends Provider<ITrackYouTube> {
   }
 }
 
-interface ITrackYouTube {
+interface YouTubeTrack {
   id: string;
   title: string;
   duration: string;

@@ -1,5 +1,4 @@
 import { is } from "typescript-is";
-import { ITrackInfo, stringify } from "../track.interface";
 import Recommender from "./recommender.abstract";
 
 /**
@@ -12,14 +11,11 @@ export default class YandexRecommender extends Recommender {
     Authorization: `OAuth ${this.token}`,
   };
 
-  protected async assemble(
-    source: ITrackInfo,
-    count: number
-  ): Promise<string[]> {
+  protected async assemble(source: string, count: number): Promise<string[]> {
     //Search for the track
     const response = (await this.call("search", {
       type: "track",
-      text: stringify(source),
+      text: source,
       nococrrect: true,
       "page-size": 1,
       page: 0,
@@ -32,16 +28,16 @@ export default class YandexRecommender extends Recommender {
   }
 
   private async getSimilarTracks(id: number): Promise<string[]> {
-    const result = (await this.call(`tracks/${id}/similar`)) as ISimilarTracks;
+    const result = (await this.call(`tracks/${id}/similar`)) as YandexSimilar;
 
-    if (!is<ISimilarTracks>(result)) return [];
+    if (!is<YandexSimilar>(result)) return [];
     const similar = result.result.similarTracks;
 
     return similar.map((x) => `aggr://yandex:${x.id}`);
   }
 }
 
-interface ISimilarTracks {
+interface YandexSimilar {
   result: {
     similarTracks: {
       id: string;

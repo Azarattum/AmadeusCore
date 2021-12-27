@@ -1,11 +1,11 @@
 import Aggregator from "../../../app/controllers/aggregator.controller";
 import Provider from "../../../app/models/providers/provider.abstract";
 import Recommender from "../../../app/models/recommenders/recommender.abstract";
-import { ITrackPreview, ITrackInfo } from "../../../app/models/track.interface";
+import { TrackPreview } from "../../../app/models/track.interface";
 
 class TestProvider extends Provider {
   protected baseURL: string = "";
-  protected convert(track: any): ITrackPreview {
+  protected convert(track: any): TrackPreview {
     const data = track + "";
     const converted = {
       title: data,
@@ -20,9 +20,10 @@ class TestProvider extends Provider {
       title: converted.title,
       artists: converted.artists,
       album: converted.album,
-      source: converted.sources[0],
+      sources: converted.sources,
+      length: 0,
 
-      track: async () => converted,
+      load: async () => converted,
     };
   }
   protected async *identify(source: string): AsyncGenerator<any, any, unknown> {
@@ -40,7 +41,7 @@ class TestProvider extends Provider {
 }
 
 class TestRecommender extends Recommender {
-  protected async assemble(source: ITrackInfo): Promise<string[]> {
+  protected async assemble(source: string): Promise<string[]> {
     return ["recommended"];
   }
 }
@@ -56,7 +57,7 @@ describe("Aggregator", () => {
     const tracks = aggr.get("test");
     const any = jest.fn();
     for await (const track of tracks) {
-      expect(await track.track()).toEqual({
+      expect(await track.load()).toEqual({
         title: "test",
         album: "test",
         artists: ["test"],
@@ -74,7 +75,7 @@ describe("Aggregator", () => {
     const tracks = aggr.desource(["42"]);
     const any = jest.fn();
     for await (const track of tracks) {
-      expect(await track.track()).toEqual({
+      expect(await track.load()).toEqual({
         title: "42",
         album: "42",
         artists: ["42"],
@@ -89,7 +90,7 @@ describe("Aggregator", () => {
 
     const jsoned = aggr.desource([{ sources: '["42"]' }]);
     for await (const track of jsoned) {
-      expect(await track.track()).toEqual({
+      expect(await track.load()).toEqual({
         title: "42",
         album: "42",
         artists: ["42"],
@@ -104,7 +105,7 @@ describe("Aggregator", () => {
 
     const objects = aggr.desource([{ sources: "42" }]);
     for await (const track of objects) {
-      expect(await track.track()).toEqual({
+      expect(await track.load()).toEqual({
         title: "42",
         album: "42",
         artists: ["42"],
@@ -119,10 +120,10 @@ describe("Aggregator", () => {
   });
 
   it("recommend", async () => {
-    const tracks = aggr.recommend([{ title: "", artists: [] }]);
+    const tracks = aggr.recommend([""]);
     const any = jest.fn();
     for await (const track of tracks) {
-      expect(await track.track()).toEqual({
+      expect(await track.load()).toEqual({
         title: "recommended",
         album: "recommended",
         artists: ["recommended"],

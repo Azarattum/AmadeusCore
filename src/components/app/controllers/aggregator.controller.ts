@@ -2,8 +2,7 @@ import Controller from "../../common/controller.abstract";
 import Provider, { TrackSource } from "../models/providers/provider.abstract";
 import { compareTwoStrings } from "string-similarity";
 import {
-  ITrackPreview,
-  ITrackInfo,
+  TrackPreview,
   purify,
   stringify,
   Tracks,
@@ -24,7 +23,7 @@ export default class Aggregator extends Controller() {
   private transcribers: Transcriber[] = [];
   private recognizers: Recognizer[] = [];
 
-  public initialize(sources: IAggregatorSources = {}): void {
+  public initialize(sources: AggregatorSources = {}): void {
     this.providers = sources.providers || [];
     this.recommenders = sources.recommenders || [];
     this.transcribers = sources.transcribers || [];
@@ -107,7 +106,7 @@ export default class Aggregator extends Controller() {
   }
 
   public async *recommend(
-    source: ITrackInfo[],
+    source: string[],
     count = 100,
     listen = false
   ): Tracks {
@@ -116,13 +115,12 @@ export default class Aggregator extends Controller() {
     const generator = mergeGenerators(generators, true);
 
     //Biased source shuffle
-    const listenRate = 0.25;
+    const listenRate = 0.2;
     if (listen) source = Recommender.normalPick(source, source.length);
 
     for await (let recommendation of generator) {
       if (listen && Math.random() < listenRate) {
-        const item = source.shift();
-        if (item) recommendation = stringify(item);
+        recommendation = source.shift() || recommendation;
       }
 
       const track = await first(this.get(recommendation));
@@ -143,7 +141,7 @@ export default class Aggregator extends Controller() {
     return null;
   }
 
-  public async transcribe(source: ITrackInfo): Promise<string> {
+  public async transcribe(source: string): Promise<string> {
     const promises = this.transcribers.map((x) => x.transcribe(source));
 
     for (const promise of promises) {
@@ -151,13 +149,13 @@ export default class Aggregator extends Controller() {
       if (text) return text;
     }
 
-    const request = `${stringify(source)} lyrics`;
+    const request = `${source} lyrics`;
     return `https://duckduckgo.com/?q=${encodeURIComponent(request)}`;
   }
 
-  private compare(a: ITrackPreview, b: ITrackPreview, query: string) {
+  private compare(a: TrackPreview, b: TrackPreview, query: string) {
     const target = purify(query.toLowerCase().trim());
-    const preview = parse(query) as ITrackPreview;
+    const preview = parse(query) as TrackPreview;
     const parsed = stringify(preview);
 
     //Exact title match
@@ -215,7 +213,7 @@ export default class Aggregator extends Controller() {
   }
 }
 
-interface IAggregatorSources {
+interface AggregatorSources {
   providers?: Provider[];
   recommenders?: Recommender[];
   transcribers?: Transcriber[];

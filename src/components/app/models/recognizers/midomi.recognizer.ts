@@ -31,7 +31,7 @@ export default class MidomiRecognizer extends Recognizer {
 
     await this.connect();
     const check = await this.send({ version: "1.0" }, true);
-    if (!is<ICheck>(check)) throw check;
+    if (!is<MidomiOK>(check)) throw check;
 
     stream.on("data", (data: Buffer) => {
       this.send(data);
@@ -44,18 +44,18 @@ export default class MidomiRecognizer extends Recognizer {
     const text = ((await promisify(gunzip)(data)) as any).toString();
     const result = JSON.parse(text);
 
-    if (!is<IResult>(result)) return null;
+    if (!is<MidomiRecognition>(result)) return null;
     const track = result.AllResults[0]?.NativeData.Tracks[0];
     if (!track) return null;
     return `${track.ArtistName} - ${track.TrackName}`;
   }
 }
 
-interface ICheck {
+interface MidomiOK {
   status: "ok";
 }
 
-interface IResult {
+interface MidomiRecognition {
   AllResults: {
     NativeData: {
       Tracks: {

@@ -1,6 +1,5 @@
 import { is } from "typescript-is";
-import { ITrackVK } from "../providers/vk.provider";
-import { ITrackInfo, stringify } from "../track.interface";
+import { VKTrack } from "../providers/vk.provider";
 import Recommender from "./recommender.abstract";
 
 /**
@@ -17,19 +16,15 @@ export default class VKRecommender extends Recommender {
     access_token: this.token,
   };
 
-  protected async assemble(
-    source: ITrackInfo,
-    count: number
-  ): Promise<string[]> {
-    const track = stringify(source);
-    const tracks = await this.getSimilarTracks(track, count);
+  protected async assemble(source: string, count: number): Promise<string[]> {
+    const tracks = await this.getSimilarTracks(source, count);
     return tracks.map((x) => `aggr://vk:${x.owner_id}_${x.id}`);
   }
 
   private async getSimilarTracks(
     track: string,
     limit: number
-  ): Promise<ITrackVK[]> {
+  ): Promise<VKTrack[]> {
     const escape = (str: string) => str.replace(/["\\]/g, "\\$&");
 
     const code = `
@@ -47,13 +42,13 @@ export default class VKRecommender extends Recommender {
 		`;
 
     const result = await this.call("execute", { code });
-    if (!is<ISimilarTracks>(result)) return [];
+    if (!is<VKSimilar>(result)) return [];
     return result.response.items;
   }
 }
 
-interface ISimilarTracks {
+interface VKSimilar {
   response: {
-    items: ITrackVK[];
+    items: VKTrack[];
   };
 }

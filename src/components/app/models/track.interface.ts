@@ -1,14 +1,4 @@
-export interface ITrackPreview {
-  title: string;
-  artists: string[];
-  album: string;
-  cover?: string;
-  source: string;
-
-  track: () => Promise<ITrack>;
-}
-
-export interface ITrackMeta {
+export interface Track {
   title: string;
   artists: string[];
   album: string;
@@ -19,29 +9,28 @@ export interface ITrackMeta {
   sources: string[];
 }
 
-export interface ITrackInfo {
-  title: string;
-  artists: string[];
+export interface TrackPreview extends Track {
+  load: () => Promise<TrackLoaded>;
 }
 
-export interface ITrack extends ITrackMeta {
+export interface TrackLoaded extends Track {
   url: string;
 }
 
-export type Tracks = AsyncGenerator<ITrackPreview>;
+export type Tracks = AsyncGenerator<TrackPreview>;
 
-export function hash(track: ITrackPreview): string {
-  const val = `${stringify(track)} - ${track.album.toLowerCase()}`;
-  const buff = Buffer.from(val, "utf-8");
-  return buff.toString("base64");
+export function hash(track: Track): string {
+  return `${stringify(track)} - ${track.album.toLowerCase()}`;
 }
 
 export function stringify(
-  track: ITrackPreview | ITrackInfo | ITrack,
+  { title, artists }: { title: string; artists: string[] | string },
   reverse = false
 ): string {
-  const title = track.title.toLowerCase().trim();
-  const artists = track.artists.sort().join().toLowerCase().trim();
+  title = title.toLowerCase().trim();
+  artists = Array.isArray(artists)
+    ? artists.sort().join(", ").toLowerCase().trim()
+    : artists.toLowerCase().trim();
 
   if (!artists) return purify(title);
   if (reverse) return purify(`${title} - ${artists}`);

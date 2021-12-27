@@ -1,10 +1,10 @@
 import { assertType, is } from "typescript-is";
 import { sleep, wrn } from "../../../common/utils.class";
 import { parseArtists } from "../parser";
-import { ITrackPreview } from "../track.interface";
+import { TrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
-export default class VKProvider extends Provider<ITrackVK> {
+export default class VKProvider extends Provider<VKTrack> {
   protected baseURL = "https://api.vk.com/method/";
   protected headers = {
     "User-Agent":
@@ -15,14 +15,14 @@ export default class VKProvider extends Provider<ITrackVK> {
     access_token: this.token,
   };
 
-  protected async *identify(source: string): AsyncGenerator<ITrackVK> {
+  protected async *identify(source: string): AsyncGenerator<VKTrack> {
     let match;
     //From aggregator
     if (source.startsWith("aggr://vk:")) {
       const audios = await this.call("audio.getById", {
         audios: [source.slice(10)],
       });
-      const tracks = assertType<ISourceVK>(audios).response;
+      const tracks = assertType<VKSource>(audios).response;
       for (const track of tracks) yield track;
 
       return;
@@ -34,7 +34,7 @@ export default class VKProvider extends Provider<ITrackVK> {
       const audios = await this.call("audio.getById", {
         audios: [match[2]],
       });
-      const tracks = assertType<ISourceVK>(audios).response;
+      const tracks = assertType<VKSource>(audios).response;
       for (const track of tracks) yield track;
 
       return;
@@ -63,7 +63,7 @@ export default class VKProvider extends Provider<ITrackVK> {
           offset: offset,
         });
 
-        tracks = assertType<IResponseVK>(audios).response.items;
+        tracks = assertType<VKSearch>(audios).response.items;
         for await (const track of tracks) yield track;
         offset += 100;
       } while (tracks.length);
@@ -77,7 +77,7 @@ export default class VKProvider extends Provider<ITrackVK> {
       const user = await this.call("users.get", {
         user_ids: [match[2]],
       });
-      const id = assertType<IUserVK>(user).response[0].id;
+      const id = assertType<VKUser>(user).response[0].id;
 
       let tracks;
       let offset = 0;
@@ -88,7 +88,7 @@ export default class VKProvider extends Provider<ITrackVK> {
           offset: offset,
         });
 
-        tracks = assertType<IResponseVK>(audios).response.items;
+        tracks = assertType<VKSearch>(audios).response.items;
         for await (const track of tracks) yield track;
         offset += 100;
       } while (tracks.length);
@@ -97,7 +97,7 @@ export default class VKProvider extends Provider<ITrackVK> {
     }
   }
 
-  protected async *search(query: string): AsyncGenerator<ITrackVK> {
+  protected async *search(query: string): AsyncGenerator<VKTrack> {
     let tracks = [];
     let retries = 0;
     let offset = 0;
@@ -114,20 +114,20 @@ export default class VKProvider extends Provider<ITrackVK> {
         continue;
       }
 
-      tracks = assertType<IResponseVK>(audios).response.items;
+      tracks = assertType<VKSearch>(audios).response.items;
       for await (const track of tracks) yield track;
       offset += 100;
     } while (tracks.length || (retries > 0 && retries < 3));
   }
 
-  protected async *artist(query: string): AsyncGenerator<ITrackVK> {
+  protected async *artist(query: string): AsyncGenerator<VKTrack> {
     //Search for the artist
     if (query.match(/[^a-z0-9_]/)) {
       const artists = await this.call("audio.searchArtists", {
         q: query,
         count: 1,
       });
-      query = assertType<IArtistVK>(artists).response.items[0]?.id || "";
+      query = assertType<VKArtist>(artists).response.items[0]?.id || "";
       if (!query) return;
     }
 
@@ -141,19 +141,19 @@ export default class VKProvider extends Provider<ITrackVK> {
         offset: offset,
       });
 
-      tracks = assertType<IResponseVK>(audios).response.items;
+      tracks = assertType<VKSearch>(audios).response.items;
       for await (const track of tracks) yield track;
       offset += 100;
     } while (tracks.length);
   }
 
-  protected async *album(query: string): AsyncGenerator<ITrackVK> {
+  protected async *album(query: string): AsyncGenerator<VKTrack> {
     //Search for the album
     const artists = await this.call("audio.searchAlbums", {
       q: query,
       count: 1,
     });
-    const album = assertType<IPlaylistVK>(artists).response.items[0];
+    const album = assertType<VKPlaylist>(artists).response.items[0];
     if (!album) return;
     const { id, owner_id } = album;
 
@@ -168,13 +168,13 @@ export default class VKProvider extends Provider<ITrackVK> {
         offset: offset,
       });
 
-      tracks = assertType<IResponseVK>(audios).response.items;
+      tracks = assertType<VKSearch>(audios).response.items;
       for await (const track of tracks) yield track;
       offset += 100;
     } while (tracks.length);
   }
 
-  protected convert(track: ITrackVK): ITrackPreview {
+  protected convert(track: VKTrack): TrackPreview {
     const converted = {
       title: track.title
         .replace(/(?<=\(([^)]+)\))\s+\(\1\)/g, "")
@@ -193,21 +193,22 @@ export default class VKProvider extends Provider<ITrackVK> {
       artists: converted.artists,
       album: converted.album,
       cover: converted.cover,
-      source: converted.sources[0],
+      sources: converted.sources,
+      length: converted.length,
 
-      track: async () => converted,
+      load: async () => converted,
     };
   }
 
-  protected validate(track: ITrackVK): boolean {
+  protected validate(track: VKTrack): boolean {
     if (track.duration > 1200) return false;
     return true;
   }
 
   private capchaed(res: any, retries: number): boolean {
-    if (!is<ICapchaVK>(res)) return false;
+    if (!is<VKCapcha>(res)) return false;
     if (retries < 2) return true;
-    const { error } = res as ICapchaVK;
+    const { error } = res as VKCapcha;
     let cmd = 'curl -H "User-Agent: VKAndroidApp/5.52" "';
     cmd += "https://api.vk.com/method/audio.search?access_token=";
     cmd += this.token;
@@ -222,7 +223,7 @@ export default class VKProvider extends Provider<ITrackVK> {
   }
 }
 
-export interface ITrackVK {
+export interface VKTrack {
   artist: string;
   id: number;
   owner_id: number;
@@ -230,37 +231,37 @@ export interface ITrackVK {
   duration: number;
   url: string;
   date: number;
-  album?: IAlbumVK;
+  album?: VKAlbum;
 }
 
-interface IArtistVK {
+interface VKArtist {
   response: { items: [{ id: string }] | [] };
 }
 
-interface IPlaylistVK {
+interface VKPlaylist {
   response: {
     items: [{ id: number; owner_id: number }] | [];
   };
 }
 
-interface IUserVK {
-  response: [{ id: number }];
-}
-
-interface ISourceVK {
-  response: ITrackVK[];
-}
-
-interface IResponseVK {
-  response: { items: ITrackVK[] };
-}
-
-interface IAlbumVK {
+interface VKAlbum {
   title: string;
   thumb?: { photo_1200?: string };
 }
 
-interface ICapchaVK {
+interface VKUser {
+  response: [{ id: number }];
+}
+
+interface VKSource {
+  response: VKTrack[];
+}
+
+interface VKSearch {
+  response: { items: VKTrack[] };
+}
+
+interface VKCapcha {
   error: {
     error_code: number;
     captcha_sid: string;

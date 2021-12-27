@@ -46,11 +46,12 @@ async function check(generator: AsyncGenerator<any>) {
     artists: expected.artists,
     album: expected.album,
     cover: expected.cover,
-    track: value.track,
-    source: expected.sources[0],
+    load: value.load,
+    sources: expected.sources,
+    length: expected.length,
   });
-  expect(typeof value.track).toBe("function");
-  expect(await value.track()).toEqual(expected);
+  expect(typeof value.load).toBe("function");
+  expect(await value.load()).toEqual(expected);
 }
 
 describe("VK", () => {

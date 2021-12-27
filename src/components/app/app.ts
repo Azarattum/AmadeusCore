@@ -1,11 +1,11 @@
 import Application, { handle } from "../common/application.abstract";
-import { log } from "../common/utils.class";
+import { log, wrn } from "../common/utils.class";
 import Aggregator from "./controllers/aggregator.controller";
-import { ITrackPreview, ITrackInfo } from "./models/track.interface";
-import Preserver, { IPlaylistUpdate } from "./controllers/preserver.controller";
+import { TrackPreview, stringify, Track } from "./models/track.interface";
+import Preserver, { PlaylistUpdate } from "./controllers/preserver.controller";
 import API from "./controllers/endpoints/api.endpoint";
 import { Playlist } from "prisma/client/tenant";
-import { generate } from "./models/generator";
+import { first, generate } from "./models/generator";
 import { TrackSource } from "./models/providers/provider.abstract";
 import Telegram from "./controllers/endpoints/telegram.endpoint";
 import Endpoint from "./controllers/endpoints/endpoint.abstract";
@@ -22,7 +22,6 @@ import YandexTranscriber from "./models/transcribers/yandex.transcriber";
 import AudDRecognizer from "./models/recognizers/audd.recognizer";
 import YandexRecognizer from "./models/recognizers/yandex.recognizer";
 import MidomiRecognizer from "./models/recognizers/midomi.recognizer";
-import parse from "./models/parser";
 
 /**
  * Application class
@@ -83,23 +82,14 @@ export default class App extends Application {
       return aggregator.get(query, from);
     });
 
-    endpoint.wants("similar", (track: ITrackInfo) => {
-      const title = [track.artists.join(", "), track.title]
-        .filter((x) => x)
-        .join(" - ");
-
-      log(`${name} queried similar to "${title}" from ${endpoint.name}.`);
-      return aggregator.recommend([track]);
+    endpoint.wants("similar", (query: string) => {
+      log(`${name} queried similar to "${query}" from ${endpoint.name}.`);
+      return aggregator.recommend([query]);
     });
 
-    endpoint.wants("lyrics", (track: ITrackInfo | string) => {
-      if (typeof track === "string") track = parse(track);
-      const title = [track.artists.join(", "), track.title]
-        .filter((x) => x)
-        .join(" - ");
-
-      log(`${name} queried lyrics for "${title}" from ${endpoint.name}.`);
-      return aggregator.transcribe(track);
+    endpoint.wants("lyrics", (query: string) => {
+      log(`${name} queried lyrics for "${query}" from ${endpoint.name}.`);
+      return aggregator.transcribe(query);
     });
 
     endpoint.wants("recognise", (sample: string) => {
@@ -118,14 +108,11 @@ export default class App extends Application {
       return await preserver.getPlaylist(playlist);
     });
 
-    endpoint.on(
-      "playlisted",
-      async (track: ITrackPreview, playlist: string) => {
-        preserver.addTrack(track, playlist);
-      }
-    );
+    endpoint.on("playlisted", async (track: Track, playlist: string) => {
+      preserver.addTrack(track, playlist);
+    });
 
-    endpoint.on("relisted", (playlist: string, update: IPlaylistUpdate) => {
+    endpoint.on("relisted", (playlist: string, update: PlaylistUpdate) => {
       log(`${name} updated "${playlist}" playlist.`);
       preserver.updatePlaylist(playlist, update);
     });
@@ -139,24 +126,38 @@ export default class App extends Application {
   @handle(Preserver)
   private onPreserver(preserver: Preserver): void {
     const endpoints = this.getComponents(Endpoint, preserver.tenant);
+    const aggregator = this.getComponent(Aggregator);
     const name = preserver.tenant.identifier;
 
     preserver.on(
       "playlisted",
-      (track: ITrackPreview, playlist: Playlist, manually: boolean) => {
+      async (track: Track, playlist: Playlist, manually: boolean) => {
         if (manually) {
           log(`${name} added track "${track.title}" to "${playlist.title}".`);
         }
 
-        endpoints.forEach((x) => {
-          x.add(generate(track), playlist);
-        });
+        let preview: TrackPreview | undefined;
+        if (typeof (track as any).load === "function") {
+          preview = track as TrackPreview;
+        } else {
+          preview = await first(aggregator.desource(track.sources));
+        }
+
+        if (!preview) {
+          wrn(`Unable to desource ${track.title}!`);
+          return;
+        }
+
+        for (const endpoint of endpoints) {
+          endpoint.add(generate(preview), playlist);
+        }
       }
     );
   }
 
   @handle(Scheduler)
   private onScheduler(scheduler: Scheduler): void {
+    const name = scheduler.tenant.identifier;
     const aggregator = this.getComponent(Aggregator);
     const preserver = this.getComponent(Preserver, scheduler.tenant);
     const endpoints = this.getComponents(Endpoint, scheduler.tenant);
@@ -172,7 +173,8 @@ export default class App extends Application {
         await preserver.clearPlaylist(playlist.title);
         await Promise.all(endpoints.map((x) => x.clear(playlist)));
         //Get a sample of the last 100 user's tracks
-        const sample = await preserver.getTracks(100);
+        const str = (x: Track) => stringify(x);
+        const sample = (await preserver.getPlaylist(undefined, 100)).map(str);
         //Recommendations are based on this sample
         const tracks = aggregator.recommend(sample, batch, playlist.type === 2);
 
@@ -181,7 +183,7 @@ export default class App extends Application {
           preserver.addTrack(track, playlist.title, false);
         }
 
-        log(`Playlist "${playlist.title}" updated with new tracks.`);
+        log(`${name}'s playlist "${playlist.title}" updated with new tracks.`);
       });
     });
   }

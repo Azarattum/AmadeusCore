@@ -1,5 +1,5 @@
 import { is } from "typescript-is";
-import { ITrackInfo } from "../track.interface";
+import parse from "../parser";
 import Recommender from "./recommender.abstract";
 
 /**
@@ -13,18 +13,16 @@ export default class LastFMRecommender extends Recommender {
     autocorrect: "1",
   };
 
-  protected async assemble(
-    source: ITrackInfo,
-    count: number
-  ): Promise<string[]> {
-    const similars = await this.getSimilarTracks(source, count);
+  protected async assemble(source: string, count: number): Promise<string[]> {
+    const { title, artists } = parse(source);
+    const similars = await this.getSimilarTracks({ title, artists }, count);
 
     //Fallback to the artist similarity
-    if (!similars.length && source.artists.length) {
-      const artist = this.normalPick(source.artists)[0];
-      const artists = await this.getSimilarArtists(artist, count);
+    if (!similars.length && artists.length) {
+      const artist = this.normalPick(artists)[0];
+      const similar = await this.getSimilarArtists(artist, count);
       const chosen = this.normalPick(
-        artists,
+        similar,
         Math.min(Math.ceil(count / 2), 20)
       );
 
@@ -37,16 +35,16 @@ export default class LastFMRecommender extends Recommender {
   }
 
   private async getSimilarTracks(
-    track: ITrackInfo,
+    { title, artists }: { title: string; artists: string[] },
     limit?: number
   ): Promise<string[]> {
     const result = await this.call("", {
       method: "track.getsimilar",
-      track: track.title,
-      artist: track.artists.join(", "),
+      track: title,
+      artist: artists.join(", "),
       limit,
     });
-    if (!is<ISimilarTracks>(result)) return [];
+    if (!is<SimilarTracks>(result)) return [];
     const tracks = result.similartracks.track;
 
     return tracks.map((x) => {
@@ -63,7 +61,7 @@ export default class LastFMRecommender extends Recommender {
       artist: artist,
       limit,
     });
-    if (!is<ISimilarArtists>(result)) return [];
+    if (!is<SimilarArtists>(result)) return [];
     const artists = result.similarartists.artist;
 
     return artists.map((x) => x.name);
@@ -78,7 +76,7 @@ export default class LastFMRecommender extends Recommender {
       artist: artist,
       limit,
     });
-    if (!is<ITopTracks>(result)) return [];
+    if (!is<TopTracks>(result)) return [];
     const tracks = result.toptracks.track;
 
     return tracks.map((x) => {
@@ -87,20 +85,20 @@ export default class LastFMRecommender extends Recommender {
   }
 }
 
-interface ISimilarTracks {
+interface SimilarTracks {
   similartracks: {
     track: { artist?: { name: string } | null; name: string }[];
   };
 }
 
-interface ITopTracks {
-  toptracks: {
-    track: { artist?: { name: string } | null; name: string }[];
+interface SimilarArtists {
+  similarartists: {
+    artist: { name: string }[];
   };
 }
 
-interface ISimilarArtists {
-  similarartists: {
-    artist: { name: string }[];
+interface TopTracks {
+  toptracks: {
+    track: { artist?: { name: string } | null; name: string }[];
   };
 }

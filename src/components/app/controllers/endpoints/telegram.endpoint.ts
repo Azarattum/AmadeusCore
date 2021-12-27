@@ -1,18 +1,13 @@
 import { Playlist } from "prisma/client/tenant";
-import { IComponentOptions } from "../../../common/component.interface";
+import { ComponentOptions } from "../../../common/component.interface";
 import Restream from "../../models/restream";
-import {
-  ITrackPreview,
-  ITrackInfo,
-  stringify,
-  Tracks,
-} from "../../models/track.interface";
-import TelegramBase, { ICallbackData } from "./telegram.base";
+import { TrackPreview, stringify, Tracks } from "../../models/track.interface";
+import TelegramBase, { CallbackData } from "./telegram.base";
 import { first } from "../../models/generator";
 import { err, generateID, shuffle, sleep } from "../../../common/utils.class";
 import AbortController from "abort-controller";
 import { Readable } from "stream";
-import Cache, { ExtendedSource, IMessage } from "../../models/cache";
+import Cache, { ExtendedSource, Message } from "../../models/cache";
 
 const UNTRACKED_TAG = "#untracked";
 const DISCOVER_TAG = "#discover";
@@ -31,9 +26,9 @@ export default class Telegram extends TelegramBase {
   private loader?: NodeJS.Timeout;
   private issued: Set<string> = new Set();
   private cache: TrackCache;
-  private tasks: Map<string, ITask> = new Map();
+  private tasks: Map<string, Task> = new Map();
 
-  public constructor(args: IComponentOptions) {
+  public constructor(args: ComponentOptions) {
     super(args);
     this.client = this.tenant.telegram;
     this.cache = {
@@ -126,7 +121,7 @@ export default class Telegram extends TelegramBase {
   }
 
   protected async onCallback(
-    data: ICallbackData,
+    data: CallbackData,
     message: number,
     chat: number
   ): Promise<void> {
@@ -333,8 +328,8 @@ export default class Telegram extends TelegramBase {
     if (!track) return;
     this.issued.add(stringify(track));
 
-    const load = track.track;
-    track.track = async () => {
+    const load = track.load;
+    track.load = async () => {
       const loaded = await load();
       if (file) loaded.sources.push(`tg://${file}`);
       return loaded;
@@ -380,7 +375,7 @@ export default class Telegram extends TelegramBase {
         if (!message) return;
 
         const task = await this.startTask(TaskType.Searching);
-        const lyrics = await this.want("lyrics", message);
+        const lyrics = await this.want("lyrics", stringify(message));
         const { message_id: id } = await Telegram.call("sendMessage", {
           disable_notification: true,
           chat_id: this.client,
@@ -439,34 +434,27 @@ export default class Telegram extends TelegramBase {
   }
 
   private async requestTracks(
-    query: string | ITrackInfo,
+    query: string,
     from: ExtendedSource = "search",
     offset = 0,
     count = 10
-  ): Promise<ITrackPreview[]> {
+  ): Promise<TrackPreview[]> {
     if (from === "similar" && typeof query === "string") return [];
 
     let task;
     try {
-      const hash =
-        typeof query == "string"
-          ? query
-          : [query.artists.join(", "), query.title]
-              .filter((x) => x)
-              .join(" - ");
-
-      const cached = this.cache[from]?.[hash];
+      const cached = this.cache[from]?.[query];
       const source = cached || {
         history: [],
         iterator:
           typeof query == "string" && from != "similar"
             ? this.want("query", query, from)
-            : this.want("similar", query as ITrackInfo),
+            : this.want("similar", query),
       };
 
       if (!cached) {
         this.cache[from] ??= {};
-        this.cache[from][hash] = source;
+        this.cache[from][query] = source;
         //Cache control
         const keys = Object.keys(this.cache[from]);
         if (keys.length > CACHE_LIMIT) {
@@ -503,22 +491,22 @@ export default class Telegram extends TelegramBase {
   }
 
   private async requestFromContext(
-    ctx: IMessage,
+    ctx: Message,
     max?: number
-  ): Promise<ITrackPreview[]> {
+  ): Promise<TrackPreview[]> {
     if (ctx.query == null || ctx.type == null || ctx.page == null) {
       return [];
     }
 
     return await this.requestTracks(
-      ctx.type == "similar" ? ctx : ctx.query,
+      ctx.type == "similar" ? stringify(ctx) : ctx.query,
       ctx.type,
       max ? 0 : ctx.page * PER_PAGE + (ctx.type == "search" ? 1 : 0),
       max || PER_PAGE
     );
   }
 
-  private async createList(ctx: IMessage): Promise<Record<string, any>[]> {
+  private async createList(ctx: Message): Promise<Record<string, any>[]> {
     if (ctx.query == null || ctx.type == null || ctx.page == null) {
       return [];
     }
@@ -530,7 +518,7 @@ export default class Telegram extends TelegramBase {
         text: `${x.artists.join(", ")} - ${x.title}`,
         callback_data: JSON.stringify({
           type: "download",
-          arg: x.source,
+          arg: x.sources[0],
         }),
       },
     ]);
@@ -652,7 +640,7 @@ export default class Telegram extends TelegramBase {
   }
 
   private async upload(
-    preview: ITrackPreview,
+    preview: TrackPreview,
     query: string | null,
     chat = this.client
   ): Promise<void> {
@@ -661,7 +649,7 @@ export default class Telegram extends TelegramBase {
     const task = await this.startTask(TaskType.Uploading, abort, chat);
     if (abort.signal.aborted) return;
     try {
-      const track = await preview.track();
+      const track = await preview.load();
       if (abort.signal.aborted) return;
       let tg = track.sources.find((x) => x.startsWith("tg://"))?.slice(5);
       tg ||= await Cache.getFile(preview);
@@ -729,7 +717,7 @@ export default class Telegram extends TelegramBase {
   }
 }
 
-interface ITask {
+interface Task {
   type: TaskType;
   playlist: number;
   abort?: AbortController;
@@ -744,5 +732,5 @@ enum TaskType {
 
 type TrackCache = Record<
   ExtendedSource,
-  Record<string, { history: ITrackPreview[]; iterator: Tracks }>
+  Record<string, { history: TrackPreview[]; iterator: Tracks }>
 >;

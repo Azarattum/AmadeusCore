@@ -15,8 +15,8 @@ export const separators = [
   "\\/\\/+",
 ];
 
-export function unbrace(text: string): IUnbraced {
-  const result: IUnbraced = {
+export function unbrace(text: string): Unbraced {
+  const result: Unbraced = {
     clean: "",
     parts: [],
   };
@@ -190,7 +190,7 @@ export function isGenere(text: string, strict: boolean = false): boolean {
   );
 }
 
-export default function parse(text: string): IParsed {
+export default function parse(text: string): Parsed {
   const { parts, clean } = unbrace(text);
   let atoms = [...split(clean), ...parts].filter((x) => x);
   atoms = [...new Set(atoms)];
@@ -268,12 +268,12 @@ export default function parse(text: string): IParsed {
   };
 }
 
-interface IUnbraced {
+interface Unbraced {
   clean: string;
   parts: string[];
 }
 
-interface IParsed {
+interface Parsed {
   title: string;
   artists: string[];
   album: string;

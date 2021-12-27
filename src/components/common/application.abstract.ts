@@ -1,4 +1,4 @@
-import { IComponent, IComponentType } from "./component.interface";
+import { Component, ComponentType } from "./component.interface";
 import { log, LogType } from "./utils.class";
 import Exposer from "./exposer.class";
 
@@ -9,19 +9,19 @@ export default abstract class Application {
   /**Whether to log out initialization status */
   public logging: boolean = true;
   /**Application components */
-  protected components: IComponent[];
+  protected components: Component[];
   /**Configuration for componets initialization */
-  protected configs: Map<IComponentType, any[]>;
+  protected configs: Map<ComponentType, any[]>;
   /**Application initialization state */
   private initialized = false;
   /**Application's exposer object */
   private readonly exposer: Exposer;
   /**Components types */
-  private readonly types: IComponentType[];
+  private readonly types: ComponentType[];
   /**Relation map for dynamic components */
-  private readonly relations: Map<IComponent, obj | null>;
+  private readonly relations: Map<Component, obj | null>;
   /**Handlers map for each component type */
-  private readonly handlers: Map<IComponentType, ((self: any) => void)[]>;
+  private readonly handlers: Map<ComponentType, ((self: any) => void)[]>;
   /**Timeout id for debouncing refresh calls */
   private refresher: any;
 
@@ -31,12 +31,12 @@ export default abstract class Application {
    * @param options Application options
    */
   public constructor(
-    components: IComponentType[],
+    components: ComponentType[],
     {
       scope = globalThis,
       configs = new Map(),
       logging = true,
-    }: IApplicationOptions = {}
+    }: ApplicationOptions = {}
   ) {
     this.components = [];
     this.configs = configs;
@@ -70,7 +70,7 @@ export default abstract class Application {
    * Initializes all components
    */
   public async initialize(
-    ...configs: [IComponentType, ...any[]][]
+    ...configs: [ComponentType, ...any[]][]
   ): Promise<void> {
     let exceptions = 0;
     if (this.logging) log("Initializtion started...");
@@ -85,7 +85,7 @@ export default abstract class Application {
       const type =
         component instanceof Promise
           ? (await component).constructor.type
-          : (component.constructor as IComponentType).type;
+          : (component.constructor as ComponentType).type;
 
       if (this.logging && type != lastType) {
         log(type, LogType.DIVIDER);
@@ -125,7 +125,7 @@ export default abstract class Application {
       if (this.logging) log("Refreshing components...");
 
       //Find all the relevant relations
-      const relations: Map<IComponentType, obj[]> = new Map();
+      const relations: Map<ComponentType, obj[]> = new Map();
       this.types.forEach((type) => {
         let array: obj[] | null | undefined = relations.get(type);
         if (array === undefined) {
@@ -140,7 +140,7 @@ export default abstract class Application {
       this.components = this.components.filter((component, i) => {
         const relation = this.relations.get(component);
         if (!relation) return true;
-        const array = relations.get(component.constructor as IComponentType);
+        const array = relations.get(component.constructor as ComponentType);
         if (!array) return true;
 
         const index = array.indexOf(relation);
@@ -223,8 +223,8 @@ export default abstract class Application {
    * Returns the first component by the type
    * @param type Component's type
    */
-  protected getComponent<T extends IComponent>(
-    type: IComponentType<T> | { name: string; prototype: T },
+  protected getComponent<T extends Component>(
+    type: ComponentType<T> | { name: string; prototype: T },
     relation?: obj
   ): T {
     const component = this.components.find(
@@ -244,8 +244,8 @@ export default abstract class Application {
    * Returns components by the type
    * @param type Component's type
    */
-  protected getComponents<T extends IComponent>(
-    type: IComponentType<T> | { name: string; prototype: T },
+  protected getComponents<T extends Component>(
+    type: ComponentType<T> | { name: string; prototype: T },
     relation?: obj
   ): T[] {
     return this.components.filter(
@@ -260,7 +260,7 @@ export default abstract class Application {
    * resolving promises, calling handlers and a call to inner method
    * @param component Component to initialize
    */
-  private async initializeComponent(component: IComponent): Promise<boolean> {
+  private async initializeComponent(component: Component): Promise<boolean> {
     try {
       //Resolve promised component
       if (component instanceof Promise) {
@@ -287,7 +287,7 @@ export default abstract class Application {
 
       //Initialize the component with its config
       const args =
-        this.configs.get(component.constructor as IComponentType) || [];
+        this.configs.get(component.constructor as ComponentType) || [];
       if (component.initialize) {
         await component.initialize(...args);
       }
@@ -314,9 +314,9 @@ export default abstract class Application {
    * @param relation Component's relation object
    */
   private registerComponent(
-    component: IComponentType,
+    component: ComponentType,
     relation?: obj
-  ): IComponent | null {
+  ): Component | null {
     try {
       const created = new component({
         refresh: this.refresh.bind(this),
@@ -354,8 +354,8 @@ export default abstract class Application {
  * before its initializtion. The main use case is events registration
  * @param type Component type to handle
  */
-export function handle<T extends IComponent>(
-  type: IComponentType<T> | { name: string; prototype: T }
+export function handle<T extends Component>(
+  type: ComponentType<T> | { name: string; prototype: T }
 ) {
   return function (
     target: Application,
@@ -380,9 +380,9 @@ export function handle<T extends IComponent>(
 /**
  * Application options interface
  */
-export interface IApplicationOptions {
+export interface ApplicationOptions {
   /**Component configuration map */
-  configs?: Map<IComponentType, any[]>;
+  configs?: Map<ComponentType, any[]>;
 
   /**Scope for an exposer */
   scope?: Record<string, any>;

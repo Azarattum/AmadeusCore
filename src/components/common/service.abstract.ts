@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
-import { IComponent } from "./component.interface";
+import { Component } from "./component.interface";
 import Utils from "./utils.class";
 
 /**
@@ -10,7 +10,7 @@ export default function Service<T extends string>() {
   /**
    * Abstract of the service class
    */
-  abstract class Service implements IComponent {
+  abstract class Service implements Component {
     /**Component type */
     public static type: string = "Services";
     /**Service universal unique id */

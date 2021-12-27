@@ -1,6 +1,5 @@
 import { gretch } from "gretchen";
 import { assertType } from "typescript-is";
-import { ITrackInfo } from "../track.interface";
 import { load } from "cheerio";
 import Transcriber from "./transcriber.abstract";
 
@@ -10,13 +9,13 @@ import Transcriber from "./transcriber.abstract";
 export default class GeniusTranscriber extends Transcriber {
   protected baseURL = "https://genius.com/api/";
 
-  public async assemble(source: ITrackInfo): Promise<string | null> {
+  public async assemble(source: string): Promise<string | null> {
     const result = await this.call("search", {
       per_page: 1,
       q: this.optimize(source),
     });
 
-    const match = assertType<ISearchResult>(result).response.hits.filter(
+    const match = assertType<GeniusSearch>(result).response.hits.filter(
       (x) => x.type === "song"
     )[0]?.result;
     if (!match?.url) return null;
@@ -50,9 +49,8 @@ export default class GeniusTranscriber extends Transcriber {
     return lyrics.replace(/\n\n\n+/g, "\n\n").trim();
   }
 
-  private optimize(track: ITrackInfo): string {
-    return `${track.title} ${track.artists.sort().join()}`
-      .toLowerCase()
+  private optimize(track: string): string {
+    return track
       .replace(/ *\([^)]*\) */g, " ")
       .replace(/ *\[[^\]]*]/, " ")
       .replace(/feat.|ft./g, " ")
@@ -61,7 +59,7 @@ export default class GeniusTranscriber extends Transcriber {
   }
 }
 
-interface ISearchResult {
+interface GeniusSearch {
   response: {
     hits: {
       type: string;

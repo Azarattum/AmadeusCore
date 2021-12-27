@@ -1,12 +1,9 @@
-import { ITrackPreview } from "../track.interface";
+import { TrackPreview, Tracks } from "../track.interface";
 import { wrn } from "../../../common/utils.class";
 import Fetcher from "../fetcher.abstract";
 
 export default abstract class Provider<T = any> extends Fetcher {
-  public async *get(
-    query: string,
-    from: TrackSource = "search"
-  ): AsyncGenerator<ITrackPreview> {
+  public async *get(query: string, from: TrackSource = "search"): Tracks {
     const sources: Record<TrackSource, (query: string) => AsyncGenerator<T>> = {
       search: this.search,
       artist: this.artist,
@@ -36,7 +33,7 @@ export default abstract class Provider<T = any> extends Fetcher {
     return true;
   }
 
-  protected abstract convert(track: T): ITrackPreview | null;
+  protected abstract convert(track: T): TrackPreview | null;
   protected abstract identify(source: string): AsyncGenerator<T>;
   protected abstract search(query: string): AsyncGenerator<T>;
   protected abstract artist(query: string): AsyncGenerator<T>;

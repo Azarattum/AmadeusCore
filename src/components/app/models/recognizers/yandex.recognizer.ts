@@ -117,14 +117,14 @@ export default class YandexRecognizer extends Recognizer {
     do {
       result = await Promise.race([this.wait(), sleep(10000)]);
       if (!result) return cache;
-      if (is<IError>(result)) {
+      if (is<YandexError>(result)) {
         const error = result.directive.payload.error;
         if (error.message.includes("inactivity")) {
           return cache;
         }
         throw error;
       }
-    } while (!is<IMusicResult>(result));
+    } while (!is<YandexRecognition>(result));
 
     const track = result.directive.payload.data.match;
     return `${track.artists.map((x) => x.name).join(", ")} - ${track.title}`;
@@ -147,7 +147,7 @@ export default class YandexRecognizer extends Recognizer {
 
 type RequestReuslt = string | Buffer[] | null;
 
-interface IError {
+interface YandexError {
   directive: {
     payload: {
       error: { message: string };
@@ -155,7 +155,7 @@ interface IError {
   };
 }
 
-interface IMusicResult {
+interface YandexRecognition {
   directive: {
     header: {
       name: "MusicResult";

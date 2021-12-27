@@ -1,32 +1,27 @@
 import { Playlist } from "prisma/client/tenant";
-import { IComponentOptions } from "../../../common/component.interface";
+import { ComponentOptions } from "../../../common/component.interface";
 import Controller from "../../../common/controller.abstract";
 import { TrackSource } from "../../models/providers/provider.abstract";
 import Tenant from "../../models/tenant";
-import {
-  ITrackPreview,
-  ITrackInfo,
-  Tracks,
-  ITrackMeta,
-} from "../../models/track.interface";
-import { IPlaylistUpdate } from "../preserver.controller";
+import { Tracks, Track } from "../../models/track.interface";
+import { PlaylistUpdate } from "../preserver.controller";
 
 export default abstract class Endpoint extends Controller<
   //Events
-  | ["playlisted", (track: ITrackPreview, playlist: string) => void]
+  | ["playlisted", (track: Track, playlist: string) => void]
   | ["triggered", (playlist: string) => void]
-  | ["relisted", (playlist: string, update: IPlaylistUpdate) => void],
+  | ["relisted", (playlist: string, update: PlaylistUpdate) => void],
   //Whishes
   | ["query", (query: string, from: TrackSource) => Tracks]
-  | ["similar", (track: ITrackInfo) => Tracks]
-  | ["tracks", (playlist?: number) => Promise<ITrackMeta[]>]
+  | ["similar", (query: string) => Tracks]
+  | ["tracks", (playlist?: number) => Promise<Track[]>]
   | ["recognise", (audio: string) => Promise<string | null>]
-  | ["lyrics", (track: ITrackInfo | string) => Promise<string>]
+  | ["lyrics", (query: string) => Promise<string>]
   | ["playlists", () => Promise<Playlist[]>]
 >() {
   public tenant: Tenant;
 
-  public constructor(args: IComponentOptions) {
+  public constructor(args: ComponentOptions) {
     super(args);
     this.tenant = args.relation as Tenant;
   }

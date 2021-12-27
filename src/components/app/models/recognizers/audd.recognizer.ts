@@ -14,12 +14,12 @@ export default class AudDRecognizer extends Recognizer {
   public async detect(url: string): Promise<string | null> {
     const data = await this.call("", { url });
 
-    if (!is<IRecognitionResult>(data)) return null;
+    if (!is<AudDRecognition>(data)) return null;
     return `${data.result.artist} - ${data.result.title}`;
   }
 }
 
-interface IRecognitionResult {
+interface AudDRecognition {
   status: "success";
   result: {
     artist: string;

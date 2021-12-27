@@ -3,7 +3,7 @@ import Exposer from "./exposer.class";
 /**
  * Component interface
  */
-export interface IComponent {
+export interface Component {
   /**Initializable name */
   name: string;
 
@@ -17,12 +17,12 @@ export interface IComponent {
 /**
  * Component type interface
  */
-export interface IComponentType<T extends IComponent = IComponent> {
+export interface ComponentType<T extends Component = Component> {
   /**Component type */
   type: string;
 
   /**Component constructor */
-  new (options: IComponentOptions): T;
+  new (options: ComponentOptions): T;
 
   /**Component relations */
   relations: obj[] | null;
@@ -31,7 +31,7 @@ export interface IComponentType<T extends IComponent = IComponent> {
 /**
  * Component's constructor options interface
  */
-export interface IComponentOptions {
+export interface ComponentOptions {
   /**Exposer object to use within component */
   exposer?: Exposer;
 
@@ -73,7 +73,7 @@ export type EventResult<
 export function expose(...args: any[]): any {
   let name: string = "";
   const decorator = function (
-    target: IComponent & { expose: (name: string, func: func) => void },
+    target: Component & { expose: (name: string, func: func) => void },
     key: string,
     descriptor: PropertyDescriptor
   ): void {

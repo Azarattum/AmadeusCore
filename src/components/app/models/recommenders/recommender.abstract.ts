@@ -1,15 +1,11 @@
 import { wrn } from "../../../common/utils.class";
 import Fetcher from "../fetcher.abstract";
-import { ITrackInfo } from "../track.interface";
 
 export default abstract class Recommender extends Fetcher {
-  protected abstract assemble(
-    source: ITrackInfo,
-    count: number
-  ): Promise<string[]>;
+  protected abstract assemble(source: string, count: number): Promise<string[]>;
 
   public async *recommend(
-    source: ITrackInfo[],
+    source: string[],
     count = 100
   ): AsyncGenerator<string> {
     const tracks = this.normalPick(source, source.length);
@@ -47,7 +43,7 @@ export default abstract class Recommender extends Fetcher {
         }
 
         wrn(
-          `${this.constructor.name} failed to assemble recommendations from "${track.title}"!\n${e}`
+          `${this.constructor.name} failed to assemble recommendations from "${track}"!\n${e}`
         );
       }
     }

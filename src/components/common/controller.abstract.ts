@@ -3,8 +3,8 @@
 import {
   EventBind,
   EventBase,
-  IComponent,
-  IComponentOptions,
+  Component,
+  ComponentOptions,
   EventCall,
   EventResult,
 } from "./component.interface";
@@ -21,7 +21,7 @@ export default function Controller<
   /**
    * Abstract of the controller class
    */
-  abstract class Controller implements IComponent {
+  abstract class Controller implements Component {
     /**Component type */
     public static type: string = "Controllers";
     /**Controller universal unique id */
@@ -40,7 +40,7 @@ export default function Controller<
     /**
      * Creates controller class
      */
-    public constructor({ exposer, relation }: IComponentOptions = {}) {
+    public constructor({ exposer, relation }: ComponentOptions = {}) {
       this.uuid = Utils.generateID();
       this.name = this.constructor.name;
       this.exposer = exposer;

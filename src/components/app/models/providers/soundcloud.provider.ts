@@ -1,10 +1,10 @@
 import { gretch } from "gretchen";
 import { assertType, is } from "typescript-is";
 import parse, { parseArtists } from "../parser";
-import { ITrackPreview } from "../track.interface";
+import { TrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 
-export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
+export default class SoundCloudProvider extends Provider<SoundCloudTrack> {
   protected baseURL = "https://api-v2.soundcloud.com/";
   protected headers = {
     "User-Agent":
@@ -14,11 +14,11 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
     client_id: this.token,
   };
 
-  protected async *identify(source: string): AsyncGenerator<ITrackSoundCloud> {
+  protected async *identify(source: string): AsyncGenerator<SoundCloudTrack> {
     //From aggregator
     if (source.startsWith("aggr://soundcloud:")) {
       const audio = await this.call(`tracks/${source.slice(18)}`);
-      const track = assertType<ITrackSoundCloud>(audio);
+      const track = assertType<SoundCloudTrack>(audio);
       yield track;
 
       return;
@@ -34,25 +34,25 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
         url: source,
       });
 
-      if (is<ITrackSoundCloud>(data)) {
+      if (is<SoundCloudTrack>(data)) {
         yield data;
-      } else if (is<IArtistSoundCloud>(data)) {
+      } else if (is<SoundCloudArtist>(data)) {
         let tracks;
         let page = `users/${data.id}/tracks`;
         do {
           const audios = await this.call(page, { limit: 100 });
-          tracks = assertType<ICollectionSoundCloud>(audios);
+          tracks = assertType<SoundCloudCollection>(audios);
           if (!tracks) return;
 
           for await (const track of tracks.collection) {
-            if (is<ITrackSoundCloud>(track)) yield track;
+            if (is<SoundCloudTrack>(track)) yield track;
           }
 
           page = tracks.next_href?.replace(this.baseURL, "") as string;
         } while (page);
-      } else if (is<IPlaylistSoundCloud>(data)) {
+      } else if (is<SoundCloudPlaylist>(data)) {
         for await (const track of data.tracks) {
-          if (is<ITrackSoundCloud>(track)) yield track;
+          if (is<SoundCloudTrack>(track)) yield track;
         }
       }
     } catch {
@@ -60,31 +60,31 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
     }
   }
 
-  protected async *search(query: string): AsyncGenerator<ITrackSoundCloud> {
+  protected async *search(query: string): AsyncGenerator<SoundCloudTrack> {
     let tracks;
     let page = "search/tracks";
     do {
       const audios = await this.call(page, { q: query, limit: 100 });
-      tracks = assertType<ICollectionSoundCloud>(audios);
+      tracks = assertType<SoundCloudCollection>(audios);
       if (!tracks) return;
 
       for await (const track of tracks.collection) {
-        if (is<ITrackSoundCloud>(track)) yield track;
+        if (is<SoundCloudTrack>(track)) yield track;
       }
 
       page = tracks.next_href?.replace(this.baseURL, "") as string;
     } while (page);
   }
 
-  protected async *artist(query: string): AsyncGenerator<ITrackSoundCloud> {
+  protected async *artist(query: string): AsyncGenerator<SoundCloudTrack> {
     //Not aplicable
   }
 
-  protected async *album(query: string): AsyncGenerator<ITrackSoundCloud> {
+  protected async *album(query: string): AsyncGenerator<SoundCloudTrack> {
     //Not aplicable
   }
 
-  protected convert(track: ITrackSoundCloud): ITrackPreview | null {
+  protected convert(track: SoundCloudTrack): TrackPreview | null {
     const { title, album, artists, year } = parse(track.title);
 
     //Check media
@@ -124,9 +124,10 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
       artists: converted.artists,
       album: converted.album,
       cover: converted.cover,
-      source: converted.sources[0],
+      sources: converted.sources,
+      length: converted.length,
 
-      track: async () => {
+      load: async () => {
         const [url, image] = await this.load(media, cover);
 
         converted.cover = image;
@@ -137,7 +138,7 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
     };
   }
 
-  protected validate(track: ITrackSoundCloud): boolean {
+  protected validate(track: SoundCloudTrack): boolean {
     if (track.full_duration > 1200 * 1000) return false;
     return true;
   }
@@ -159,40 +160,40 @@ export default class SoundCloudProvider extends Provider<ITrackSoundCloud> {
   }
 }
 
-interface ICollectionSoundCloud {
-  collection: (ITrackSoundCloud | Record<string, any>)[];
+interface SoundCloudCollection {
+  collection: (SoundCloudTrack | Record<string, any>)[];
   next_href?: string | null;
 }
 
-interface ITrackSoundCloud {
+interface SoundCloudTrack {
   artwork_url?: string | null;
   created_at: string;
   full_duration: number;
   id: number;
-  publisher_metadata?: IMetaSoundCloud | null;
+  publisher_metadata?: SoundCloudMeta | null;
   release_date?: string | null;
   title: string;
-  media: { transcodings: ITranscodingsSoundCloud[] };
-  user: IArtistSoundCloud;
+  media: { transcodings: SoundCloudTranscodings[] };
+  user: SoundCloudArtist;
 }
 
-interface IPlaylistSoundCloud {
-  tracks: (ITrackSoundCloud | Record<string, any>)[];
+interface SoundCloudPlaylist {
+  tracks: (SoundCloudTrack | Record<string, any>)[];
 }
 
-interface IArtistSoundCloud {
+interface SoundCloudArtist {
   id: number;
   username: string;
   full_name?: string | null;
   avatar_url?: string | null;
 }
 
-interface ITranscodingsSoundCloud {
+interface SoundCloudTranscodings {
   url: string;
   format: { protocol: "hls" | "progressive" };
 }
 
-interface IMetaSoundCloud {
+interface SoundCloudMeta {
   artist?: string | null;
   album_title?: string | null;
 }

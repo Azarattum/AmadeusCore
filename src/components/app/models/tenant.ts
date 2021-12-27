@@ -11,7 +11,7 @@ export default class Tenant {
   public hour: number;
   public batch: number;
 
-  public constructor(tenant: ITenant) {
+  public constructor(tenant: TenantData) {
     this.identifier = tenant.identifier;
     this.telegram = +tenant.telegram;
     this.token = tenant.token;
@@ -32,7 +32,7 @@ export default class Tenant {
 
       const text = readFileSync("data/tenants.json").toString();
       const data = [] as Tenant[];
-      for (const x of JSON.parse(text) as ITenant[]) {
+      for (const x of JSON.parse(text) as TenantData[]) {
         const name = x.identifier.toLowerCase();
         if (data.some((y) => y.identifier.toLowerCase() === name)) {
           err(`Dublicate identifiers ("${name}") are not allowed!`);
@@ -79,7 +79,7 @@ export default class Tenant {
   }
 }
 
-interface ITenant {
+interface TenantData {
   identifier: string;
   telegram: string;
   token: string;

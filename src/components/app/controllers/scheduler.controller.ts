@@ -1,4 +1,4 @@
-import { IComponentOptions } from "../../common/component.interface";
+import { ComponentOptions } from "../../common/component.interface";
 import Controller from "../../common/controller.abstract";
 import Tenant from "../models/tenant";
 
@@ -16,7 +16,7 @@ export default class Scheduler extends Controller<
     return Tenant.tenants;
   }
 
-  public constructor(args: IComponentOptions) {
+  public constructor(args: ComponentOptions) {
     super(args);
     this.tenant = args.relation as Tenant;
     this.hour = this.tenant.hour;

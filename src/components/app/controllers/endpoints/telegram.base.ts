@@ -25,7 +25,7 @@ export default abstract class TelegramBase extends Endpoint {
     description?: string
   ): void;
   protected abstract onCallback(
-    data: ICallbackData,
+    data: CallbackData,
     message: number,
     chat: number
   ): void;
@@ -182,7 +182,7 @@ export default abstract class TelegramBase extends Endpoint {
   private static async update(data: Record<string, any>): Promise<void> {
     if (data["message"]) {
       const message = data["message"];
-      if (!is<IMessage>(message)) {
+      if (!is<Message>(message)) {
         wrn(`Unkown message recieved!\n${JSON.stringify(message)}`);
         return;
       }
@@ -216,7 +216,7 @@ export default abstract class TelegramBase extends Endpoint {
       else await client.onMessage(text);
     } else if (data["my_chat_member"]) {
       const member = data["my_chat_member"];
-      if (!is<IChatMember>(member)) {
+      if (!is<ChatMember>(member)) {
         wrn(`Unkown member recieved!\n${JSON.stringify(member)}`);
         return;
       }
@@ -234,7 +234,7 @@ export default abstract class TelegramBase extends Endpoint {
       await client.onChat(id, title, description);
     } else if (data["channel_post"]) {
       const post = data["channel_post"];
-      if (!is<IPost>(post)) {
+      if (!is<Post>(post)) {
         wrn(`Unkown post recieved!\n${JSON.stringify(post)}`);
         return;
       }
@@ -265,7 +265,7 @@ export default abstract class TelegramBase extends Endpoint {
       }
     } else if (data["callback_query"]) {
       const query = data["callback_query"];
-      if (!is<IQuery>(query)) {
+      if (!is<Query>(query)) {
         wrn(`Unkown post recieved!\n${JSON.stringify(query)}`);
         return;
       }
@@ -284,7 +284,7 @@ export default abstract class TelegramBase extends Endpoint {
       }).catch(() => {});
       try {
         const parsed = JSON.parse(query.data);
-        assertType<ICallbackData>(parsed);
+        assertType<CallbackData>(parsed);
         await client.onCallback(parsed, query.message.message_id, id);
       } catch {
         //Ignore errors here
@@ -293,12 +293,12 @@ export default abstract class TelegramBase extends Endpoint {
   }
 }
 
-export interface ICallbackData {
+export interface CallbackData {
   type: string;
   arg?: string;
 }
 
-interface IMessage {
+interface Message {
   from: { id: number; username?: string; first_name: string };
   message_id: number;
   text?: string;
@@ -311,12 +311,12 @@ interface IMessage {
   audio?: { performer?: string; title: string };
 }
 
-interface IChatMember {
+interface ChatMember {
   new_chat_member: { status: string };
   chat: { id: number; title: string };
 }
 
-interface IPost {
+interface Post {
   chat: { id: number; title: string };
   message_id: number;
   text?: string;
@@ -324,7 +324,7 @@ interface IPost {
   document?: { file_id?: string };
 }
 
-interface IQuery {
+interface Query {
   id: string;
   from: { id: number; username?: string; first_name: string };
   message: { message_id: number };

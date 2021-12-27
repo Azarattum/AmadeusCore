@@ -1,19 +1,16 @@
-import { Playlist, PrismaClient, Track } from "prisma/client/tenant";
+import { Playlist, PrismaClient } from "prisma/client/tenant";
 import { copyFileSync } from "fs";
 import { existsSync } from "fs";
-import { IComponentOptions } from "../../common/component.interface";
+import { ComponentOptions } from "../../common/component.interface";
 import Controller from "../../common/controller.abstract";
 import Tenant from "../models/tenant";
-import { ITrackPreview, ITrack, ITrackMeta } from "../models/track.interface";
+import { Track } from "../models/track.interface";
 
 /**
  * Stores and manages Amadeus' user's data
  */
 export default class Preserver extends Controller<
-  [
-    "playlisted",
-    (track: ITrackPreview, updated: Playlist, manually: boolean) => void
-  ]
+  ["playlisted", (track: Track, updated: Playlist, manually: boolean) => void]
 >() {
   public tenant: Tenant;
   private prisma: PrismaClient;
@@ -26,7 +23,7 @@ export default class Preserver extends Controller<
     return this.prisma.$disconnect();
   }
 
-  public constructor(args: IComponentOptions) {
+  public constructor(args: ComponentOptions) {
     super(args);
     this.tenant = args.relation as Tenant;
 
@@ -46,7 +43,7 @@ export default class Preserver extends Controller<
 
   public async updatePlaylist(
     playlist: string,
-    update: IPlaylistUpdate
+    update: PlaylistUpdate
   ): Promise<void> {
     await this.prisma.playlist.upsert({
       where: {
@@ -88,7 +85,7 @@ export default class Preserver extends Controller<
   }
 
   public async addTrack(
-    track: ITrackPreview,
+    track: Track,
     playlist: string,
     manually = true
   ): Promise<void> {
@@ -114,7 +111,7 @@ export default class Preserver extends Controller<
         },
       });
     } else {
-      found = await this.createTrack(await track.track(), playlist);
+      await this.createTrack(track, playlist);
     }
 
     const updated = await this.prisma.playlist.findUnique({
@@ -126,32 +123,7 @@ export default class Preserver extends Controller<
     if (updated) this.emit("playlisted", track, updated, manually);
   }
 
-  public async getTracks(
-    count: number
-  ): Promise<(Track & { artists: string[] })[]> {
-    const results = (await this.prisma.track.findMany({
-      where: {
-        playlists: {
-          some: { type: 0 },
-        },
-      },
-      include: {
-        artists: true,
-      },
-      orderBy: {
-        id: "desc",
-      },
-      take: count,
-    })) as (Track & { artists: any[] })[];
-
-    results.forEach((result) => {
-      result.artists = result.artists.map((x) => x.name);
-    });
-
-    return results;
-  }
-
-  public async getPlaylist(id?: number): Promise<ITrackMeta[]> {
+  public async getPlaylist(id?: number, count?: number): Promise<Track[]> {
     const results = await this.prisma.track.findMany({
       where: {
         playlists: {
@@ -165,7 +137,7 @@ export default class Preserver extends Controller<
       orderBy: {
         id: id != null ? "asc" : "desc",
       },
-      take: id != null ? undefined : 30,
+      take: id != null ? count : count || 30,
     });
 
     return results.map((x) => ({
@@ -179,8 +151,8 @@ export default class Preserver extends Controller<
     }));
   }
 
-  private async createTrack(track: ITrack, playlist: string): Promise<Track> {
-    return this.prisma.track.create({
+  private async createTrack(track: Track, playlist: string): Promise<void> {
+    this.prisma.track.create({
       data: {
         title: track.title,
         album: {
@@ -209,7 +181,7 @@ export default class Preserver extends Controller<
   }
 }
 
-export interface IPlaylistUpdate {
+export interface PlaylistUpdate {
   telegram?: number | null;
   type?: number;
 }
