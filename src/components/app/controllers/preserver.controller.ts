@@ -89,7 +89,7 @@ export default class Preserver extends Controller<
     playlist: string,
     manually = true
   ): Promise<void> {
-    let found = await this.prisma.track.findFirst({
+    const found = await this.prisma.track.findFirst({
       where: {
         title: track.title,
         artists: {
@@ -99,7 +99,7 @@ export default class Preserver extends Controller<
     });
 
     if (found) {
-      found = await this.prisma.track.update({
+      await this.prisma.track.update({
         where: { id: found.id },
         data: {
           playlists: {
@@ -152,7 +152,7 @@ export default class Preserver extends Controller<
   }
 
   private async createTrack(track: Track, playlist: string): Promise<void> {
-    this.prisma.track.create({
+    await this.prisma.track.create({
       data: {
         title: track.title,
         album: {
