@@ -200,7 +200,6 @@ export default class Telegram extends TelegramBase {
       }
 
       case "similar": {
-        if (!ctx.album) return;
         ctx.page = 0;
         ctx.query = "similar";
         ctx.type = "similar";
@@ -439,15 +438,13 @@ export default class Telegram extends TelegramBase {
     offset = 0,
     count = 10
   ): Promise<TrackPreview[]> {
-    if (from === "similar" && typeof query === "string") return [];
-
     let task;
     try {
       const cached = this.cache[from]?.[query];
       const source = cached || {
         history: [],
         iterator:
-          typeof query == "string" && from != "similar"
+          from != "similar"
             ? this.want("query", query, from)
             : this.want("similar", query),
       };
