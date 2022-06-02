@@ -207,9 +207,42 @@ describe("Parser", () => {
     val = parse(
       "My Darkest Days - Porn Star Dancing (Rock Version) ft. Zakk Wylde (Official Video)"
     );
-    expect(val.title).toBe("Porn Star Dancing");
+    expect(val.title).toBe("Porn Star Dancing (Rock Version)");
     expect(val.album).toBe("Porn Star Dancing");
     expect(val.artists).toEqual(["My Darkest Days", "Zakk Wylde"]);
+
+    val = parse("Epic Trailer Music - Fall", true);
+    expect(val.title).toBe("Fall");
+    expect(val.album).toBe("Epic Trailer Music");
+    expect(val.artists).toEqual([]);
+
+    val = parse("Epic Trailer Music - Fall - Nice Thing", true);
+    expect(val.title).toBe("Fall (Nice Thing)");
+    expect(val.album).toBe("Epic Trailer Music");
+    expect(val.artists).toEqual([]);
+
+    val = parse(
+      "Epic and Dramatic Trailer Music - Olympus (Copyright and Royalty Free)",
+      true
+    );
+    expect(val.title).toBe("Olympus");
+    expect(val.album).toBe("Epic and Dramatic Trailer Music");
+    expect(val.artists).toEqual([]);
+
+    val = parse('I:Scintilla - "Swimmers Can Drown" OFFICIAL VIDEO');
+    expect(val.title).toBe("Swimmers Can Drown");
+    expect(val.album).toBe("Swimmers Can Drown");
+    expect(val.artists).toEqual(["I:Scintilla"]);
+
+    val = parse("The Pretty Reckless - Make Me Wanna Die (Acoustic Version)");
+    expect(val.title).toBe("Make Me Wanna Die (Acoustic Version)");
+    expect(val.album).toBe("Make Me Wanna Die");
+    expect(val.artists).toEqual(["The Pretty Reckless"]);
+
+    val = parse("Rock - Rock Song - Under a Rock");
+    expect(val.title).toBe("Rock Song");
+    expect(val.album).toBe("Under a Rock");
+    expect(val.artists).toEqual(["Rock"]);
   });
 
   it("parseArtists", () => {
