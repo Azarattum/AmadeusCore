@@ -41,6 +41,7 @@ export default class Telegram extends TelegramBase {
   }
 
   public async initialize(token: string): Promise<void> {
+    if (!token) throw new Error("No telegram token provided!");
     return Telegram.initialize(token, this);
   }
 

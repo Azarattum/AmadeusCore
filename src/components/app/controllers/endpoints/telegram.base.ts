@@ -34,7 +34,7 @@ export default abstract class TelegramBase extends Endpoint {
   private static url: string;
   private static inited = false;
   private static username: string;
-  private static globalAbort: AbortController;
+  private static globalAbort: AbortController | undefined;
   private static clients: Map<number, TelegramBase> = new Map();
 
   public static get relations(): Tenant[] {
@@ -60,7 +60,7 @@ export default abstract class TelegramBase extends Endpoint {
 
   protected static close(): void {
     this.inited = false;
-    this.globalAbort.abort();
+    this.globalAbort?.abort();
   }
 
   protected static async call(
@@ -71,7 +71,7 @@ export default abstract class TelegramBase extends Endpoint {
     if (!this.inited) return {};
 
     const mixedAbort = new AbortController();
-    this.globalAbort.signal.addEventListener("abort", () => {
+    this.globalAbort?.signal.addEventListener("abort", () => {
       mixedAbort.abort();
     });
     abortController?.signal.addEventListener("abort", () => {
@@ -117,7 +117,7 @@ export default abstract class TelegramBase extends Endpoint {
   }
 
   private static async subscribe(offset = 0): Promise<void> {
-    if (!this.inited) return;
+    if (!this.inited || !this.globalAbort) return;
     const { data, error, status } = await gretch(this.url + "getUpdates", {
       signal: this.globalAbort.signal,
       timeout: 120 * 1000,
