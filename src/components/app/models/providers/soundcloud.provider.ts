@@ -85,7 +85,7 @@ export default class SoundCloudProvider extends Provider<SoundCloudTrack> {
   }
 
   protected convert(track: SoundCloudTrack): TrackPreview | null {
-    const { title, album, artists, year } = parse(track.title);
+    const { title, album, artists, year } = parse(track.title, true);
 
     //Check media
     const media = track.media.transcodings

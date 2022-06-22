@@ -7,7 +7,8 @@ export const separators = [
   '"',
   "`",
   "''+",
-  ":",
+  ":\\s",
+  "\\s:",
   "-\\s",
   "\\s-",
   "--+",
@@ -161,6 +162,7 @@ export function toArtist(text: string): [string, string[]] {
     const match = text.match(regex);
     const artist = match?.groups?.artist;
     if (!match || !artist) continue;
+    if (isGenere(artist, true) || isJunk(artist)) continue;
     artists.unshift(artist);
     text = trim(text.replace(match[0], ""));
   }
@@ -190,7 +192,25 @@ export function isGenere(text: string, strict: boolean = false): boolean {
   );
 }
 
-export default function parse(text: string): Parsed {
+export function isJunkGenere(text: string) {
+  const filter = (x: string) => new RegExp(r`(\b|^)${x}(\b|$)`, "i");
+  const marks = [
+    "edit",
+    "rmx",
+    "remix",
+    "cover",
+    "(piano\\s+)?arrangement",
+    "edit?",
+    "version(\\s+cover)?",
+    "ver(\\s+cover)?",
+    "cover",
+    "release",
+  ];
+
+  return isGenere(text) && !marks.map(filter).find((x) => x.test(text));
+}
+
+export default function parse(text: string, noArtist = false): Parsed {
   const { parts, clean } = unbrace(text);
   let atoms = [...split(clean), ...parts].filter((x) => x);
   atoms = [...new Set(atoms)];
@@ -241,21 +261,21 @@ export default function parse(text: string): Parsed {
       title = atoms[0];
       break;
     case 2:
-      artists.unshift(...parseArtists(atoms[0]));
+      if (noArtist) album = atoms[0];
+      else artists.unshift(...parseArtists(atoms[0]));
       title = atoms[1];
       break;
     default:
-      artists.unshift(...parseArtists(atoms[0]));
+      if (noArtist) album = atoms[0];
+      else artists.unshift(...parseArtists(atoms[0]));
       title = atoms[1];
-      meta.push(...atoms.slice(2, atoms.length - 1));
-      album = atoms[atoms.length - 1];
+      meta.push(...atoms.slice(2, atoms.length - 1 * +!noArtist));
+      if (!noArtist) album = atoms[atoms.length - 1];
       break;
   }
 
-  meta = meta.filter((x) => !isGenere(x));
-  artists = artists
-    .map((x) => trim(x))
-    .filter((x) => !isJunk(x) && !isGenere(x, true));
+  meta = meta.filter((x) => !isJunkGenere(x));
+  artists = artists.map((x) => trim(x));
 
   album = album || title;
   if (meta.length) title += ` (${meta.join(", ")})`;

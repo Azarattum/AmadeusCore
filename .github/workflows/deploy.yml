@@ -33,5 +33,5 @@ jobs:
           eval $(ssh-agent -s)
           ssh-add <(echo "$REMOTE_SSH_KEY")
           scp -r -o "StrictHostKeyChecking no" dist/* "$REMOTE_IP":~/amadeus
-          ssh -o "StrictHostKeyChecking no" "$REMOTE_IP" "(cd amadeus && npm i --only=prod)"
+          ssh -o "StrictHostKeyChecking no" "$REMOTE_IP" "(cd amadeus && npm i --omit=dev)"
           ssh-agent -k
