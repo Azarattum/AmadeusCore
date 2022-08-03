@@ -342,6 +342,15 @@ export default class Telegram extends TelegramBase {
     this.clearTemp();
 
     switch (command) {
+      case "start": {
+        const { message_id: id } = await Telegram.call("sendMessage", {
+          disable_notification: true,
+          chat_id: this.client,
+          text: "👋",
+        });
+        if (Number.isInteger(+id)) this.tempMessages.push(+id);
+        break;
+      }
       case "clear": {
         this.clear();
         break;
