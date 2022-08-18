@@ -1,7 +1,7 @@
 import { TrackPreview } from "../track.interface";
 import Provider from "./provider.abstract";
 import ytsr, { ContinueResult } from "ytsr";
-import ytdl from "ytdl-core";
+import ytdl from "@distube/ytdl-core";
 import parse, { parseArtists } from "../parser";
 import { is } from "typescript-is";
 import ytpl from "ytpl";

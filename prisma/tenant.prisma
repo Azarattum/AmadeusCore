@@ -14,8 +14,8 @@ model Track {
   title     String
   album     Album      @relation(references: [id], fields: [albumId])
   albumId   Int
-  artists   Artist[]   @relation(references: [id])
-  playlists Playlist[] @relation(references: [id])
+  artists   Artist[]
+  playlists Playlist[]
 
   length Float
   cover  String?
@@ -29,7 +29,7 @@ model Track {
 model Playlist {
   id     Int     @id @default(autoincrement())
   title  String  @unique
-  tracks Track[] @relation(references: [id])
+  tracks Track[]
 
   telegram Int? @unique
 
@@ -50,7 +50,7 @@ model Album {
 model Artist {
   id     Int     @id @default(autoincrement())
   name   String  @unique
-  tracks Track[] @relation(references: [id])
+  tracks Track[]
 
   @@index([name])
 }
